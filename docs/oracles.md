@@ -9,7 +9,7 @@ recalled.  Re-run `lattix fingerprint` / `pytest tests/oracles` after any engine
 | Engine | How it runs here | Version | Basis (native) | p0 through RF | Notes |
 |---|---|---|---|---|---|
 | MAD-X | `cpymad` in the base env and in env `lattix` | 5.09.03 (2024-04-25) via cpymad 1.19.0 | (x, px, y, py, T, pt) | constant | `twiss, sectormap` gives per-element maps; **T is ahead-positive** (drift R56 = +L/(β²γ²) in native units → +L/γ² in the common basis after z = +β·T, δ = pt/β). Table names carry `:N` occurrence suffixes. |
-| HELIX | in-process, `HELIX_ROOT` (default: local `HELIX_v3` checkout) | linac_gen 1.9.1 | (x mm, x′ mrad, y mm, y′ mrad, Δφ deg, ΔW MeV) | follows | Δφ is *late-positive* (z = −βλ/360·Δφ); ΔW → δ = ΔW/(β²γmc²). **HELIX dipoles omit the path-length row (R51, R52) and the dispersive part of R56** — transverse 4×4 and dispersion agree with MAD-X to 1e-7 / 7e-9 on `examples/madx/fodo.madx`, `path` block differs by 0.7. Worth filing upstream. |
+| HELIX | in-process, `HELIX_ROOT` (default: local `HELIX_v3` checkout) | linac_gen 1.9.1 | (x mm, x′ mrad, y mm, y′ mrad, Δφ deg, ΔW MeV) | follows | Δφ is *late-positive* (z = −βλ/360·Δφ); ΔW → δ = ΔW/(β²γmc²). **HELIX dipoles omit the path-length row (R51, R52) and the dispersive part of R56** — transverse 4×4 and dispersion agree with MAD-X to 1e-7 / 7e-9 on `examples/madx/fodo.madx`, `path` block differs by 0.7. Worth filing upstream. Also: HELIX's matrix path (`compute_transfer_matrix`, mirrored by the oracle) ignores `SET_BEAM_E0_P0`, and `SET_SYNC_PHASE` binds only to the next FIELD_MAP/NCELLS (never a thin GAP: `tracewin_parser.py:701-711`). |
 | TraceWin | `TRACEWIN_EXE` (default `TraceWin.app/Contents/MacOS/TraceWin`, x86_64 under Rosetta), batch mode `TraceWin project.ini hide dat_file= path_cal= energy1= freq1= current1= nbr_part1=` with LightWin's `generic_project.ini` (MIT) as the project file | licensed **trial** build: *"Number of element limited to 20"* | `Transfer_matrix1.dat`: (x, x′, y, y′, z, dp/p), lengths m, **z ahead-positive** (R56 = +L/γ² measured), dp/p relative to the *exit* p0 (cavity R66 = p_in/p_out) | follows | Rejects HELIX's `TITLE` card ("Unknown element or command") — HELIX `.dat` dialect is not portable as-is. Outputs also `tracewin.out` (`gama-1` per element exit → reference energy), `.beta`, `.par`, `Density_Env.dat`. 20-element cap → fingerprints and small decks only; PIP-II decks rely on the CEA reference exports in `HELIX_v3/Tracewin_code/`. Stalled once for 600 s in a full-suite run (passes in 16 s alone) → adapter timeout 120 s. |
 | Bmad / Tao | conda env `bmad` (`pytao` 1.2.4, bmad 20260828.0, py3.13/numpy2) via an out-of-process worker | 20260828.0 | (x, px, y, py, z, pz) | follows (`lcavity`) | Converters shipped: `bmad_to_mad_sad_elegant`, `madx_to_bmad.py`, `elegant_to_bmad.py`, `sad_to_bmad`. `bmad_to_mad_sad_elegant` needs positive initial Twiss (`beginning[beta_a]`) or `-force`. |
 | elegant | conda env `lattix` (`conda-forge elegant 2026.3.0`, osx-arm64) + `pysdds` 0.6 (text fallback via `sdds2stream`) | 2026.3.0 (2026-07-02) | (x, x′, y, y′, s, δ) with **s = path length**: its matrices carry no velocity-bunching term (drift R56 = 0); the adapter adds −L/γ² per element so maps land in the arrival-time common basis | follows with `change_p0=1` | **RFCA phase convention follows the charge sign relative to the electron**: negative species crest at +90°, positive species (protons) at −90° — `phase = 60` *decelerates* protons, `phase = 240` gives +V·cos30°. Its RFCA *matrix* phase slip is ultra-relativistic (R65 = β·true value; tracking is physical). Constants are CODATA-86 (m_e = 0.51099906 MeV; built-in `proton` = 938.2866 MeV, 1.5e-5 off) → adapter uses `change_particle name=custom, mass_ratio, charge_ratio`. conda-forge build ships no `defns.rpn` (adapter embeds one and passes `-rpnDefns=<abs path>`). |
@@ -75,3 +75,23 @@ HELIX vs TraceWin differ by 0.7 % on R65 (gap model detail; Equivalent tier).
   skipped (`compare.shared_boundaries`).
 * Report per-block metrics (transverse 4×4, dispersion column, path-length row, R56,
   energy row) — a single max-abs number hides which physics disagrees.
+
+## Phase 1 measurements (2026-09-03)
+
+* **MAD-X twiss carries a cavity's energy gain in the orbit `pt`** (50 MV on a 100 MeV proton →
+  pt = 0.1125) and linearises downstream magnets about it, although p0 stays constant. So
+  `energy_mode="constant"` is what composes with MAD-X when the cavities are in the deck;
+  `"local"` is right when the energy change is *not* modelled by MAD-X (ReferenceChange,
+  FM_TO_DRIFT, extracted sections).
+* MAD-X `rbend` expanded `l` is the chord; the node length is the arc `L·(θ/2)/sin(θ/2)`
+  (`rbarc=true`). `(k1, k1s)` ≡ `hypot(k1,k1s)` rotated by `−atan2(k1s,k1)/2`. Element names
+  fail above 41 characters. `apertype` is illegal on `drift`, `matrix`, `translation`.
+* HELIX writes `.dat` numbers with `%.10g`; that alone costs 4e-8 on a converted k1 (gate A1),
+  so lattix writes `%.15g`.
+* `fodo.madx` declares `energy = 0.938272 + 0.800 GeV` with a rounded proton mass: its kinetic
+  energy is 799.99991 MeV, not 800 MeV — a 1e-7 rigidity trap for anyone re-reading a converted
+  deck at "800 MeV".
+* The PIP-II MEBT deck has four buncher FIELD_MAPs (ke = 0.068/0.045 at −90°); until Phase 3's
+  `FM_TO_CAVITY`, MAD-X sees drifts there and the comparison stops at the first map.
+* HELIX↔IR↔HELIX is bit-exact on every deck tried (mebt 427, mebt+hwr 483 incl. 24 real field
+  maps); HELIX's particle masses differ from CODATA-2018 at 1e-8, visible in ∫B·dl→kick.

@@ -1,0 +1,27 @@
+! lattix <version> from madx
+title, "HELIX MAD-X demo - FODO cell";
+
+beam, particle=proton, mass=0.93827208816, charge=1, energy=1.738272;
+
+! --- variables
+lquad = 0.3;
+kfocus = 0.6;
+lbend = 1;
+abend = 0.1;
+ehalf = 0.05;
+
+! --- elements
+qf: quadrupole, l=0.3, k1=0.6;
+b1: sbend, l=1, angle=0.1, e1=0.05, e2=0.05;
+qd: quadrupole, l=0.3, k1=-0.6;
+m1: marker;
+
+fodo: sequence, l=6.6, refer=centre;
+  qf, at=0.15;
+  b1, at=1.5;
+  qd, at=3.15;
+  b1, at=4.8;
+  m1, at=6.6;
+endsequence;
+
+use, sequence=fodo;

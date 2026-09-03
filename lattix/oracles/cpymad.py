@@ -40,6 +40,26 @@ def _align(s_ref: np.ndarray, s_tbl: np.ndarray, tol: float = 1e-9) -> list[int]
     return out
 
 
+_MADX_OUTPUT_NAMES = {"sectormap", "sectormap.tfs", "trackone", "track.obs0001.p0001"}
+
+
+def _mirror_deck_dir(deck: Path, wd: Path) -> Path:
+    """Symlink the deck's folder into *wd* so relative ``CALL``s resolve while every
+    file MAD-X writes (sectormap, track tables) lands in the temp dir, never next to
+    the user's deck.  Names MAD-X itself writes are never linked (a linked
+    ``sectormap`` would be overwritten through the link)."""
+    for child in deck.parent.iterdir():
+        if child.name in _MADX_OUTPUT_NAMES or child.name.startswith("."):
+            continue
+        target = wd / child.name
+        if not target.exists() and not target.is_symlink():
+            try:
+                target.symlink_to(child)
+            except OSError:
+                pass
+    return wd / deck.name
+
+
 @register
 class MadxOracle:
     name = "madx"
@@ -62,8 +82,9 @@ class MadxOracle:
         wd = Path(workdir) if workdir else Path(tempfile.mkdtemp(prefix="lattix_madx_"))
         wd.mkdir(parents=True, exist_ok=True)
         m = Madx(stdout=False)
+        local = _mirror_deck_dir(deck, wd)
         m.chdir(str(wd))
-        m.call(str(deck))
+        m.call(str(local))
         seq = sequence or self._pick_sequence(m)
         beam_used = self._apply_beam(m, seq, beam)
         m.use(sequence=seq)
@@ -72,7 +93,8 @@ class MadxOracle:
 
         tw = m.twiss(sequence=seq, betx=beam_used.betx, alfx=beam_used.alfx,
                      bety=beam_used.bety, alfy=beam_used.alfy, dx=beam_used.dx,
-                     dpx=beam_used.dpx, dy=beam_used.dy, dpy=beam_used.dpy, sectormap=True)
+                     dpx=beam_used.dpx, dy=beam_used.dy, dpy=beam_used.dpy, sectormap=True,
+                     sectorfile=str(wd / "sectormap.tfs"))
         st = m.table.sectortable
         names_all = [str(n) for n in st.name]
         keep = [i for i, n in enumerate(names_all) if not n.lower().endswith(("$start", "$end"))]
