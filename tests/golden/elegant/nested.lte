@@ -1,0 +1,16 @@
+! lattix <version> from IR
+! reference: proton, 800000000 eV kinetic
+
+! --- variables
+% 0.3 sto LQ
+
+! --- elements
+QF: KQUAD, L=0.3, K1=0.6
+DR: DRIF, L=0.5
+MK: MARK
+
+! --- beam lines
+CELL: LINE=(QF, 3*DR, MK)
+RING: LINE=(CELL, -CELL, 2*CELL)
+
+USE, RING

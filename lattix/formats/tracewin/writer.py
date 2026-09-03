@@ -91,7 +91,50 @@ class _Emitter:
         self.placed = propagate(lattice, warnings=[])
 
     # -- helpers ---------------------------------------------------------------------------------
+
+    # TraceWin counts these cards inside a ``LATTICE n`` cell (manual: DIAG_*, APERTURE and
+    # THIN_STEERING are not counted; markers/commands neither)
+    _LATTICE_COUNTED = frozenset({"DRIFT", "QUAD", "SOLENOID", "GAP", "FIELD_MAP", "BEND", "EDGE", "NCELLS",
+                                  "RFQ_CELL", "DTL_CEL", "CAVSIN", "MULTIPOLE", "STEERER", "THIN_LENS",
+                                  "SEXTUPOLE", "OCTUPOLE", "CHOPPER_MAGNET"})
+
+    @staticmethod
+    def _card_keyword(line: str) -> str:
+        body = line.split(";", 1)[0].strip()
+        if not body:
+            return ""
+        if ":" in body.split()[0] or (len(body.split()) > 1 and body.split()[1].startswith(":")):
+            body = body.split(":", 1)[1].strip()
+        return body.split()[0].upper() if body else ""
+
+    def _recount_lattice_cards(self) -> None:
+        """Rewrite ``LATTICE n …`` so n matches the element cards actually emitted up to the
+        matching ``LATTICE_END`` — the count depends on how this writer splits elements."""
+        changed = 0
+        for i, line in enumerate(self.lines):
+            if self._card_keyword(line) != "LATTICE":
+                continue
+            n = 0
+            for later in self.lines[i + 1:]:
+                kw = self._card_keyword(later)
+                if kw == "LATTICE_END":
+                    break
+                if kw in self._LATTICE_COUNTED:
+                    n += 1
+            body = line.split(";", 1)[0]
+            prefix = body[: body.upper().index("LATTICE")]
+            args = body.upper().split("LATTICE", 1)[1].split()
+            if not args:
+                continue
+            if args[0] != str(n):
+                self.lines[i] = (prefix + "LATTICE " + " ".join([str(n)] + args[1:])).rstrip()
+                changed += 1
+        if changed:
+            self.rep.equivalent("LATTICE_COUNT_RECOMPUTED",
+                                f"{changed} LATTICE card(s) renumbered to the emitted element count")
+
     def render(self) -> str:
+        self._recount_lattice_cards()
         if self.header_freq:
             self._freq(float(self.header_freq), force=True)
         for p in self.placed:
@@ -378,6 +421,8 @@ def _bend(em: _Emitter, p: Placed) -> None:
     if abs(abs(b.tilt_ref) - math.pi / 2) < 1e-9:
         hv = 1
         if b.tilt_ref < 0:
+            # TraceWin has one vertical plane (HV=1): a tilt of −π/2 is the +π/2 plane with
+            # the angle sign flipped; the EDGE angles follow sign(θ) through the rule below
             theta = -theta
     elif abs(b.tilt_ref) > 1e-12:
         tilt_ok = False
@@ -405,7 +450,7 @@ def _bend(em: _Emitter, p: Placed) -> None:
         )
 
     if has_edges:
-        edge(b.e1, k1_in)
+        edge(math.copysign(1.0, b.angle) * b.e1, k1_in)   # β = sign(θ)·e, see reader
     em.emit_card(
         "BEND",
         [_fmt(theta), _fmt(rho_mm)],
@@ -413,7 +458,7 @@ def _bend(em: _Emitter, p: Placed) -> None:
         em.label(e),
     )
     if has_edges:
-        edge(b.e2, k1_out)
+        edge(math.copysign(1.0, b.angle) * b.e2, k1_out)
     em.misalign_check(e)
     mp = e.multipole
     if not tilt_ok:
@@ -532,6 +577,10 @@ def _rfqcell(em: _Emitter, p: Placed) -> None:
 
 
 def _kicker(em: _Emitter, p: Placed) -> None:
+    """Corrector.  TraceWin's THIN_STEERING is thin and is NOT counted in LATTICE cells
+    (manual); a thick corrector with no kick — every corrector in the PIP-II design
+    exports — is exactly its body drift, and a thick corrector with a kick becomes
+    DRIFT L/2 + THIN_STEERING + DRIFT L/2 (kick at the centre, length preserved)."""
     e = p.element
     ref = p.ref_in
     brho = ref.brho_signed
@@ -542,13 +591,22 @@ def _kicker(em: _Emitter, p: Placed) -> None:
         bx, by = e.vkick * brho, e.hkick * brho
     R, _ry, _rect = _aperture_mm(e)
     elec = 1 if e.electric else 0
+    has_kick = bool(e.hkick or e.vkick)
+    L_mm = e.length / MM
+    if e.length and not has_kick:
+        em.emit_card("DRIFT", [_fmt(L_mm), _fmt(R)], [], em.label(e))
+        em.rep.exact(e.name, e.kind, message="zero-kick corrector written as its body drift")
+        return
+    if e.length:
+        em.emit_card("DRIFT", [_fmt(L_mm / 2), _fmt(R)], [], "")
     em.emit_card(
         "THIN_STEERING", [_fmt(bx), _fmt(by)], [(_fmt(R), R == 0.0), (str(elec), elec == 0)], em.label(e)
     )
     if e.length:
+        em.emit_card("DRIFT", [_fmt(L_mm / 2), _fmt(R)], [], "")
         em.rep.equivalent(
-            "THICK_KICKER_AS_THIN",
-            f"kicker length {e.length:.4g} m dropped (THIN_STEERING)",
+            "THICK_KICKER_SPLIT",
+            f"kicker body {e.length:.4g} m written as DRIFT + THIN_STEERING + DRIFT (kick at the centre)",
             element=e.name,
             kind=e.kind,
         )

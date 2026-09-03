@@ -1,0 +1,28 @@
+! lattix <version> from IR
+
+parameter[particle] = proton
+parameter[e_tot] = 1738272088.16
+parameter[geometry] = open
+
+! --- elements
+qf: quadrupole, l = 0.3, k1 = 0.6   ! lattix: name="QF"
+d1: drift, l = 0.5   ! lattix: name="D1"
+b1: sbend, l = 1, angle = 0.1, e1 = 0.05, e2 = 0.05, fint = 0.5, hgap = 0.02   ! lattix: name="B1"
+d2: drift, l = 0.5   ! lattix: name="D2"
+sol: solenoid, l = 0.4, ks = 0.3   ! lattix: name="SOL"
+d3: drift, l = 0.2   ! lattix: name="D3"
+cav: lcavity, l = 0, voltage = 1000000, phi0 = -0.0833333333333333, rf_frequency = 325000000, cavity_type = traveling_wave   ! lattix: name="CAV"
+d4: drift, l = 0.2   ! lattix: name="D4"
+cor: kicker, l = 0, hkick = 0.001, vkick = -0.002   ! lattix: name="COR"
+d5: drift, l = 0.3   ! lattix: name="D5"
+coll: rcollimator, l = 0.1, x1_limit = 0.02, x2_limit = 0.02, y1_limit = 0.03, y2_limit = 0.03   ! lattix: name="COLL"
+d6: drift, l = 0.5   ! lattix: name="D6"
+b2: rbend, l = 0.999583385413567, angle = -0.1   ! lattix: name="B2"
+d7: drift, l = 0.5   ! lattix: name="D7"
+qd: quadrupole, l = 0.3, k1 = -0.599578511631037   ! lattix: name="QD"
+end_x: marker   ! lattix: name="END"
+
+! --- line
+demo: line = (qf, d1, b1, d2, sol, d3, cav, d4, cor, d5, coll, d6, b2, d7, qd, end_x)
+
+use, demo

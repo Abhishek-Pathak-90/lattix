@@ -95,3 +95,71 @@ HELIX vs TraceWin differ by 0.7 % on R65 (gap model detail; Equivalent tier).
   `FM_TO_CAVITY`, MAD-X sees drifts there and the comparison stops at the first map.
 * HELIX↔IR↔HELIX is bit-exact on every deck tried (mebt 427, mebt+hwr 483 incl. 24 real field
   maps); HELIX's particle masses differ from CODATA-2018 at 1e-8, visible in ∫B·dl→kick.
+
+## Phase 2 measurements (2026-09-03)
+
+* **Elegant**: `RBEN L` is the CHORD (`RBEN, L=1, ANGLE=0.1` → elegant's own `SBEN, L=1.0004168`,
+  MAD-X `rbarc` semantics) — cheetah, ocelot and Bmad's `elegant_to_bmad.py` all pass L through
+  unchanged (error L·θ²/24). `FINT` default is **0.5** (not 0.45 as PLAN §4.3 said); `FINT1/FINT2`
+  only on CSBEND/CSRCSBEND. `RFCA`: FREQ default 500 MHz, CHANGE_P0 default 0. `#` is a comment
+  character, `;` is not a separator, a trailing `,` is not a continuation (only `&`). Per-type
+  misalignment attributes differ (DRIF/KICKER/WATCH accept none). KQUAD's linear matrix is
+  bit-identical to QUAD's. Charge-sign phase rule pinned by tracking: proton `PHASE=240`, H⁻
+  `PHASE=60` both give +V·cos30°. A2 elegant leg: T4x4 2.8e-10.
+* **Bmad**: `lcavity` with `l = 0` (or any l < 1 mm) and the default `standing_wave` is FATAL
+  ("infinite pondermotive kick") → thin cavities are written `l = 0, cavity_type = traveling_wave`,
+  which reproduces ΔE = V·cos(2π·phi0) exactly. **A thin Bmad cavity has no transverse RF kick**
+  (R21 = R43 = 0 where HELIX/TraceWin give 0.76/0.65/0.56 for 300 kV gaps at −30°). `rbend` deck
+  `l` is the chord; Bmad stores the arc and adds angle/2 to e1/e2 itself. `k{n}l`/`k{n}sl` ≡ MAD-X
+  knl/ksl exactly; `b_n = k_nl/n!`. Name limit 40. Default particle is positron. `k0l` needs
+  `k0l_status = straight_reference`. **Upstream bug**: `bmad_to_mad_sad_elegant -madx` writes
+  `ksl = −n!·a_n`, reversing skew multipoles (both engines agree the sign should be +). A2 Bmad leg:
+  T4x4 2.8e-14; A3 Bmad leg on the real MEBT: 9.9e-14.
+* **MAD8**: BTL lockstep MAD8 vs TraceWin export (873 magnets): lengths 4e-10 m, gradients
+  1.4e-10, angles 7e-12 — passes where HELIX's own anchor is xfail (HELIX's Dipole lacks a
+  reference tilt). The only systematic difference is `tilt_ref` sign on 4 vertical bends (the
+  TraceWin export keeps only `hv=1`). `BAL2025V0213.FLAT` parses (HELIX stops at SQRT) and has a
+  deck bug: `BRHO := P0/C*1.0E11` is 1000× too large (never referenced). The BTL deck contains a
+  genuine negative drift (`DBV3NT = −0.204288 m`): MAD-X aborts on it in both sequence and line
+  mode; the MAD-X writer now resolves overlaps (shift the overlapping element downstream, shorten
+  the next drift, LOSSY `OVERLAP_SHIFTED`). RBEND `L` is the arc in MAD8.
+* **PALS**: `pals-schema` 0.3.0 loads every document lattix writes but is an older draft (untagged
+  union → unknown kinds silently become placeholders; PyYAML reads the standard's own `1.0e9` as a
+  string). ImpactX 26.08 `pals_to_impactx` needs the `PALS:` root, a final `use:`, no sublines or
+  `repeat:`, only Drift+Quadrupole, and raises on `BeginningEle` (→ writer flavor `flat`). Bmad
+  `write pals` emits `kind: Bend`, `g_ref` + a redundant `Kn0`, always `Kn1` (never `Bn1`), no
+  `use:`, signed Fortran exponents. Field names in the standard text: `angle_ref`, `edge1_int` =
+  fint·hgap product, `num_cells`, `z_rot`, `x_min/x_max`, `dtime_ref`.
+* **TraceWin export convention**: the PIP-II BTL export has no THIN_STEERING cards — zero-kick
+  correctors are plain drifts; `LATTICE n` counts exclude DIAG_*, APERTURE and THIN_STEERING, so
+  the TraceWin writer recounts every `LATTICE n` from the cards it emits.
+
+## Vertical bends and edge angles in TraceWin (measured with the licensed binary, 2026-09-03)
+
+Five-card decks (EDGE/BEND/EDGE, ρ = 25.24 m, |θ| = 2.3835°, |β| = 1.1918°, HV=1) through
+TraceWin, HELIX and MAD-X (`sbend` with `e1 = e2 = angle/2`, tilt −π/2):
+
+| cards | R21 | R43 | R36 | matches MAD-X |
+|---|---|---|---|---|
+| θ = −2.38°, β = −1.19° | +0.00165 | −0.00329 | −0.0218 | **no** (edge focusing reversed) |
+| θ = −2.38°, β = +1.19° | −0.00165 | 0 | −0.0218 | MAD-X angle +0.0416, tilt −π/2 |
+| θ = +2.38°, β = +1.19° | −0.00165 | 0 | +0.0218 | MAD-X angle −0.0416, tilt −π/2 (≡ +0.0416, +π/2) |
+| θ = +2.38°, β = −1.19° | +0.00165 | −0.00329 | +0.0218 | no |
+
+Rules encoded in `formats/tracewin`: `HV=1` with angle θ ≡ MAD tilt +π/2 with the same θ (a
+tilt of −π/2 is written as HV=1 with −θ); the EDGE angle carries the sign of the bend angle,
+**β = sign(θ)·e** (HELIX's MAD-X importer rule), so a rectangular bend has β = |θ|/2 whatever the
+bend direction.  HELIX and TraceWin agree to 1e-6 on all four combinations.
+
+**Finding for the PIP-II export**: `btl_2025v0703.dat` writes the two negative-angle vertical
+bends (BVDD, ORB1) with β = e, i.e. the reversed edge focusing (R21 = +0.00165 instead of
+−0.00165, R43 = −0.0033 instead of 0); the two positive ones (BVDU, ORB2) are right.  The MAD8
+lockstep anchor pins exactly those two as edge-sign flips.
+
+## MAD8 negative drifts in MAD-X
+
+The BTL's `DBV3NT = −0.204288 m` makes the following corrector start inside the preceding
+drift.  MAD-X aborts on any overlap; the writer orders sequence entries by position, shortens
+the *preceding* drift (a drift is only a gap in a MAD-X sequence) and keeps every element where
+the source put it — gate A4 then agrees HELIX vs MAD-X to 1e-7 through the whole 308 m line.
+Only genuine thick-element collisions are shifted (LOSSY `OVERLAP_SHIFTED`).

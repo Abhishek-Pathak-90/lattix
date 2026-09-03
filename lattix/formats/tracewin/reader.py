@@ -884,7 +884,10 @@ class _Parser:
         nat["has_edges"] = True
         nat["edge_in" if entry else "edge_out"] = dict(kw)
         bp = b.bend
-        beta = kw["pole_rotation"] * DEG
+        # TraceWin/HELIX pole-face angle carries the sign of the bend angle (HELIX madx_parser:
+        # pole_rotation = sign(θ)·e): e = sign(θ)·β.  Measured against MAD-X on the PIP-II BTL
+        # vertical bends (2026-09-03).
+        beta = math.copysign(1.0, bp.angle) * kw["pole_rotation"] * DEG
         if entry:
             bp.e1 = beta
             bp.edge_int1 = kw["k1"]

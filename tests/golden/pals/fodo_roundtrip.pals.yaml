@@ -1,0 +1,46 @@
+# PALS document written by lattix <version> from the lattix IR
+# https://github.com/pals-project/pals
+PALS:
+  version: null
+  notes:
+  - written by lattix <version> from the lattix IR
+  facility:
+  - drift1:
+      kind: Drift
+      length: 0.25
+  - quad1:
+      kind: Quadrupole
+      length: 1.0
+      MagneticMultipoleP:
+        Bn1: 1.0
+  - drift2:
+      kind: Drift
+      length: 0.5
+  - quad2:
+      kind: Quadrupole
+      length: 1.0
+      MagneticMultipoleP:
+        Bn1: -1.0
+  - fodo_cell:
+      kind: BeamLine
+      line:
+      - drift1
+      - quad1
+      - drift2
+      - quad2
+      - drift1
+  - fodo_channel:
+      kind: BeamLine
+      line:
+      - begin:
+          kind: BeginningEle
+          ReferenceP:
+            species_ref: proton
+            E_tot_ref: 1938272088.1599998
+      - fodo_cell:
+          repeat: 3
+  - fodo_lattice:
+      kind: Lattice
+      branches:
+      - fodo_channel
+  - use: fodo_lattice

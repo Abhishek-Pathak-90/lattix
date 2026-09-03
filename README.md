@@ -5,13 +5,22 @@ Translate a lattice deck from one accelerator code's format to another's
 IMPACT-Z, FLAME, xtrack) through a code-neutral intermediate representation, with
 a fidelity report on every conversion and validation against the real engines.
 
-**Status: Phase 0 complete** — the engine harness, corpus tooling and CI scaffold
-exist; the IR, readers and writers arrive in Phase 1 (see `PLAN.md`, `docs/oracles.md`,
+**Status: Phase 2 complete** — readers and writers for TraceWin, MAD-X, MAD8 flat, Elegant, Bmad
+and PALS, the HELIX adapter, the fidelity report and the CLI are in, each validated against its real
+engine; field maps, ImpactX/IMPACT-Z/FLAME/xtrack are Phase 3 (see `PLAN.md`, `docs/oracles.md`,
 `docs/corpus.md`).
 
 ## What works today
 
 ```bash
+# translate a deck (fidelity summary on stderr; --strict fails on the first LOSSY/DROPPED element)
+PYTHONPATH=. python3 -m lattix.cli convert examples/mebt.dat mebt.madx --read-option species=h- \
+    --read-option kinetic_energy_eV=2.1e6 --write-option energy_mode=constant --report mebt.fidelity.json
+PYTHONPATH=. python3 -m lattix.cli inspect mebt.dat --read-option species=h- --elements
+PYTHONPATH=. python3 -m lattix.cli convert BTL2025v0703.lat btl.bmad          # MAD8 -> Bmad
+PYTHONPATH=. python3 -m lattix.cli convert fodo.madx fodo.lte                  # MAD-X -> Elegant (species-aware RF phase)
+PYTHONPATH=. python3 -m lattix.cli convert fodo.madx fodo.pals.yaml            # -> PALS (loads in ImpactX, validates with pals-schema)
+
 # which engines this machine can run (MAD-X via cpymad, xtrack, Bmad/Tao, elegant, HELIX, TraceWin)
 PYTHONPATH=. python3 -m lattix.cli oracles
 

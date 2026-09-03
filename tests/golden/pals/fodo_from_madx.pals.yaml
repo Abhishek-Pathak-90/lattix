@@ -1,0 +1,66 @@
+# PALS document written by lattix <version> from madx
+# https://github.com/pals-project/pals
+PALS:
+  version: null
+  notes:
+  - written by lattix <version> from madx
+  facility:
+  - variables:
+    - lquad: 0.3
+    - kfocus: 0.6
+    - lbend: 1.0
+    - abend: 0.1
+    - ehalf: 0.05
+  - qf:
+      kind: Quadrupole
+      length: 0.3
+      MagneticMultipoleP:
+        Bn1: 2.928617935551388
+  - drift_0:
+      kind: Drift
+      length: 0.7
+  - b1:
+      kind: Bend
+      length: 1.0
+      BendP:
+        angle_ref: 0.1
+        e1: 0.05
+        e2: 0.05
+  - drift_1:
+      kind: Drift
+      length: 1.0
+  - qd:
+      kind: Quadrupole
+      length: 0.3
+      MagneticMultipoleP:
+        Bn1: -2.928617935551388
+  - drift_2:
+      kind: Drift
+      length: 1.0
+  - drift_3:
+      kind: Drift
+      length: 1.2999999999999998
+  - m1:
+      kind: Marker
+  - fodo:
+      kind: BeamLine
+      line:
+      - begin:
+          kind: BeginningEle
+          ReferenceP:
+            species_ref: proton
+            E_tot_ref: 1738272000.0
+      - qf
+      - drift_0
+      - b1
+      - drift_1
+      - qd
+      - drift_2
+      - b1
+      - drift_3
+      - m1
+  - fodo_lattice:
+      kind: Lattice
+      branches:
+      - fodo
+  - use: fodo_lattice

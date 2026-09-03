@@ -1,0 +1,118 @@
+# PALS document written by lattix <version> from the lattix IR
+# https://github.com/pals-project/pals
+PALS:
+  version: null
+  notes:
+  - written by lattix <version> from the lattix IR
+  facility:
+  - QF:
+      kind: Quadrupole
+      length: 0.3
+      MagneticMultipoleP:
+        Bn1: 2.928618145149656
+  - D1:
+      kind: Drift
+      length: 0.5
+  - B1:
+      kind: Bend
+      length: 1.0
+      BendP:
+        angle_ref: 0.1
+        e1: 0.05
+        e2: 0.05
+        edge1_int: 0.01
+        edge2_int: 0.01
+  - D2:
+      kind: Drift
+      length: 0.5
+  - SOL:
+      kind: Solenoid
+      length: 0.4
+      SolenoidP:
+        Bsol: 1.464309072574828
+  - D3:
+      kind: Drift
+      length: 0.2
+  - CAV:
+      kind: RFCavity
+      length: 0.0
+      RFP:
+        frequency: 325000000.0
+        voltage: 1000000.0
+        phase: -0.08333333333333333
+        zero_phase: ACCELERATING
+        dE_ref: 866025.4037844387
+  - D4:
+      kind: Drift
+      length: 0.2
+  - COR:
+      kind: Kicker
+      length: 0.0
+      MagneticMultipoleP:
+        Bn0L: -0.004884461481421207
+        Bs0L: -0.009768922962842415
+  - D5:
+      kind: Drift
+      length: 0.3
+  - COLL:
+      kind: Mask
+      length: 0.1
+      ApertureP:
+        x_min: -0.02
+        x_max: 0.02
+        y_min: -0.03
+        y_max: 0.03
+        shape: RECTANGULAR
+        location: BOTH_ENDS
+  - D6:
+      kind: Drift
+      length: 0.5
+  - B2:
+      kind: Bend
+      length: 1.0
+      BendP:
+        angle_ref: -0.1
+        e1_rect: 0.0
+        e2_rect: 0.0
+  - D7:
+      kind: Drift
+      length: 0.5
+  - QD:
+      kind: Quadrupole
+      length: 0.3
+      MagneticMultipoleP:
+        Bn1: -2.928618145149656
+      BodyShiftP:
+        x_offset: 0.0001
+        z_rot: 0.7853981633974483
+  - END:
+      kind: Marker
+  - demo:
+      kind: BeamLine
+      line:
+      - begin:
+          kind: BeginningEle
+          ReferenceP:
+            species_ref: proton
+            E_tot_ref: 1738272088.1599998
+      - QF
+      - D1
+      - B1
+      - D2
+      - SOL
+      - D3
+      - CAV
+      - D4
+      - COR
+      - D5
+      - COLL
+      - D6
+      - B2
+      - D7
+      - QD
+      - END
+  - demo_lattice:
+      kind: Lattice
+      branches:
+      - demo
+  - use: demo_lattice

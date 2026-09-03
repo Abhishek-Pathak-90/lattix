@@ -115,6 +115,23 @@ to the clone root.
 | `helix/mebt_line.dat` | tracewin | `examples/mebt_line.dat` |
 | `helix/matching_demo.dat` | tracewin | `examples/matching_demo.dat` |
 
+## PALS
+
+- Upstream: <https://github.com/pals-project/pals> (the PALS standard repository; fetched from
+  `raw.githubusercontent.com`, not from a local clone)
+- Commit: `a2b108342c84e03c80f606d88ff446059b757b9e` (main, 2026-09-01)
+- License: CC-BY-4.0, the PALS project (`LICENSES/PALS.txt`)
+- Per-file notes and the standard sections used: `pals/README.md`
+
+| File | Format | Upstream path |
+|---|---|---|
+| `pals/fodo.pals.yaml` | pals | `examples/fodo.pals.yaml` |
+| `pals/iota.pals.yaml` | pals | `examples/iota.pals.yaml` |
+| `pals/bend_angle_radius.pals.yaml` | pals | `examples/unit_tests/elements/bend_angle_radius.pals.yaml` |
+| `pals/rf_voltage.pals.yaml` | pals | `examples/unit_tests/elements/rf_voltage.pals.yaml` |
+| `pals/rf_gradient.pals.yaml` | pals | `examples/unit_tests/elements/rf_gradient.pals.yaml` |
+| `pals/drift_quad_bend.pals.yaml` | pals | `examples/unit_tests/elements/drift_quad_bend.pals.yaml` |
+
 ## Cite-only (NOT vendored)
 
 | Source | Why | Reference path |

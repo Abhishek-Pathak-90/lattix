@@ -1,0 +1,84 @@
+# bare-BeamLine (pre-standard) PALS document written by lattix <version> from the lattix IR
+# https://github.com/pals-project/pals
+fodo_channel:
+  kind: BeamLine
+  line:
+  - drift1:
+      kind: Drift
+      length: 0.25
+  - quad1:
+      kind: Quadrupole
+      length: 1.0
+      MagneticMultipoleP:
+        Bn1: 1.0
+  - drift2:
+      kind: Drift
+      length: 0.5
+  - quad2:
+      kind: Quadrupole
+      length: 1.0
+      MagneticMultipoleP:
+        Bn1: -1.0
+  - drift1_2:
+      kind: Drift
+      length: 0.25
+      MetaP:
+        alias: drift1
+  - drift1_3:
+      kind: Drift
+      length: 0.25
+      MetaP:
+        alias: drift1
+  - quad1_2:
+      kind: Quadrupole
+      length: 1.0
+      MagneticMultipoleP:
+        Bn1: 1.0
+      MetaP:
+        alias: quad1
+  - drift2_2:
+      kind: Drift
+      length: 0.5
+      MetaP:
+        alias: drift2
+  - quad2_2:
+      kind: Quadrupole
+      length: 1.0
+      MagneticMultipoleP:
+        Bn1: -1.0
+      MetaP:
+        alias: quad2
+  - drift1_4:
+      kind: Drift
+      length: 0.25
+      MetaP:
+        alias: drift1
+  - drift1_5:
+      kind: Drift
+      length: 0.25
+      MetaP:
+        alias: drift1
+  - quad1_3:
+      kind: Quadrupole
+      length: 1.0
+      MagneticMultipoleP:
+        Bn1: 1.0
+      MetaP:
+        alias: quad1
+  - drift2_3:
+      kind: Drift
+      length: 0.5
+      MetaP:
+        alias: drift2
+  - quad2_3:
+      kind: Quadrupole
+      length: 1.0
+      MagneticMultipoleP:
+        Bn1: -1.0
+      MetaP:
+        alias: quad2
+  - drift1_6:
+      kind: Drift
+      length: 0.25
+      MetaP:
+        alias: drift1

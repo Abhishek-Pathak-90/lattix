@@ -110,7 +110,9 @@ class Lattice(BaseModel):
     def _expand(self, name: str, reverse: bool, path: tuple[str, ...], out: list, depth: int) -> None:
         if depth > 64:
             raise ValueError(f"line nesting deeper than 64 at {name!r} (cycle?)")
-        if name in self.lines:
+        # an element and a line may share a name (from_sequence("s", [Drift("s")])): a line
+        # referring to its own name means the element, never itself
+        if name in self.lines and not (path and path[-1] == name and name in self.elements):
             items = self.lines[name].items
             seq = list(reversed(items)) if reverse else items
             for it in seq:

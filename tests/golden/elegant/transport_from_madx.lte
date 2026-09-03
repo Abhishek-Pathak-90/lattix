@@ -1,0 +1,33 @@
+! lattix <version> from madx
+! reference: proton, 799999911.84 eV kinetic
+
+! --- variables
+% 0.25 sto LQUAD
+% 0.4 sto LCAV
+% 0.08 sto ABEND
+
+! --- elements
+DRIFT_0: DRIF, L=0.375   ! lattix: name="drift_0" type="drift"
+QF: KQUAD, L=0.25, K1=0.5   ! lattix: name="qf" type="quadrupole"
+DRIFT_1: DRIF, L=0.975   ! lattix: name="drift_1" type="drift"
+BS: CSBEND, L=0.8, ANGLE=0.08, E1=0.04, E2=0.04, FINT=0   ! lattix: name="bs" type="sbend"
+DRIFT_2: DRIF, L=0.6   ! lattix: name="drift_2" type="drift"
+BPM: MONI, L=0   ! lattix: name="bpm" type="monitor"
+DRIFT_3: DRIF, L=0.875   ! lattix: name="drift_3" type="drift"
+QD: KQUAD, L=0.25, K1=-0.5   ! lattix: name="qd" type="quadrupole"
+DRIFT_4: DRIF, L=1.275   ! lattix: name="drift_4" type="drift"
+SF: KSEXT, L=0.2, K2=2   ! lattix: name="sf" type="sextupole"
+DRIFT_5: DRIF, L=1.2   ! lattix: name="drift_5" type="drift"
+CAV: RFCA, L=0.4, VOLT=1500000, PHASE=180, FREQ=325000000, CHANGE_P0=1   ! lattix: name="cav" type="rfcavity"
+DRIFT_6: DRIF, L=1.39989331341886   ! lattix: name="drift_6" type="drift"
+BR: RBEN, L=0.8, ANGLE=0.08, FINT=0   ! lattix: name="br" type="rbend"
+DRIFT_7: DRIF, L=1.09989331341886   ! lattix: name="drift_7" type="drift"
+OCT: MULT, L=0, ORDER=3, KNL=0.5   ! lattix: name="oct" type="multipole"
+DRIFT_8: DRIF, L=1.5   ! lattix: name="drift_8" type="drift"
+END_MARK: MARK   ! lattix: name="end_mark" type="marker"
+
+! --- beam lines
+TLINE: LINE=(DRIFT_0, QF, DRIFT_1, BS, DRIFT_2, BPM, DRIFT_3, QD, DRIFT_4, SF, DRIFT_5, CAV, DRIFT_6,&
+BR, DRIFT_7, OCT, DRIFT_8, END_MARK)
+
+USE, TLINE
