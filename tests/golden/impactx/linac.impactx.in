@@ -1,0 +1,81 @@
+###############################################################################
+# lattix <version> from <fmt>
+# Particle Beam(s)
+###############################################################################
+beam.npart = 10000
+beam.units = static
+beam.kin_energy = 2.1
+beam.charge = 1e-09
+beam.particle = proton
+beam.distribution = waterbag
+beam.lambdaX = 0.0001
+beam.lambdaY = 0.0001
+beam.lambdaT = 0.0001
+beam.lambdaPx = 0.0001
+beam.lambdaPy = 0.0001
+beam.lambdaPt = 0.0001
+
+###############################################################################
+# Beamline: lattice elements and segments
+###############################################################################
+lattice.elements = q1 da1 cav1 db1 q2 da2 cav2 db2 q3 da3 cav3 db3
+lattice.nslice = 1
+
+q1.type = quad
+q1.ds = 0.1
+q1.k = 5
+q1.nslice = 1
+
+da1.type = drift
+da1.ds = 0.2
+da1.nslice = 1
+
+cav1.type = shortrf
+cav1.V = 0.000319736677436836
+cav1.freq = 162500000
+cav1.phase = -30
+
+db1.type = drift
+db1.ds = 0.2
+db1.nslice = 1
+
+q2.type = quad
+q2.ds = 0.1
+q2.k = -4.71640752547624
+q2.nslice = 1
+
+da2.type = drift
+da2.ds = 0.2
+da2.nslice = 1
+
+cav2.type = shortrf
+cav2.V = 0.000319736677436836
+cav2.freq = 162500000
+cav2.phase = -30
+
+db2.type = drift
+db2.ds = 0.2
+db2.nslice = 1
+
+q3.type = quad
+q3.ds = 0.1
+q3.k = 4.47611096922601
+q3.nslice = 1
+
+da3.type = drift
+da3.ds = 0.2
+da3.nslice = 1
+
+cav3.type = shortrf
+cav3.V = 0.000319736677436836
+cav3.freq = 162500000
+cav3.phase = -30
+
+db3.type = drift
+db3.ds = 0.2
+db3.nslice = 1
+
+###############################################################################
+# Algorithms
+###############################################################################
+algo.space_charge = false

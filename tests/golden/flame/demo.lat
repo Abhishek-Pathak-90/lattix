@@ -1,0 +1,59 @@
+# written by lattix <version> (FLAME GLPS)
+
+sim_type = "MomentMatrix";
+IonEs = 938272088.16;
+IonEk = 2100000;
+IonZ = 1;
+IonChargeStates = [1];
+NCharge = [1];
+SampleFreq = 80500000;
+
+BaryCenter0 = [0, 0, 0, 0, 0, 0, 1];
+S0 = [
+  1, 0, 0, 0, 0, 0, 0,
+  0, 1e-06, 0, 0, 0, 0, 0,
+  0, 0, 1, 0, 0, 0, 0,
+  0, 0, 0, 1e-06, 0, 0, 0,
+  0, 0, 0, 0, 1, 0, 0,
+  0, 0, 0, 0, 0, 1e-06, 0,
+  0, 0, 0, 0, 0, 0, 0
+];
+
+S_lattix: source, vector_variable = "BaryCenter", matrix_variable = "S";
+START: marker;
+QF: quadrupole, L = 0.3, B2 = 0.12570786778694146, aper = 0.02;
+D1: drift, L = 0.5;
+B1: sbend, L = 1, phi = 5.729577951308233, phi1 = 2.8647889756541165, phi2 = 2.8647889756541165;
+BV: sbend, L = 1.05, phi = 2.3835044277442243, phi1 = 1.1917522138721122, phi2 = 1.1917522138721122, ver = 1;
+SOL: solenoid, L = 0.4, B = 0.06285393389347073;
+SX: sextupole, L = 0.2, B3 = 0.3142696694673537;
+OC: drift, L = 0.2;
+MP: orbtrim, theta_x = -0.02, theta_y = 0.01;
+CAV: rfcavity, L = 0.24, cavtype = "0.041QWR", f = 80500000, phi = -35, scl_fac = 0.64;
+CAV_V: drift, L = 0.1;
+COR: orbtrim, theta_x = 0.001, theta_y = -0.002;
+COLL: marker, aper = 0.02;
+BPM1: bpm;
+WIRE1: marker;
+FM: drift, L = 0.3;
+NC: drift, L = 0.4;
+RQ: drift, L = 0.1;
+STRIP: stripper;
+TAY: tmatrix, matrix = [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1];
+PA: marker;
+RC: marker;
+SUP: drift, L = 0.2;
+QSKEW: quadrupole, L = 0.3, B2 = 0.12570786778694146, roll = -0.39269908169872414;
+QMIS: quadrupole, L = 0.3, B2 = -0.12570786778694146, dx = 0.0001, dy = -0.0002, pitch = 0.001, yaw = 0.002, roll = 0.003;
+# lattix: name="END"
+END_x: marker;
+
+DEMO: LINE = (
+  S_lattix, START, QF, D1, B1, BV,
+  SOL, SX, OC, MP, CAV, CAV_V,
+  COR, COLL, BPM1, WIRE1, FM, NC,
+  RQ, STRIP, TAY, PA, RC, SUP,
+  QSKEW, QMIS, END_x
+);
+
+USE: DEMO;

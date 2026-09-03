@@ -56,8 +56,9 @@ def _first_map_s(res) -> float:
     return float(res.s_out[-1])
 
 
-EXPECTED_MEBT_CODES = {"FM_TO_DRIFT", "APERTURE_SHAPE", "APERTURE_DROPPED", "DRIFT_SHIFT_DROPPED",
-                       "SPECIES_ASSUMED", "RF_ABSOLUTE_PHASE", "FM_FILES_MISSING"}
+EXPECTED_MEBT_CODES = {"FM_TO_DRIFT", "FM_TO_CAVITY", "APERTURE_SHAPE", "APERTURE_DROPPED",
+                       "DRIFT_SHIFT_DROPPED", "SPECIES_ASSUMED", "RF_ABSOLUTE_PHASE",
+                       "FM_FILES_MISSING"}
 
 
 def _mebt_deck() -> Path:
@@ -123,13 +124,16 @@ def test_A3_mebt_tracewin_to_madx(tmp_path):
                     write_options={"energy_mode": "constant"})
     unexpected = [e for e in rep.problems() if e.code not in EXPECTED_MEBT_CODES]
     assert not unexpected, [e.code for e in unexpected]
-    assert rep.codes().get("FM_TO_DRIFT") == 4, "the MEBT has four buncher field maps"
+    # Phase 3: with the map files on disk the four bunchers are integrated and written as
+    # rfcavities (FM_TO_CAVITY); without them they stay FM_TO_DRIFT
+    n_maps = rep.codes().get("FM_TO_CAVITY", 0) + rep.codes().get("FM_TO_DRIFT", 0)
+    assert n_maps == 4, "the MEBT has four buncher field maps"
     beam = BeamSpec("h-", 2.1e6, 162.5e6)
     h = helix.run(src, fmt="tracewin", beam=beam)
     m = madx.run(out, fmt="madx", beam=beam, workdir=tmp_path / "m")
     assert abs(h.total_length - m.total_length) < 1e-9
-    # the four bunchers are drifts in MAD-X (Phase 3 brings FM_TO_CAVITY): compare the
-    # warm section before the first field map, where the physics is identical
+    # MAD-X keeps p0 constant across the bunchers: compare the warm section before the
+    # first field map, where the physics is identical
     s1 = _first_map_s(h)
     pc = compare_pair(_truncate(h, s1), _truncate(m, s1))
     assert pc.n_shared > 5, pc.row()
@@ -140,10 +144,11 @@ def test_A3_mebt_tracewin_to_madx(tmp_path):
 @pytest.mark.oracle_madx
 @pytest.mark.oracle_helix
 def test_A5_mebt_hwr_fieldmaps_to_madx_are_reported(tmp_path):
-    """mebt+hwr.dat has FIELD_MAP cavities/solenoids.  Phase 1 degrades them to
-    drifts (Phase 3 brings FM_TO_CAVITY): the report must list every map, strict
-    mode must raise, and the transverse optics of the warm MEBT section (before
-    the first map) must still agree with HELIX."""
+    """mebt+hwr.dat has FIELD_MAP cavities/solenoids: the report must carry an entry for
+    every map (Phase 1 degraded them all to drifts; Phase 3 integrates the ones whose files
+    are on disk into rfcavities and hard-edge solenoids), strict mode must raise on the
+    deck's other lossy cards, and the transverse optics of the warm MEBT section (before the
+    first map) must still agree with HELIX."""
     _formats_ready("madx", "tracewin")
     from lattix.fidelity import TranslationError
     from lattix.formats import translate
@@ -155,14 +160,28 @@ def test_A5_mebt_hwr_fieldmaps_to_madx_are_reported(tmp_path):
     out = tmp_path / "mebt_hwr.madx"
     rep = translate(src, out, read_options={"species": "h-", "kinetic_energy_eV": 2.1e6},
                     write_options={"energy_mode": "constant"})
-    fm = [e for e in rep.entries if e.kind == "FieldMap" and e.cls.value in ("LOSSY", "DROPPED")]
-    assert fm, "field-map degradation must be reported"
+    fm = [e for e in rep.entries if e.kind == "FieldMap"]
+    assert fm, "every field map must be reported"
+    assert {e.code for e in fm} <= {"FM_TO_CAVITY", "FM_SOL_HARDEDGE", "FM_QUAD_HARDEDGE",
+                                    "FM_TO_DRIFT", "FM_INTEGRATED", "FM_NOT_INTEGRATED",
+                                    "FM_FILES_MISSING", "RF_ABSOLUTE_PHASE", "CONST_P0",
+                                    "CONST_P0_START_RIGIDITY", "CONST_P0_LOCAL_RIGIDITY"}, \
+        sorted({e.code for e in fm})
     with pytest.raises(TranslationError):
         translate(src, tmp_path / "strict.madx", strict=True,
                   read_options={"species": "h-", "kinetic_energy_eV": 2.1e6})
     beam = BeamSpec("h-", 2.1e6, 162.5e6)
     h = helix.run(src, fmt="tracewin", beam=beam)
-    m = madx.run(out, fmt="madx", beam=beam, workdir=tmp_path / "m")
+    # MAD-X keeps p0 constant: with the HWR cavities' 8.1 MeV of gain linearised about a
+    # 2.1 MeV reference its own TWISS diverges on this open line (measured 2026-09-03 — the
+    # same deck twisses fine once the cavity volts are zeroed).  The optics leg therefore
+    # uses the Phase-1 deck (field_maps=False → the maps stay drifts), which is what the
+    # comparison up to the first map needs anyway.
+    drifted = tmp_path / "mebt_hwr_drifts.madx"
+    translate(src, drifted, read_options={"species": "h-", "kinetic_energy_eV": 2.1e6,
+                                          "field_maps": False},
+              write_options={"energy_mode": "constant"})
+    m = madx.run(drifted, fmt="madx", beam=beam, workdir=tmp_path / "m")
     s1 = _first_map_s(h)
     pc = compare_pair(_truncate(h, s1), _truncate(m, s1))
     assert pc.n_shared > 5, pc.row()

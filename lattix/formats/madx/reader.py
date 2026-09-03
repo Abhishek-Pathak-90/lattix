@@ -602,7 +602,7 @@ class Reader:
     def _edge_is_free(b: Element | None, edge: str, h: float, hgap: float) -> bool:
         """True when *b* is a bend of curvature *h* whose *edge* is still unset."""
         if not (isinstance(b, Bend) and b.length > 0
-                and abs(b.bend.g_ref(b.length) - h) <= 1e-9 * max(1.0, abs(h))):
+                and abs(b.bend.g_ref(b.length) - h) <= 1e-4 * max(1.0, abs(h))):   # ImpactX decks state H to 1.4e-6
             return False
         if b.bend.hgap and hgap and abs(b.bend.hgap - hgap) > 1e-12:
             return False               # two different gaps would double-count the fringe

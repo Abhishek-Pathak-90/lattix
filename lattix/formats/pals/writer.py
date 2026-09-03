@@ -93,6 +93,7 @@ from lattix.ir.elements import (
     Taylor,
 )
 from lattix.ir.expr import ExpressionError, evaluate
+from lattix.ir.fieldmap import replacement_for
 from lattix.ir.lattice import Lattice, Line, LineItem
 from lattix.ir.reference import ReferenceParticle
 from lattix.ir.rf import pals_phase
@@ -191,7 +192,7 @@ class Writer:
         "Bend": Rule("Bend"),
         "Solenoid": Rule("Solenoid"),
         "RFCavity": Rule("RFCavity"),
-        "FieldMap": Rule("RFCavity/Drift", "EQUIVALENT", "FM_AS_RFCAVITY",
+        "FieldMap": Rule("RFCavity/UnionEle/Drift", "EQUIVALENT", "FM_TO_CAVITY",
                          "field map written as an RFCavity with an explicit dE_ref"),
         "NCells": Rule("Drift", "LOSSY", "NCELLS_TO_DRIFT",
                        "PALS has no multi-cell DTL/CCL element; written as a drift"),
@@ -488,7 +489,8 @@ class Writer:
             out["length"] = self._maybe_expr(el, "length", el.length)
         out.update(node)
         self._common_groups(el, name, out)
-        self._record(el, rule)
+        if not isinstance(el, FieldMap):        # _def_fieldmap records the ladder's own entry
+            self._record(el, rule)
         return out
 
     def _record(self, el: Element, rule: Rule) -> None:
@@ -636,19 +638,26 @@ class Writer:
         return {"kind": "RFCavity", "RFP": self._rf_group(el, el.rf, item)}
 
     def _def_fieldmap(self, el: FieldMap, item: _Item) -> dict:
-        known = el.rf.dE_ref_eV is not None or el.rf.voltage_V or el.rf.gradient_V_per_m
-        if not known:
-            self.rep.lossy("FM_TO_DRIFT",
-                           "field map has no known voltage or dE_ref; written as a drift of the "
-                           "same length", element=el.name, kind="FieldMap", files=list(el.files))
+        """PLAN §4.3 degradation ladder.  The map files are not part of the PALS standard, so an
+        RF map becomes an ``RFCavity`` with an explicit ``dE_ref`` and a static solenoid /
+        quadrupole map a hard edge; a hard edge shorter than the map is wrapped in a
+        ``UnionEle`` of the map's own length so the padding stays implicit and the survey
+        does not move."""
+        r = replacement_for(el)
+        self.rep.add(r.cls, r.code, r.message, element=el.name, kind="FieldMap",
+                     **{"files": list(el.files), **r.details})
+        for cls, code, message in r.extra:
+            self.rep.add(cls, code, message, element=el.name, kind="FieldMap")
+        body = r.main
+        if body.kind == "Drift":
             return {"kind": "Drift"}
-        rf = self._rf_group(el, el.rf, item)
-        self.rep.equivalent("FM_AS_RFCAVITY",
-                            "field map written as an RFCavity with an explicit dE_ref; the map "
-                            "files are not part of the PALS standard",
-                            element=el.name, kind="FieldMap", files=list(el.files),
-                            dE_ref=rf.get("dE_ref"))
-        return {"kind": "RFCavity", "RFP": rf}
+        if body.kind == "RFCavity":
+            return {"kind": "RFCavity", "RFP": self._rf_group(body, body.rf, item)}
+        if not r.padded:
+            return getattr(self, f"_def_{body.kind.lower()}")(body, item)
+        key = self.names.assign(f"{el.name}_core", body)
+        node = self._definition(body, key, parent=item)
+        return {"kind": "UnionEle", "elements": {key: node}}
 
     def _def_ncells(self, el: NCells, item: _Item) -> dict:
         self.rep.lossy("NCELLS_TO_DRIFT",

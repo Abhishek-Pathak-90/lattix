@@ -28,7 +28,7 @@ PALS:
       length: 0.5
       RFP:
         frequency: 162500000.0
-        voltage: 2000000.0
+        voltage: 1954267.9710898297
         phase: -0.06366197723675814
         zero_phase: ACCELERATING
         dE_ref: 1800000.0

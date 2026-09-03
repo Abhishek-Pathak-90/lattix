@@ -1,0 +1,43 @@
+# written by lattix <version> (FLAME GLPS)
+
+sim_type = "MomentMatrix";
+MpoleLevel = "2";
+HdipoleFitMode = "1";
+IonEs = 931494320;
+IonEk = 500000;
+IonZ = 0.13865546218487396;
+IonChargeStates = [0.13865546218487396];
+NCharge = [1];
+SampleFreq = 80500000;
+Eng_Data_Dir = dir("data");
+Stripper_IonChargeStates = [0.3277310924369748];
+Stripper_NCharge = [5300];
+
+BaryCenter0 = [0, 0, 0, 0, 0, 0, 1];
+S0 = [
+  1, 0, 0, 0, 0, 0, 0,
+  0, 1e-06, 0, 0, 0, 0, 0,
+  0, 0, 1, 0, 0, 0, 0,
+  0, 0, 0, 1e-06, 0, 0, 0,
+  0, 0, 0, 0, 1, 0, 0,
+  0, 0, 0, 0, 0, 1e-06, 0,
+  0, 0, 0, 0, 0, 0, 0
+];
+
+S_lattix: source, vector_variable = "BaryCenter", matrix_variable = "S";
+d1: drift, L = 0.207065, aper = 0.02;
+cav1: rfcavity, L = 0.24, cavtype = "0.041QWR", f = 80500000, phi = -35, scl_fac = 0.64;
+bpm1: bpm;
+sol1: solenoid, L = 0.1, B = 5.34, aper = 0.02;
+dch1: orbtrim, theta_x = 0, theta_y = 0;
+bend1: sbend, L = 1, phi = -45, phi1 = -22.5, phi2 = -22.5, ver = 1;
+strip: stripper;
+tm1: tmatrix, matrix = [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1];
+end: marker;
+
+cell: LINE = (
+  S_lattix, d1, cav1, bpm1, sol1, dch1,
+  bend1, strip, tm1, end
+);
+
+USE: cell;

@@ -37,7 +37,11 @@ import shlex
 from pathlib import Path
 
 from lattix.fidelity import FidelityClass, FidelityReport
-from lattix.formats.tracewin.fieldmap_files import has_electric_channel, resolve_field_files
+from lattix.formats.tracewin.fieldmap_files import (
+    checksums,
+    has_electric_channel,
+    resolve_field_files,
+)
 from lattix.formats.tracewin.syntax import (
     COMMAND_ROLES,
     DEFAULT_FREQ_MHZ,
@@ -232,8 +236,10 @@ class _Parser:
         frequency_Hz: float | None,
         base_dir: str | Path | None,
         name: str | None,
+        field_maps: bool = True,
     ):
         self.path = Path(path)
+        self.field_maps = bool(field_maps)
         self.base_dir = str(Path(base_dir) if base_dir is not None else self.path.parent)
         self.species_given = species is not None
         self.sp = _species(species if species is not None else "proton")
@@ -809,7 +815,8 @@ class _Parser:
                 phase_rad=phase_from_tracewin_deg(kw["phase"], self.charge, sync),
                 phase_is_sync=sync,
             ),
-            meta={"field_map_dir": map_dir, "field_files": existing, "field_files_missing": missing},
+            meta={"field_map_dir": map_dir, "field_files": existing, "field_files_missing": missing,
+                  "field_files_sha256": checksums(existing) if existing else {}},
             provenance=self._prov("FIELD_MAP", label),
         )
         if err:
@@ -1135,8 +1142,21 @@ class _Parser:
                 f"{self.n_raw_phases} raw RF phase(s) interpreted for proton (no species given; "
                 "negative species need a π shift)",
             )
+        if self.field_maps:
+            self._integrate_field_maps()
         if self.postpass:
             self._postpass()
+
+    def _integrate_field_maps(self) -> None:
+        """Fill ``rf.dE_ref_eV`` / ``rf.voltage_V`` / ``rf.ttf`` / ``meta['map_summary']`` on every
+        FIELD_MAP whose component files are on disk (PLAN §6 task 3.1).  A map whose files are
+        missing keeps today's LOSSY ``FM_FILES_MISSING``; one whose files cannot be decoded is
+        reported EQUIVALENT ``FM_NOT_INTEGRATED`` and keeps ``dE_ref_eV = None``."""
+        from lattix.ir.fieldmap import annotate_field_maps
+
+        if not any(isinstance(e, (FieldMap, Superposition)) for e in self.lat.elements.values()):
+            return
+        annotate_field_maps(self.lat, report=self.report, checksums=False)
 
     def _postpass(self) -> None:
         """Conversions that need the local reference particle (rigidity, β) at each element."""
@@ -1220,6 +1240,7 @@ class Reader:
         frequency_Hz: float | None = None,
         base_dir: str | Path | None = None,
         name: str | None = None,
+        field_maps: bool = True,
         **_ignored,
     ) -> tuple[Lattice, FidelityReport]:
         """Parse a TraceWin deck.
@@ -1227,8 +1248,11 @@ class Reader:
         ``species`` defaults to proton; when the deck carries raw (non-sync) RF phases and no
         species was given, an EQUIVALENT ``SPECIES_ASSUMED`` entry is recorded.  ``frequency_Hz``
         replaces TraceWin's 352.21 MHz default for RF cards that precede any FREQ card.
-        ``base_dir`` resolves ``FIELD_MAP`` files (default: the deck's directory).  In strict mode
-        the first LOSSY/DROPPED entry raises :class:`~lattix.fidelity.TranslationError`.
+        ``base_dir`` resolves ``FIELD_MAP`` files (default: the deck's directory).  ``field_maps``
+        (default true) reads those files and fills each map's reference energy gain, effective
+        voltage, transit-time factor and ``meta['map_summary']``; ``field_maps=False`` keeps the
+        cards but leaves ``dE_ref_eV`` unknown.  In strict mode the first LOSSY/DROPPED entry
+        raises :class:`~lattix.fidelity.TranslationError`.
         """
         p = _Parser(
             Path(path),
@@ -1237,6 +1261,7 @@ class Reader:
             frequency_Hz=None if frequency_Hz in (None, "") else float(frequency_Hz),
             base_dir=base_dir,
             name=name,
+            field_maps=field_maps if isinstance(field_maps, bool) else _coerce_option(str(field_maps)),
         )
         lat, rep = p.parse()
         rep.raise_if(strict)

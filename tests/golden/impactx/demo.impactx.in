@@ -1,0 +1,128 @@
+###############################################################################
+# lattix <version> from <fmt>
+# Particle Beam(s)
+###############################################################################
+beam.npart = 10000
+beam.units = static
+beam.kin_energy = 800
+beam.charge = 1e-09
+beam.particle = proton
+beam.distribution = waterbag
+beam.lambdaX = 0.0001
+beam.lambdaY = 0.0001
+beam.lambdaT = 0.0001
+beam.lambdaPx = 0.0001
+beam.lambdaPy = 0.0001
+beam.lambdaPt = 0.0001
+
+###############################################################################
+# Beamline: lattice elements and segments
+###############################################################################
+lattice.elements = QF D1 B1_e1 B1 B1_e2 D2 SOL D3 CAV D4 COR D5 COLL D6 B2_e1 B2 B2_e2 D7 QD END
+lattice.nslice = 1
+
+QF.type = quad
+QF.ds = 0.3
+QF.k = 0.6
+QF.nslice = 1
+
+D1.type = drift
+D1.ds = 0.5
+D1.nslice = 1
+
+B1_e1.type = dipedge
+B1_e1.psi = 0.05
+B1_e1.rc = 10
+B1_e1.g = 0.04
+B1_e1.K2 = 0.5
+B1_e1.location = entry
+
+B1.type = sbend
+B1.ds = 1
+B1.rc = 10
+B1.nslice = 1
+
+B1_e2.type = dipedge
+B1_e2.psi = 0.05
+B1_e2.rc = 10
+B1_e2.g = 0.04
+B1_e2.K2 = 0.5
+B1_e2.location = exit
+
+D2.type = drift
+D2.ds = 0.5
+D2.nslice = 1
+
+SOL.type = solenoid
+SOL.ds = 0.4
+SOL.ks = 0.3
+SOL.nslice = 1
+
+D3.type = drift
+D3.ds = 0.2
+D3.nslice = 1
+
+CAV.type = shortrf
+CAV.V = 0.00106578892478945
+CAV.freq = 325000000
+CAV.phase = -30
+
+D4.type = drift
+D4.ds = 0.2
+D4.nslice = 1
+
+COR.type = kicker
+COR.xkick = 0.001
+COR.ykick = -0.002
+COR.units = dimensionless
+
+D5.type = drift
+D5.ds = 0.3
+D5.nslice = 1
+
+COLL.type = aperture
+COLL.aperture_x = 0.02
+COLL.aperture_y = 0.03
+COLL.shape = rectangular
+COLL.action = absorb
+
+D6.type = drift
+D6.ds = 0.5
+D6.nslice = 1
+
+B2_e1.type = dipedge
+B2_e1.psi = -0.05
+B2_e1.rc = -10
+B2_e1.g = 0
+B2_e1.K2 = 0
+B2_e1.location = entry
+
+B2.type = sbend
+B2.ds = 1
+B2.rc = -10
+B2.nslice = 1
+
+B2_e2.type = dipedge
+B2_e2.psi = -0.05
+B2_e2.rc = -10
+B2_e2.g = 0
+B2_e2.K2 = 0
+B2_e2.location = exit
+
+D7.type = drift
+D7.ds = 0.5
+D7.nslice = 1
+
+QD.type = quad
+QD.ds = 0.3
+QD.k = -0.599578511631037
+QD.nslice = 1
+
+END.type = drift
+END.ds = 0
+END.nslice = 1
+
+###############################################################################
+# Algorithms
+###############################################################################
+algo.space_charge = false

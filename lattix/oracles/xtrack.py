@@ -293,9 +293,17 @@ class XtrackOracle:
                                  f"was given") from e
         beam_used = MadxOracle._apply_beam(m, seq, beam)
         m.use(sequence=seq)
-        line = xt.Line.from_madx_sequence(m.sequence[seq], deferred_expressions=False)
+        try:
+            line = xt.Line.from_madx_sequence(m.sequence[seq], deferred_expressions=False)
+            loader_name = "cpymad + xt.Line.from_madx_sequence"
+        except AttributeError:
+            # xtrack 0.112: Line.from_madx_sequence hands MadLoader an element-class table
+            # without `Line` ('AttrDict' object has no attribute 'Line'); drive MadLoader directly
+            line = xt.MadLoader(m.sequence[seq], enable_expressions=False, classes=xt,
+                                allow_thick=True).make_line()
+            loader_name = "cpymad + xt.MadLoader(classes=xt, allow_thick=True)"
         m.quit()
-        return line, beam_used, "cpymad + xt.Line.from_madx_sequence", seq
+        return line, beam_used, loader_name, seq
 
     @staticmethod
     def _track_probe(line, probe: Probe, ke: float, mass_eV: float) -> np.ndarray:
