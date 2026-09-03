@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lattix"
-version = "0.0.1"
+version = "0.1.0"
 description = "Translate accelerator lattice files between codes with a fidelity report and engine-backed validation."
 readme = "README.md"
 requires-python = ">=3.11"
