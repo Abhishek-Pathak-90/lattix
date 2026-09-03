@@ -24,12 +24,22 @@ CONSTANTS: dict[str, float] = {
     "pi": math.pi, "twopi": 2 * math.pi, "e": math.e, "clight": 299_792_458.0,
     "emass": 0.51099895e-3, "pmass": 0.93827208816, "true": 1.0, "false": 0.0,
     "degrad": 180.0 / math.pi, "raddeg": math.pi / 180.0,
+    # PALS constant names (fundamentals.md)
+    "c_light": 299_792_458.0, "e_charge": 1.602_176_634e-19, "h_planck": 6.626_070_15e-34,
+    "hbar": 1.054_571_817e-34, "k_boltzmann": 1.380_649e-23, "mu_0": 1.256_637_062_12e-6,
+    "epsilon_0": 8.854_187_812_8e-12, "r_electron": 2.817_940_326_2e-15, "r_proton": 1.534_698_2e-18,
+    "fine_structure": 7.297_352_569_3e-3, "n_avogadro": 6.022_140_76e23,
 }
 FUNCTIONS: dict[str, Callable[..., float]] = {
     "sqrt": math.sqrt, "abs": abs, "sin": math.sin, "cos": math.cos, "tan": math.tan,
     "asin": math.asin, "acos": math.acos, "atan": math.atan, "atan2": math.atan2,
     "exp": math.exp, "log": math.log, "log10": math.log10, "floor": math.floor,
     "ceil": math.ceil, "sinh": math.sinh, "cosh": math.cosh, "tanh": math.tanh,
+    # PALS function names
+    "cot": lambda x: 1.0 / math.tan(x), "sinc": lambda x: 1.0 if x == 0 else math.sin(x) / x,
+    "factorial": lambda n: float(math.factorial(int(round(n)))), "nint": lambda x: float(round(x)),
+    "sign": lambda x: float((x > 0) - (x < 0)), "ceiling": math.ceil, "modulo": math.fmod,
+    "max": max, "min": min,
 }
 _BINOPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
            ast.Div: operator.truediv, ast.Pow: operator.pow, ast.Mod: operator.mod}
@@ -71,10 +81,15 @@ def _eval_node(node: ast.AST, variables: Mapping[str, float], resolver: Resolver
             return float(variables[key])
         if node.id in variables:
             return float(variables[node.id])
+        if resolver is not None:
+            # a deck's own parameter (MAD8 `E :=`, `PI :=`) beats the built-in constant
+            try:
+                return float(resolver(node.id))
+            except ExpressionError:
+                if key not in CONSTANTS:
+                    raise
         if key in CONSTANTS:
             return CONSTANTS[key]
-        if resolver is not None:
-            return float(resolver(node.id))
         raise ExpressionError(f"unknown identifier {node.id!r}")
     if isinstance(node, ast.BinOp) and type(node.op) in _BINOPS:
         return _BINOPS[type(node.op)](_eval_node(node.left, variables, resolver),

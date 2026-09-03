@@ -163,6 +163,11 @@ class Writer:
 
         rep = FidelityReport(target_format="madx", target_file=str(path))
         placed = propagate(lattice)
+        if mode == "sequence" and (not placed or placed[-1].s_out <= 0.0):
+            # MAD-X: "fatal: missing length for sequence" — a zero-length line is accepted (measured)
+            mode = "line"
+            rep.equivalent("ZERO_LENGTH_LINE_MODE",
+                           "MAD-X rejects a zero-length sequence; the lattice was written as a line")
         items = self._items(lattice, placed, rep)
         self._record_energy_mode(items, energy_mode, rep)
 
@@ -274,6 +279,67 @@ class Writer:
                 continue
             out.append(_Item(el, p.s_in, p.s_out, ref.brho_signed,
                              energy_gain_eV(el, ref)))
+        return self._resolve_overlaps(out, rep)
+
+    @staticmethod
+    def _resolve_overlaps(items: list[_Item], rep: FidelityReport) -> list[_Item]:
+        """MAD8 tolerates negative drifts (overlapping elements); MAD-X aborts on them
+        ("negative drift between elements").  Shift an overlapping thick element to the
+        previous element's end (LOSSY, geometry moved), move zero-length elements out of the
+        overlap, and shorten the following drift so the total length is preserved."""
+        out: list[_Item] = []
+        end = 0.0
+        last_thick: int | None = None
+        # a MAD8 negative drift usually just lists elements out of physical order (a marker
+        # placed downstream of elements that physically precede it): order by position first,
+        # so only genuine thick-element collisions are treated as overlaps
+        items = sorted(enumerate(items), key=lambda kv: (round(kv[1].s_in, 12), kv[0]))
+        items = [it for _, it in items]
+        for it in items:
+            el = it.element
+            if el.length < 0.0 and isinstance(el, Drift):
+                # a negative drift is pure bookkeeping: the following elements' s already include it
+                rep.equivalent("NEGATIVE_DRIFT_DROPPED",
+                               f"negative drift {el.length:.6g} m has no MAD-X form; downstream "
+                               "overlaps are resolved element by element", element=el.name, kind="Drift")
+                continue
+            s_in, s_out = it.s_in, it.s_out
+            if s_in < end - 1e-9 and last_thick is not None and isinstance(out[last_thick].element, Drift) \
+                    and out[last_thick].s_in <= s_in + 1e-9 and not isinstance(el, Drift):
+                # the overlap is with a DRIFT: a drift is only a gap in a MAD-X sequence, so
+                # shortening it keeps every other element exactly where the source put it
+                prev = out[last_thick]
+                rep.equivalent("DRIFT_SHORTENED_BY_OVERLAP",
+                               f"preceding drift shortened by {end - s_in:.6g} m so {el.name!r} keeps its position",
+                               element=prev.element.name, kind="Drift", shift_m=end - s_in)
+                out[last_thick] = _Item(prev.element, prev.s_in, s_in, prev.brho, prev.dE)
+                end = s_in
+            if s_in < end - 1e-9:
+                shift = end - s_in
+                if isinstance(el, Drift):
+                    if s_out < end - 1e-9:
+                        rep.lossy("DRIFT_INSIDE_OVERLAP", f"drift {el.name!r} lies entirely inside a preceding "
+                                  "element and was dropped", element=el.name, kind="Drift")
+                        continue
+                    rep.equivalent("DRIFT_SHORTENED_BY_OVERLAP",
+                                   f"drift shortened by {shift:.6g} m to absorb an upstream overlap",
+                                   element=el.name, kind="Drift", shift_m=shift)
+                    s_in = end
+                elif el.length == 0.0:
+                    rep.lossy("MARKER_MOVED_OUT_OF_OVERLAP",
+                              f"zero-length element moved {shift:.6g} m downstream out of an overlap",
+                              element=el.name, kind=el.kind, shift_m=shift)
+                    s_in = s_out = end
+                else:
+                    rep.lossy("OVERLAP_SHIFTED",
+                              f"element starts {shift:.6g} m inside the previous one (MAD8 negative drift); "
+                              "shifted downstream — MAD-X cannot overlap elements",
+                              element=el.name, kind=el.kind, shift_m=shift)
+                    s_in, s_out = end, s_out + shift
+            out.append(_Item(el, s_in, s_out, it.brho, it.dE))
+            if s_out > s_in:
+                last_thick = len(out) - 1
+            end = max(end, s_out)
         return out
 
     @staticmethod
@@ -574,6 +640,11 @@ class Writer:
     # -- sequence / line ----------------------------------------------------
     def _sequence_block(self, seq_name: str, items: list[_Item], defs: dict,
                         total: float) -> list[str]:
+        if total <= 0.0:
+            raise ValueError(
+                "MAD-X aborts on a zero-length sequence (measured with cpymad 5.09.03); "
+                "use mode='line' for a lattice of thin elements only"
+            )
         out = [f"{seq_name}: sequence, l={_num(total)}, refer=centre;"]
         placed = 0
         for it in items:

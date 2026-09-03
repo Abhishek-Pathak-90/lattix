@@ -321,9 +321,10 @@ def test_energy_mode_local_vs_constant(tmp_path):
 
 def test_non_accelerating_cavity_records_nothing(tmp_path):
     """A bunching cavity at φ = −π/2 gains nothing, so no CONST_P0 entry."""
-    lat = one_element(RFCavity(name="cav", length=0.0,
-                               rf=RFP(voltage_V=1.5e6, phase_rad=-math.pi / 2,
-                                      frequency_Hz=325e6)))
+    lat = Lattice.from_sequence("s", [Drift(name="d", length=1.0),
+                                      RFCavity(name="cav", length=0.0,
+                                               rf=RFP(voltage_V=1.5e6, phase_rad=-math.pi / 2,
+                                                      frequency_Hz=325e6))], proton_ref())
     rep = Writer().write(lat, tmp_path / "b.madx")
     assert rep.codes() == {}
 
@@ -521,7 +522,9 @@ def test_line_mode_without_line_structure(tmp_path):
 
 def test_directive_roles_that_are_only_comments(tmp_path):
     for role in sorted(Writer.COMMENT_ROLES):
-        lat = one_element(Directive(name="dv", card="LATTICE", args=["4"], role=role))
+        lat = Lattice.from_sequence("s", [Drift(name="d", length=1.0),
+                                          Directive(name="dv", card="LATTICE", args=["4"], role=role)],
+                                    proton_ref())
         out = tmp_path / f"{role}.madx"
         rep = Writer().write(lat, out, strict=True)      # EXACT: strict must not raise
         assert rep.ok

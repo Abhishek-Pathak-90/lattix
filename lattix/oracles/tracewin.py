@@ -109,7 +109,14 @@ class TracewinOracle:
                 f"freq1={freq_mhz:.12g}", f"nbr_part1={nbr_part}"]
         if beam.species.lower() != "proton":
             args += [f"mass1={beam.mass_eV * 1e-6:.12g}", f"charge1={beam.charge}"]
-        proc = subprocess.run(args, cwd=wd, capture_output=True, text=True, timeout=timeout)
+        proc = None
+        for attempt in range(2):          # the trial build stalls now and then; one retry
+            try:
+                proc = subprocess.run(args, cwd=wd, capture_output=True, text=True, timeout=timeout)
+                break
+            except subprocess.TimeoutExpired:
+                if attempt == 1:
+                    raise
         log = (proc.stdout or "") + (proc.stderr or "")
         if "Limited trial version" in log:
             raise RuntimeError(f"TraceWin trial licence limit hit: {log.strip().splitlines()[:2]}")

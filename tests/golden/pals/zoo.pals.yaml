@@ -1,0 +1,132 @@
+# PALS document written by lattix <version> from the lattix IR
+# https://github.com/pals-project/pals
+PALS:
+  version: null
+  notes:
+  - written by lattix <version> from the lattix IR
+  - dropped tracewin directive ADJUST 1 2
+  - 'TITLE: a demo'
+  facility:
+  - sx:
+      kind: Sextupole
+      length: 0.2
+      MagneticMultipoleP:
+        Bn2: 12.0
+  - oc:
+      kind: Octupole
+      length: 0.2
+      MagneticMultipoleP:
+        Bn3: 30.0
+  - mp:
+      kind: Multipole
+      length: 0.0
+      MagneticMultipoleP:
+        Bn2L: 0.4
+        Bs3L: -0.1
+  - fm:
+      kind: RFCavity
+      length: 0.5
+      RFP:
+        frequency: 162500000.0
+        voltage: 2000000.0
+        phase: -0.06366197723675814
+        zero_phase: ACCELERATING
+        dE_ref: 1800000.0
+  - fm_blind:
+      kind: Drift
+      length: 0.5
+  - nc:
+      kind: Drift
+      length: 0.6
+  - rq:
+      kind: Drift
+      length: 0.05
+  - bpm:
+      kind: Instrument
+      length: 0.0
+      MetaP:
+        label: BPM
+  - foil:
+      kind: Foil
+      length: 0.0
+  - tay:
+      kind: Taylor
+      TaylorP:
+        x_out:
+        - term 1.0 1 0 0 0 0 0
+        - term 0.75 0 1 0 0 0 0
+        px_out:
+        - term 1.0 0 1 0 0 0 0
+        y_out:
+        - term 0.0001 0 0 0 0 0 0
+        - term 1.0 0 0 1 0 0 0
+        py_out:
+        - term 1.0 0 0 0 1 0 0
+        z_out:
+        - term 1.0 0 0 0 0 1 0
+        pz_out:
+        - term 1.0 0 0 0 0 0 1
+  - pat:
+      kind: Patch
+      PatchP:
+        x_offset: 0.0
+        y_offset: 0.0
+        z_offset: 0.1
+        x_rot: 0.0
+        y_rot: 0.02
+        z_rot: 0.0
+  - rc:
+      kind: ReferenceChange
+      ReferenceChangeP:
+        dE_ref: 500000.0
+  - per:
+      kind: Marker
+      MetaP:
+        label: period_start
+  - sup:
+      kind: UnionEle
+      length: 1.0
+      elements:
+        sup_sol:
+          kind: Solenoid
+          length: 0.8
+          SolenoidP:
+            Bsol: 0.2
+        sup_cav:
+          kind: RFCavity
+          length: 0.3
+          RFP:
+            frequency: 325000000.0
+            voltage: 1000000.0
+            phase: 0.0
+            zero_phase: ACCELERATING
+            dE_ref: 1000000.0
+          BodyShiftP:
+            z_offset: 0.15000000000000002
+  - zoo:
+      kind: BeamLine
+      line:
+      - begin:
+          kind: BeginningEle
+          ReferenceP:
+            species_ref: proton
+            E_tot_ref: 1038272088.1600001
+      - sx
+      - oc
+      - mp
+      - fm
+      - fm_blind
+      - nc
+      - rq
+      - bpm
+      - foil
+      - tay
+      - pat
+      - rc
+      - per
+      - sup
+  - zoo_lattice:
+      kind: Lattice
+      branches:
+      - zoo
+  - use: zoo_lattice

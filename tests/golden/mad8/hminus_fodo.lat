@@ -1,0 +1,20 @@
+! lattix <version> from IR
+
+BEAM, MASS=0.93929408606, CHARGE=-1, ENERGY=1.73881631804175
+
+! --- parameters
+BRHO := 4.881
+KF := 1.5
+LQ := 0.2
+
+! --- elements
+D1: DRIFT, L=0.5
+QF: QUADRUPOLE, L=0.2, K1=KF
+QD: QUADRUPOLE, L=0.2, K1=-KF
+
+! --- lines
+CELL: LINE=(D1, QF, D1, QD)
+TOP: LINE=(3*CELL, -CELL)
+
+USE, TOP
+RETURN

@@ -84,6 +84,7 @@ class MagneticMultipoleP(_Model):
 
 
 class BendP(_Model):
+    # PALS spells `angle` as `angle_ref` and stores edge integrals as the product fint·hgap
     angle: float = 0.0            # rad, signed; horizontal plane unless tilt_ref
     e1: float = 0.0               # rad, sector-referenced entrance pole-face angle
     e2: float = 0.0
@@ -100,6 +101,7 @@ class BendP(_Model):
 
 class RFP(_Model):
     frequency_Hz: float | None = None
+    harmon: float | None = None       # PALS/MAD harmonic number when the deck gives it instead of a frequency
     voltage_V: float = 0.0            # effective accelerating voltage for the reference particle (≥ 0 normally)
     gradient_V_per_m: float | None = None
     phase_rad: float = 0.0            # synchronous phase, 0 = crest, cos convention
@@ -247,6 +249,7 @@ class Foil(Element):
     kind = "Foil"
     material: str = "C"
     thickness_kg_per_m2: float = 0.0
+    dE_ref_eV: float | None = None      # PALS FoilP.dE_ref (reference energy loss)
 
 
 class Taylor(Element):
@@ -265,6 +268,8 @@ class Patch(Element):
     x_rot: float = 0.0
     y_rot: float = 0.0
     tilt: float = 0.0
+    t_offset_s: float | None = None        # Bmad patch t_offset
+    e_tot_offset_eV: float | None = None   # Bmad patch e_tot_offset
 
 
 class ReferenceChange(Element):
@@ -300,6 +305,8 @@ class Superposition(Element):
     kind = "Superposition"
     children: list[tuple[float, str]] = Field(default_factory=list)
     rf: RFP = Field(default_factory=RFP)
+    ref: str | None = None            # Bmad superimpose ref element (when not resolved geometrically)
+    offset_m: float | None = None     # Bmad superimpose offset
 
 
 ELEMENT_KINDS: dict[str, type[Element]] = {

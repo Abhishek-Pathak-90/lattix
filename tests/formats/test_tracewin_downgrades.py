@@ -275,7 +275,7 @@ _WRITER_EQUIVALENT = [
     ("ZERO_ANGLE_BEND_AS_DRIFT", Bend(name="b", length=0.5)),
     ("INSTRUMENT_AS_MARKER", Instrument(name="i", family="PROFILE")),
     ("ZERO_MULTIPOLE_OMITTED", Multipole(name="m")),
-    ("THICK_KICKER_AS_THIN", Kicker(name="k", length=0.1, hkick=1e-3)),
+    ("THICK_KICKER_SPLIT", Kicker(name="k", length=0.1, hkick=1e-3)),
     ("COLLIMATOR_NO_APERTURE", Collimator(name="c")),
 ]
 

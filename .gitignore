@@ -14,3 +14,4 @@ sectormap
 runs/
 .DS_Store
 .env
+*.digested*

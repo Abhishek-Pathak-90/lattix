@@ -1,0 +1,24 @@
+! lattix <version> from madx
+! reference: proton, 799999911.84 eV kinetic
+
+! --- variables
+% 0.3 sto LQUAD
+% 0.6 sto KFOCUS
+% 1 sto LBEND
+% 0.1 sto ABEND
+% 0.05 sto EHALF
+
+! --- elements
+QF: KQUAD, L=0.3, K1=0.6   ! lattix: name="qf" type="quadrupole"
+DRIFT_0: DRIF, L=0.7   ! lattix: name="drift_0" type="drift"
+B1: CSBEND, L=1, ANGLE=0.1, E1=0.05, E2=0.05, FINT=0   ! lattix: name="b1" type="sbend"
+DRIFT_1: DRIF, L=1   ! lattix: name="drift_1" type="drift"
+QD: KQUAD, L=0.3, K1=-0.6   ! lattix: name="qd" type="quadrupole"
+DRIFT_2: DRIF, L=1   ! lattix: name="drift_2" type="drift"
+DRIFT_3: DRIF, L=1.3   ! lattix: name="drift_3" type="drift"
+M1: MARK   ! lattix: name="m1" type="marker"
+
+! --- beam lines
+FODO: LINE=(QF, DRIFT_0, B1, DRIFT_1, QD, DRIFT_2, B1, DRIFT_3, M1)
+
+USE, FODO
