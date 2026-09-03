@@ -1,0 +1,6 @@
+HELIX examples, (c) Abhishek Pathak, redistributed with permission of the author.
+
+The files under tests/data/public/helix/ are teaching/demo decks from the HELIX
+linac code (HELIX_v3/examples/). They are included in the lattix test-suite with
+the author's permission; the HELIX code itself is licensed separately
+(GPL-3.0 / owner) and is not part of this repository.

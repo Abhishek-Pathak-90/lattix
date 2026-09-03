@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lattix"
+version = "0.0.1"
+description = "Translate accelerator lattice files between codes with a fidelity report and engine-backed validation."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "BSD-3-Clause"}
+authors = [{name = "Abhishek Pathak"}]
+dependencies = [
+  "numpy>=1.24",
+  "pydantic>=2.5",
+  "lark>=1.1",
+  "pyyaml>=6",
+]
+
+[project.optional-dependencies]
+oracles = ["cpymad>=1.16", "xtrack>=0.60", "pysdds>=0.6"]
+pals = ["pals-schema>=0.3"]
+dev = ["pytest>=7", "pytest-cov", "hypothesis>=6", "ruff", "mypy"]
+
+[project.scripts]
+lattix = "lattix.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["lattix*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+  "oracle_madx: needs MAD-X via cpymad",
+  "oracle_xtrack: needs xtrack",
+  "oracle_bmad: needs Bmad/Tao via pytao (conda env)",
+  "oracle_elegant: needs the elegant binary",
+  "oracle_impactx: needs impactx",
+  "oracle_impactz: needs IMPACT-Z",
+  "oracle_flame: needs flame-code",
+  "oracle_helix: needs a HELIX checkout (HELIX_ROOT)",
+  "oracle_tracewin: needs a licensed TraceWin binary (TRACEWIN_EXE); local only",
+  "corpus: needs LATTIX_CORPUS_DIR with the private corpus manifest",
+  "slow: long-running",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.setuptools.package-data]
+lattix = ["oracles/data/*"]

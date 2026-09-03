@@ -1,0 +1,47 @@
+! ===========================================================================
+! Mixed transport line — HELIX MAD-X import demo (richer than fodo.madx)
+!
+! Exercises more of HELIX's MAD-X subset parser:
+!   QUADRUPOLE (k1)   SBEND + RBEND   SEXTUPOLE (k2)
+!   RFCAVITY          MULTIPOLE (knl) MONITOR / MARKER
+!   variables + arithmetic expressions
+!
+! Open with  File -> Open Lattice...  and pick this .madx file.
+! ===========================================================================
+
+TITLE, "HELIX MAD-X demo - mixed transport line";
+
+! --- Beam: 800 MeV kinetic proton (total energy = m_p + W_kin, in GeV) -----
+beam, particle=proton, energy=1.738272;
+
+! --- Parameters ------------------------------------------------------------
+lquad = 0.25;
+kquad = 0.5;
+lcav  = 0.40;
+abend = 0.08;          ! bend angle [rad]
+
+! --- Element definitions ---------------------------------------------------
+qf:  quadrupole, l=lquad, k1=kquad;
+qd:  quadrupole, l=lquad, k1=-kquad;
+sf:  sextupole,  l=0.20,  k2=2.0;
+bs:  sbend,      l=0.80,  angle=abend, e1=abend/2, e2=abend/2;
+br:  rbend,      l=0.80,  angle=abend;          ! edges get +angle/2
+cav: rfcavity,   l=lcav,  volt=1.5, lag=0.0, freq=325.0;
+oct: multipole,  knl={0.0, 0.0, 0.0, 0.5};      ! thin octupole component
+bpm: monitor;
+end_mark: marker;
+
+! --- Sequence --------------------------------------------------------------
+tline: sequence, l=12.0, refer=centre;
+  qf,       at=0.5;
+  bs,       at=2.0;
+  bpm,      at=3.0;
+  qd,       at=4.0;
+  sf,       at=5.5;
+  cav,      at=7.0;
+  br,       at=9.0;
+  oct,      at=10.5;
+  end_mark, at=12.0;
+endsequence;
+
+use, sequence=tline;

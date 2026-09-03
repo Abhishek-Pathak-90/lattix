@@ -1,0 +1,41 @@
+! ===========================================================================
+! Simple FODO + bend cell — HELIX MAD-X import demo
+!
+! Open this file in HELIX via  File -> Open Lattice...  (the file dialog
+! accepts *.madx and *.seq alongside TraceWin *.dat).  HELIX's in-house
+! MAD-X subset parser converts it to a native Lattice: quadrupole k1 ->
+! gradient and bend angle -> Dipole+Edge geometry, with all lengths
+! converted from MAD-X metres to HELIX millimetres, and drifts inserted
+! to fill the gaps between sequence members.
+! ===========================================================================
+
+TITLE, "HELIX MAD-X demo - FODO cell";
+
+! --- Beam ------------------------------------------------------------------
+! 800 MeV kinetic proton.  MAD-X 'energy' is the TOTAL energy in GeV:
+!   E_total = m_p + W_kin = 0.938272 + 0.800 = 1.738272 GeV
+beam, particle=proton, energy=1.738272;
+
+! --- Parameters (exercise the expression evaluator) ------------------------
+lquad  = 0.3;                 ! quadrupole length [m]
+kfocus = 0.6;                 ! focusing quad strength [1/m^2]
+lbend  = 1.0;                 ! bend arc length [m]
+abend  = 0.1;                 ! bend angle [rad]
+ehalf  = abend / 2.0;         ! symmetric pole-face angles
+
+! --- Element definitions ---------------------------------------------------
+qf: quadrupole, l=lquad, k1=kfocus;
+qd: quadrupole, l=lquad, k1=-kfocus;
+b1: sbend,      l=lbend, angle=abend, e1=ehalf, e2=ehalf;
+m1: marker;
+
+! --- Sequence (REFER=centre is the MAD-X default) --------------------------
+fodo: sequence, l=6.6, refer=centre;
+  qf, at=0.15;
+  b1, at=1.5;
+  qd, at=3.15;
+  b1, at=4.8;
+  m1, at=6.6;
+endsequence;
+
+use, sequence=fodo;

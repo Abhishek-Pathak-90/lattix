@@ -1,0 +1,6 @@
+;Example : Repeat 10 times a quadrupole
+DRIFT 5 30
+REPEAT_ELE 10 1
+QUAD 10 15 30 0
+DRIFT 5 30
+END
