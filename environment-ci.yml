@@ -1,0 +1,24 @@
+# CI / oracle environment for lattix (everything except Bmad, which needs its own env).
+# cpymad and xtrack are PyPI-only -> pip section. (lightwin needs py>=3.12: not included.)
+name: lattix
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - pydantic>=2.5
+  - lark
+  - pyyaml
+  - pytest
+  - pytest-cov
+  - hypothesis
+  - elegant
+  - impactx
+  - impact-z
+  - pip
+  - pip:
+      - cpymad
+      - xtrack
+      - pysdds
+      - pals-schema

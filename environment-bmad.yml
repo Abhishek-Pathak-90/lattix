@@ -1,0 +1,10 @@
+# Bmad/Tao oracle environment (kept separate: bmad pins python 3.13 / numpy 2).
+# The existing local env named `bmad` (bmad 20260828.0, pytao 1.2.4) is equivalent.
+name: lattix-bmad
+channels:
+  - conda-forge
+dependencies:
+  - python=3.13
+  - bmad
+  - pytao
+  - numpy

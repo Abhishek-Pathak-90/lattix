@@ -1,0 +1,15 @@
+name: fast
+on: [push, pull_request]
+jobs:
+  fast:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e ".[dev]" pysdds pals-schema
+      - run: ruff check lattix tests
+      - run: pytest -m "not corpus and not slow and not oracle_madx and not oracle_xtrack and not oracle_bmad and not oracle_elegant and not oracle_impactx and not oracle_impactz and not oracle_flame and not oracle_helix and not oracle_tracewin" --cov=lattix --cov-fail-under=85

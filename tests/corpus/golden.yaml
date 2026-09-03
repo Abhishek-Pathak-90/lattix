@@ -1,0 +1,92 @@
+bal2025_flat:
+  file: BAL2025V0213.FLAT
+  format: mad8
+  helix_error: 'ValueError: MAD8: unknown identifier ''SQRT'''
+bend_line_dat:
+  file: bend_line.dat
+  format: tracewin
+  helix_n_elements: 19
+  helix_n_warnings: 0
+  helix_total_length_m: 4.541592654
+btl2022_flat:
+  file: BTL2022V0922_NEWCOL.FLAT
+  format: mad8
+  helix_n_elements: 993
+  helix_n_warnings: 2
+  helix_total_length_m: 308.18159353
+btl2022_lte:
+  file: elegant_lattice.lte
+  format: elegant
+  helix_n_elements: 592
+  helix_n_warnings: 224
+  helix_total_length_m: 0.0
+btl2025_lat:
+  file: BTL2025v0703.lat
+  format: mad8
+  helix_n_elements: 1125
+  helix_n_warnings: 2
+  helix_total_length_m: 307.96991816
+btl_dat:
+  file: btl.dat
+  format: tracewin
+  helix_n_elements: 960
+  helix_n_warnings: 37
+  helix_total_length_m: 304.906284063
+fnalscl_dat:
+  file: fnalscl.dat
+  format: tracewin
+  helix_n_elements: 284
+  helix_n_warnings: 0
+  helix_total_length_m: 70.508306627
+fodo_cell_dat:
+  file: fodo_cell.dat
+  format: tracewin
+  helix_n_elements: 22
+  helix_n_warnings: 0
+  helix_total_length_m: 1.6
+fodo_madx:
+  file: fodo.madx
+  format: madx
+  helix_n_elements: 13
+  helix_n_warnings: 0
+  helix_total_length_m: 6.6
+  madx_betx_end: 7.163515
+  madx_bety_end: 15.286662
+  madx_length_m: 6.6
+  madx_n_rows: 11
+  madx_sequence: fodo
+hwr_cm_lte:
+  file: TraceWin_elegant_lattice.lte
+  format: elegant
+  helix_n_elements: 50
+  helix_n_warnings: 0
+  helix_total_length_m: 5.901207
+lebt_pxie_dat:
+  file: lebt_pxie.dat
+  format: tracewin
+  helix_n_elements: 36
+  helix_n_warnings: 0
+  helix_total_length_m: 1.95610003
+mebt_dat:
+  file: mebt.dat
+  format: tracewin
+  helix_n_elements: 427
+  helix_n_warnings: 0
+  helix_total_length_m: 13.0556078
+mebt_hwr_dat:
+  file: mebt+hwr.dat
+  format: tracewin
+  helix_n_elements: 483
+  helix_n_warnings: 1
+  helix_total_length_m: 18.9568154
+transport_madx:
+  file: transport.madx
+  format: madx
+  helix_n_elements: 26
+  helix_n_warnings: 0
+  helix_total_length_m: 12.0
+  madx_betx_end: 22.942724
+  madx_bety_end: 15.045291
+  madx_length_m: 12.0
+  madx_n_rows: 20
+  madx_sequence: tline

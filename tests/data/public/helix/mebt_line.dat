@@ -1,0 +1,52 @@
+; Medium Energy Beam Transport (MEBT) line
+; Transport from RFQ exit to DTL entrance
+; 3 MeV proton, 352.21 MHz, with rebuncher cavities
+;
+TITLE MEBT Transport Line
+FREQ 352.21
+PARTRAN_STEP 100 50
+;
+; Matching section from RFQ
+DRIFT 30.0 20.0
+QUAD 40.0 12.0 15.0
+DRIFT 60.0 20.0
+QUAD 40.0 -10.0 15.0
+DRIFT 60.0 20.0
+QUAD 40.0 8.0 15.0
+DRIFT 30.0 20.0
+;
+DIAG_SIZE 1
+;
+; Rebuncher 1 (operated near zero-crossing for bunching)
+; E0TL = 0.08 MV = 80000 V; phi_s = -85 deg; aperture 15 mm
+GAP 80000 -85.0 15.0
+;
+; Transport to second rebuncher
+DRIFT 40.0 20.0
+QUAD 40.0 -9.0 15.0
+DRIFT 80.0 20.0
+QUAD 40.0 7.0 15.0
+DRIFT 80.0 20.0
+QUAD 40.0 -9.0 15.0
+DRIFT 40.0 20.0
+;
+DIAG_SIZE 1
+;
+; Rebuncher 2
+GAP 80000 -85.0 15.0
+;
+; Final matching to DTL
+DRIFT 40.0 20.0
+QUAD 40.0 11.0 15.0
+DRIFT 60.0 20.0
+QUAD 40.0 -11.0 15.0
+DRIFT 40.0 20.0
+;
+; Steering correctors (placeholder, zero kick)
+THIN_STEERING 0.0 0.0
+;
+; Aperture check (circular 15 mm)
+APERTURE 15.0 0 1
+;
+DIAG_PHASE 1
+END

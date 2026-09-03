@@ -1,0 +1,34 @@
+; FODO cell - basic quadrupole focusing channel
+; 3 MeV proton beam, 352.21 MHz bunching
+TITLE FODO Quadrupole Channel
+FREQ 352.21
+PARTRAN_STEP 100 50
+;
+; 4 FODO periods
+; Period 1
+DRIFT 50 30
+QUAD 50 5 20
+DRIFT 200 30
+QUAD 50 -5 20
+DRIFT 50 30
+; Period 2
+DRIFT 50 30
+QUAD 50 5 20
+DRIFT 200 30
+QUAD 50 -5 20
+DRIFT 50 30
+; Period 3
+DRIFT 50 30
+QUAD 50 5 20
+DRIFT 200 30
+QUAD 50 -5 20
+DRIFT 50 30
+; Period 4
+DRIFT 50 30
+QUAD 50 5 20
+DRIFT 200 30
+QUAD 50 -5 20
+DRIFT 50 30
+;
+DIAG_PHASE 1
+END

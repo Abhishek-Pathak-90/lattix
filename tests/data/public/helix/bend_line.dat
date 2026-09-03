@@ -1,0 +1,38 @@
+; Achromatic bend section
+; 100 MeV proton beam, 90-degree bend with dispersion matching
+;
+TITLE Achromatic Bend (90 deg)
+FREQ 352.21
+PARTRAN_STEP 100 50
+;
+; Matching quads before bend
+DRIFT 100.0 40.0
+QUAD 60.0 3.0 30.0
+DRIFT 150.0 40.0
+QUAD 60.0 -3.5 30.0
+DRIFT 100.0 40.0
+;
+DIAG_SIZE 1
+;
+; First 45-degree bend (pure sector, field_index=0)
+BEND 45.0 2000.0 0.0 30.0 0
+;
+; Drift between bends
+DRIFT 200.0 40.0
+QUAD 60.0 2.5 30.0
+DRIFT 200.0 40.0
+;
+DIAG_SIZE 1
+;
+; Second 45-degree bend (completes 90 degrees)
+BEND 45.0 2000.0 0.0 30.0 0
+;
+; Dispersion-closing quads
+DRIFT 100.0 40.0
+QUAD 60.0 -2.8 30.0
+DRIFT 150.0 40.0
+QUAD 60.0 3.2 30.0
+DRIFT 100.0 40.0
+;
+DIAG_PHASE 1
+END

@@ -1,0 +1,33 @@
+; Solenoid focusing channel
+; Low-energy proton beam (0.5 MeV) with solenoid focusing
+; Typical for LEBT (Low Energy Beam Transport) after ion source
+;
+TITLE Solenoid LEBT Channel
+FREQ 352.21
+PARTRAN_STEP 100 50
+;
+; Space charge compensation in LEBT (90% neutralization)
+SPACE_CHARGE_COMP 0.9
+;
+; Solenoid 1
+DRIFT 30.0 40.0
+SOLENOID 150.0 0.25 30.0
+DRIFT 80.0 40.0
+;
+DIAG_SIZE 1
+;
+; Solenoid 2
+SOLENOID 150.0 0.30 30.0
+DRIFT 80.0 40.0
+;
+DIAG_SIZE 1
+;
+; Solenoid 3
+SOLENOID 150.0 0.25 30.0
+DRIFT 50.0 40.0
+;
+; Aperture at RFQ entrance (circular 15 mm)
+APERTURE 15.0 0 1
+;
+DIAG_PHASE 1
+END

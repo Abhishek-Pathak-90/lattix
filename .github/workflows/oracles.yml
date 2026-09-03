@@ -1,0 +1,20 @@
+name: oracles
+on: [push, pull_request]
+jobs:
+  oracles:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    defaults: { run: { shell: bash -el {0} } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
+        with: { environment-file: environment-ci.yml, activate-environment: lattix, auto-activate-base: false }
+      - uses: conda-incubator/setup-miniconda@v3
+        with: { environment-file: environment-bmad.yml, activate-environment: lattix-bmad, auto-activate-base: false }
+      - run: conda activate lattix && pip install -e . && python -c "from lattix.oracles import available_oracles; print(available_oracles())"
+      - run: conda activate lattix && LATTIX_BMAD_ENV=lattix-bmad pytest -m "oracle_madx or oracle_xtrack or oracle_bmad or oracle_elegant or oracle_impactx or oracle_impactz" -ra
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: fidelity-${{ matrix.os }}, path: "**/*.fidelity.json", if-no-files-found: ignore }
