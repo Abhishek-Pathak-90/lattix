@@ -1,0 +1,23 @@
+{
+ "impactx": {
+  "engine": "impactx",
+  "basis": "impactx",
+  "drift": {
+   "length_m": 1.0,
+   "R56_native": 223.14839568543672,
+   "R65_native": 0.0,
+   "R56_common": 0.9955386698310204,
+   "R56_expected": 0.9955386698310196,
+   "max_abs_err_common": 7.771561172376096e-16
+  },
+  "cavity": {
+   "row": "c",
+   "R65_native": -0.02280724133591901,
+   "R66_native": 0.8412443022520899,
+   "R65_common": -4.304575240811582,
+   "gain_eV": 866025.4037854802,
+   "gain_expected_eV": 866025.4037844387,
+   "follows_p0": true
+  }
+ }
+}

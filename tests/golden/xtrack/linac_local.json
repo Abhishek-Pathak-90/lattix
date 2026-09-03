@@ -1,0 +1,191 @@
+{
+ "element_names": [
+  "q1",
+  "da1",
+  "cav1",
+  "db1",
+  "q2",
+  "da2",
+  "cav2",
+  "db2",
+  "q3",
+  "da3",
+  "cav3",
+  "db3"
+ ],
+ "elements": {
+  "cav1": {
+   "__class__": "Cavity",
+   "frequency": 162500000.0,
+   "phase": 1.0471975511965979,
+   "voltage": 300000.0
+  },
+  "cav2": {
+   "__class__": "Cavity",
+   "frequency": 162500000.0,
+   "phase": 1.0471975511965979,
+   "voltage": 300000.0
+  },
+  "cav3": {
+   "__class__": "Cavity",
+   "frequency": 162500000.0,
+   "phase": 1.0471975511965979,
+   "voltage": 300000.0
+  },
+  "da1": {
+   "__class__": "Drift",
+   "length": 0.2
+  },
+  "da2": {
+   "__class__": "Drift",
+   "length": 0.2
+  },
+  "da3": {
+   "__class__": "Drift",
+   "length": 0.2
+  },
+  "db1": {
+   "__class__": "Drift",
+   "length": 0.2
+  },
+  "db2": {
+   "__class__": "Drift",
+   "length": 0.2
+  },
+  "db3": {
+   "__class__": "Drift",
+   "length": 0.2
+  },
+  "q1": {
+   "__class__": "Quadrupole",
+   "k1": 5.0,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 0.1,
+   "order": 5
+  },
+  "q2": {
+   "__class__": "Quadrupole",
+   "k1": -4.716407525476244,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 0.1,
+   "order": 5
+  },
+  "q3": {
+   "__class__": "Quadrupole",
+   "k1": 4.476110969226014,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 0.1,
+   "order": 5
+  }
+ },
+ "metadata": {
+  "lattix": {
+   "charge": 1,
+   "elements": {
+    "cav1": {
+     "group": 2,
+     "kind": "RFCavity",
+     "name": "cav1",
+     "role": "main"
+    },
+    "cav2": {
+     "group": 6,
+     "kind": "RFCavity",
+     "name": "cav2",
+     "role": "main"
+    },
+    "cav3": {
+     "group": 10,
+     "kind": "RFCavity",
+     "name": "cav3",
+     "role": "main"
+    },
+    "da1": {
+     "group": 1,
+     "kind": "Drift",
+     "name": "da1",
+     "role": "main"
+    },
+    "da2": {
+     "group": 5,
+     "kind": "Drift",
+     "name": "da2",
+     "role": "main"
+    },
+    "da3": {
+     "group": 9,
+     "kind": "Drift",
+     "name": "da3",
+     "role": "main"
+    },
+    "db1": {
+     "group": 3,
+     "kind": "Drift",
+     "name": "db1",
+     "role": "main"
+    },
+    "db2": {
+     "group": 7,
+     "kind": "Drift",
+     "name": "db2",
+     "role": "main"
+    },
+    "db3": {
+     "group": 11,
+     "kind": "Drift",
+     "name": "db3",
+     "role": "main"
+    },
+    "q1": {
+     "group": 0,
+     "kind": "Quadrupole",
+     "name": "q1",
+     "role": "main"
+    },
+    "q2": {
+     "group": 4,
+     "kind": "Quadrupole",
+     "name": "q2",
+     "role": "main"
+    },
+    "q3": {
+     "group": 8,
+     "kind": "Quadrupole",
+     "name": "q3",
+     "role": "main"
+    }
+   },
+   "energy_mode": "local",
+   "kinetic_energy_eV": 2100000.0,
+   "lattice": "linac",
+   "mass_eV": 938272088.16,
+   "rf_frequency_Hz": 162500000.0,
+   "source_format": "IR",
+   "species": "proton",
+   "use": "linac",
+   "version": "<version>"
+  }
+ },
+ "particle_ref": {
+  "beta0": 0.06679318954040565,
+  "gamma0": 1.0022381567420577,
+  "mass0": 938272088.16,
+  "p0c": 62810451.122977935,
+  "q0": 1.0
+ }
+}

@@ -48,9 +48,11 @@ from lattix.ir.elements import (
     ApertureP,
     Directive,
     Element,
+    FieldMap,
     Freq,
     Superposition,
 )
+from lattix.ir.fieldmap import replacement_for
 from lattix.ir.lattice import Lattice, Placed
 from lattix.ir.reference import ReferenceParticle
 from lattix.ir.rf import elegant_phase_deg
@@ -162,8 +164,10 @@ class Writer:
         "Bend": Rule("CSBEND/RBEN"),
         "Solenoid": Rule("SOLE"),
         "RFCavity": Rule("RFCA"),
-        "FieldMap": Rule("DRIF", "LOSSY", "FM_TO_DRIFT",
-                         "field map replaced by a drift of the same length"),
+        "FieldMap": Rule("RFCA/SOLE/KQUAD/DRIF", "LOSSY", "FM_TO_DRIFT",
+                         "field map degraded per its integrated summary: RF → RFCA "
+                         "(FM_TO_CAVITY), static solenoid/quadrupole → hard edge with drift "
+                         "padding (FM_SOL_HARDEDGE / FM_QUAD_HARDEDGE), otherwise a drift"),
         "NCells": Rule("DRIF", "LOSSY", "NCELLS_TO_DRIFT",
                        "NCELLS cell train replaced by a drift of the same length"),
         "RFQCell": Rule("DRIF", "LOSSY", "RFQ_TO_DRIFT",
@@ -402,7 +406,8 @@ class Writer:
                    if nm != original else "")
             joined = ", ".join(attrs)
             out.append(f"{nm}: {etype}" + (f", {joined}" if joined else "") + tag)
-        self._record(rep, el, rule)
+        if not isinstance(el, FieldMap):        # _def_fieldmap records the ladder's own entry
+            self._record(rep, el, rule)
         return out
 
     def _directive(self, name: str, el: Directive, rule: Rule, rep: FidelityReport) -> list[str]:
@@ -601,7 +606,18 @@ class Writer:
         return [(etype, attrs)]
 
     def _def_fieldmap(self, el, brho, rep):
-        return [("DRIF", [f"L={_num(el.length)}"])]
+        """PLAN §4.3 degradation ladder.  elegant's ``RFCA`` is a thin kick at the centre of a
+        drift of the same length, so an RF map keeps its length in one element; a static
+        solenoid/quadrupole map becomes a hard edge padded by two drifts (the writer's
+        one-IR-element-to-many mechanism keeps them adjacent in the line)."""
+        r = replacement_for(el)
+        rep.add(r.cls, r.code, r.message, element=el.name, kind="FieldMap", **r.details)
+        for cls, code, message in r.extra:
+            rep.add(cls, code, message, element=el.name, kind="FieldMap")
+        out: list = []
+        for part in r.parts:
+            out.extend(getattr(self, f"_def_{part.kind.lower()}")(part, brho, rep))
+        return out
 
     def _phase_attr(self, el: Element, phase_rad: float) -> str:
         """``PHASE=<source text>`` when the deck's own number is the same phase mod 360."""
@@ -613,8 +629,10 @@ class Writer:
                 return f"PHASE={raw}"
         return f"PHASE={_num(want)}"
 
-    _def_ncells = _def_fieldmap
-    _def_rfqcell = _def_fieldmap
+    def _def_ncells(self, el, brho, rep):
+        return [("DRIF", [f"L={_num(el.length)}"])]
+
+    _def_rfqcell = _def_ncells
 
     def _def_kicker(self, el, brho, rep):
         if el.electric and el.hkick and el.vkick:

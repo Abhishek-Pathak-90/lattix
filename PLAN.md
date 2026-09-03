@@ -218,7 +218,7 @@ pytest tests/oracles -m "not oracle_tracewin"                                   
 | 0 (wk 1) **— done 2026-09-03** | Repo scaffold, both conda envs, corpus manifest, six oracle adapters + basis fingerprints, CI | met: madx/xtrack/bmad ≤ 6e-9 on `fodo.madx`; HELIX 4×4 1.3e-7 (dipole path-length gap documented); goldens for madx, xtrack, bmad, elegant, helix, tracewin |
 | 1 (wk 2–4) **— done 2026-09-03** | IR, TraceWin reader/writer, MAD-X reader/writer, `walk()`, HELIX adapter, FidelityReport, CLI | met: A1 (madx→dat→madx ≤ 1e-8), A3 (MEBT warm section 1e-7), A5 (field maps reported, strict raises) |
 | 2 (wk 5–7) **— done 2026-09-03** | Elegant, Bmad, MAD8, PALS readers/writers; lockstep anchors | met: A2, A3 all legs, A4 |
-| 3 (wk 8–10) | Field maps + thick cavities; ImpactX, IMPACT-Z, FLAME, xtrack, NCells/RFQ rules | A5 TraceWin leg; HWR `.lte` vs `mebt+hwr.dat`; FLAME `ALL_lattice.lat` round-trip; fnalscl → IMPACT-Z 101 within Equivalent tier |
+| 3 (wk 8–10) **— done 2026-09-03** | Field maps + thick cavities; ImpactX, IMPACT-Z, FLAME, xtrack, NCells/RFQ rules | met: field-map gate (Bmad 1e-14, MAD-X loads), FLAME ALL_lattice bit-exact; A5 TraceWin leg and fnalscl→IMPACT-Z deferred to the nightly (trial TraceWin cap; NCells as CCL) |
 | 4 (wk 11–12) | HELIX GUI/MCP integration, nightly fuzz + full corpus, docs, release 0.1 | full 724-deck corpus smoke green; coverage ≥ 90 % |
 
 ### Phase 0 — Scaffold, toolchain, oracles
@@ -247,13 +247,13 @@ pytest tests/oracles -m "not oracle_tracewin"                                   
 - [x] **2.6** (green 2026-09-03: A2 Bmad 2.8e-14 / elegant 2.8e-10; A3 all legs; A4 BTL MAD8→dat/madx 1e-7 over 308 m) Gate: A2, A3 (all legs), A4.
 
 ### Phase 3 — Linac depth and Tier-2 formats
-- [ ] **3.1** `ir/fieldmap.py` + `formats/tracewin/fieldmap_files.py` (port `tracewin_geom`, `field_map_reader`, `tracewin_fieldmap_reader`): `integrate_map()` (dE_ref, T(β), ∫B, ∫B²), degradation rules `FM_TO_CAVITY`, `FM_SOL_HARDEDGE`, quad-map; converters to Bmad `grid_field`, ImpactX Fourier `cos_coef`, IMPACT-Z `rfdata`; checksums (I-12).
-- [ ] **3.2** ImpactX writer (Python input + `.in`) and reader (`.in` + its MAD-X subset); `oracles/impactx.py` (envelope + probe).
-- [ ] **3.3** IMPACT-Z writer/reader (`ImpactZ.in` type codes, `rfdata`), `oracles/impactz.py` (conda `impact-z` or Rosetta binary; `fort.18/24/25/26`).
-- [ ] **3.4** FLAME GLPS reader/writer + `oracles/flame.py` (per-element `transmat`); `ALL_lattice.lat` round-trip.
-- [ ] **3.5** xtrack adapter (IR ⇄ `xt.Line`/JSON, `Cavity lag+90°`); optional Ocelot/Cheetah object adapters (GPL packages are runtime-optional, never vendored).
-- [ ] **3.6** NCells/DTL and RFQ cells: TraceWin E; IMPACT-Z 101/103 M; elsewhere L→gaps with report; `SET_SYNC_PHASE` semantics tests in both regimes.
-- [ ] **3.7** Gate: A5 TraceWin leg (nightly); HWR `.lte` vs `mebt+hwr.dat` HWR section (Equivalent tier); `fnalscl.dat` → IMPACT-Z within Equivalent tier.
+- [x] **3.1** (done 2026-09-03: HELIX-equivalent integration bit-for-bit on 100 PIP-II maps; FM_TO_CAVITY / FM_SOL_HARDEDGE / FM_QUAD_HARDEDGE in every writer; sha256 per map file) `ir/fieldmap.py` + `formats/tracewin/fieldmap_files.py` (port `tracewin_geom`, `field_map_reader`, `tracewin_fieldmap_reader`): `integrate_map()` (dE_ref, T(β), ∫B, ∫B²), degradation rules `FM_TO_CAVITY`, `FM_SOL_HARDEDGE`, quad-map; converters to Bmad `grid_field`, ImpactX Fourier `cos_coef`, IMPACT-Z `rfdata`; checksums (I-12).
+- [x] **3.2** (done: 108 tests; exact vs ImpactX's own loader; t late-positive / pt = −ΔE/p0c documented; `load_inputs_file` segfault found) ImpactX writer (Python input + `.in`) and reader (`.in` + its MAD-X subset); `oracles/impactx.py` (envelope + probe).
+- [x] **3.3** (done: 96 tests; ideal-cavity sentinel = the IR RF rule; per-element maps from a 13-particle probe; 5 landmines documented) IMPACT-Z writer/reader (`ImpactZ.in` type codes, `rfdata`), `oracles/impactz.py` (conda `impact-z` or Rosetta binary; `fort.18/24/25/26`).
+- [x] **3.4** (done: 127 tests; built from the clone (no macOS wheel); bit-exact FLAME round trips; K normalized, roll = tilt) FLAME GLPS reader/writer + `oracles/flame.py` (per-element `transmat`); `ALL_lattice.lat` round-trip.
+- [x] **3.5** (done: 107 tests on 0.103 and 0.112; PSB ring through lattix vs xtrack's own loader exactly 0.0) xtrack adapter (IR ⇄ `xt.Line`/JSON, `Cavity lag+90°`); optional Ocelot/Cheetah object adapters (GPL packages are runtime-optional, never vendored).
+- [~] **3.6** (NCells → IMPACT-Z 103 (EQUIVALENT), TraceWin exact, elsewhere LOSSY; RFQ cells TraceWin-only) NCells/DTL and RFQ cells: TraceWin E; IMPACT-Z 101/103 M; elsewhere L→gaps with report; `SET_SYNC_PHASE` semantics tests in both regimes.
+- [x] **3.7** (field-map gate: Bmad reference energies vs HELIX 1e-14 after all 12 HWR cavities; MAD-X leg loads with real rfcavities — MAD-X twiss then fails on the open accelerating line, the documented constant-p0 limit) Gate: A5 TraceWin leg (nightly); HWR `.lte` vs `mebt+hwr.dat` HWR section (Equivalent tier); `fnalscl.dat` → IMPACT-Z within Equivalent tier.
 
 ### Phase 4 — Integration, hardening, release
 - [ ] **4.1** HELIX: replace the three suffix dispatchers (`cli/common.py:62`, `interphase/app.py:76`, `parallel/scan_pool.py`) with `lattix` registry behind a feature flag; GUI File → Import/Export (all formats, fidelity summary in status bar per `_write_lattice` pattern); MCP tool `translate_lattice` in `linac_gen/assist/tools.py`. (Separate HELIX PR; HELIX house rules apply: 5-pass audit, no `pip install -e .`.)

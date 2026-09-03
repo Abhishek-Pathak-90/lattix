@@ -163,3 +163,29 @@ drift.  MAD-X aborts on any overlap; the writer orders sequence entries by posit
 the *preceding* drift (a drift is only a gap in a MAD-X sequence) and keeps every element where
 the source put it — gate A4 then agrees HELIX vs MAD-X to 1e-7 through the whole 308 m line.
 Only genuine thick-element collisions are shifted (LOSSY `OVERLAP_SHIFTED`).
+
+## Phase 3 engines (measured 2026-09-03)
+
+| Engine | How it runs | Native basis | p0 through RF | Measured facts |
+|---|---|---|---|---|
+| **ImpactX 26.08** | env `lattix`, in-process or `python -I lattix/oracles/impactx.py` worker; per-element maps by 13-probe central differences re-seeded at every element (`el.push` applies ONE slice) | (x, px, y, py, t, pt) with **t late-positive and pt = −ΔE/p0c** — the adapter returns S·R·S in MAD-X's (T, pt); the two sign flips cancel in the longitudinal block (drift R56 +223.148 native, +0.9955387 common, identical to MAD-X) but not in the dispersion column | follows (`ShortRF` pushes the reference; cavity R65 −4.3046, gain 866 025.404 eV) | `ShortRF.phase` is the synchronous phase in degrees, 0 = crest (IR convention, no shift); `V` is dimensionless = voltage_V/mass_eV; `load_inputs_file` segfaults after the first call (ParmParse state) → the oracle builds through the Python API; Marker has no `inputs` type. fodo.madx vs cpymad 1.8e-15; vs ImpactX's own MAD-X loader 0.0. |
+| **IMPACT-Z 2.7.7** | env `lattix` `ImpactZexe`; per-element maps from a 13-particle `particle.in` probe (`flagdist=19`) with zero-length `-2` dumps at every boundary; `fort.18` gives the reference energy | (x/Scxl, γβx, y/Scxl, γβy, ω·Δt [rad, late-positive], γ_ref−γ) with Scxl = c/(2πf); `basis.py` corrected to `d = (Scxl, 1/βγ, Scxl, 1/βγ, −β·Scxl, −1/β²γ)` | follows | **any element other than types 0/1/4 with a negative `Param(5)` is an ideal RF cavity** (`BeamBunch.f90:323-437`): gradient V/m, synchronous phase deg, gain E0·L·cos φs with no charge factor — the IR rule verbatim, used as `rf_model="ideal"` (thin cavity gain to 1.2e-16, R65 −4.30458); a solenoid with negative dx becomes a cavity (writer zeroes it, LOSSY); type 5 multipoles produce NaN under `flagmap=1`; misalignments need header `flagerr=1`; no Twiss/dispersion/survey outputs. fodo.madx vs cpymad: T4x4 6e-14. |
+| **FLAME 1.9.2** (built from the clone against Homebrew Boost; PyPI ships only manylinux x86_64 wheels) | env `lattix`, in-process or `-I` worker; `Machine.propagate` per-element `transmat` (7×7×n_charge_states, state index LAST) | (x mm, x′ rad, y mm, y′ rad, φ rad late-positive w.r.t. **SampleFreq** (default 80.5 MHz), ΔEk MeV/u); `_Z_SIGN = −1` confirmed (drift 4.4e-16) | follows (per nucleon: `IonEk`, `IonEs`, charge states) | `sbend K` is normalized (1/m², `Kx = K + 1/ρ²`, `Ky = −K`); `roll` **is** MAD-X `tilt` (9 digits); `orbtrim theta_x → +x′`; `rfcavity phi` is a synchronous phase when `syncflag` ≥ 1 but the gain is a tabulated TTF polynomial, not V·cos φ (3.2 % off at −35°) → the reader records `FLAME_CAVTYPE_VOLTAGE_UNKNOWN`; `aper` is read nowhere in FLAME's source. fodo.madx vs cpymad 3.6e-15; LS1/LS1FS1/ALL_lattice read→write→FLAME bit-exact. `FrontEnd.lat` ships an undefined `v` (FLAME rejects it). |
+| **xtrack** (0.103.5 base, 0.112.0 env) | `lattix.formats.xtrack.to_line`/`from_line` + `Line` JSON | (x, px, y, py, ζ, δ) | constant | `rot_s_rad` is MAD-X `tilt` (2.2e-16); kicker = `Multipole(knl=[−hkick], ksl=[+vkick])`; `Cavity.phase = φ + π/2` round-trips on both releases (lag deprecated in 0.112); `Bend.h` cannot be assigned (pass length+angle) and `k0` reads back as the string `'from_h'`; thick kickers need `isthick=True` or 7.5 m of the PSB vanish; PSB `psb.seq` through lattix vs `Line.from_madx_sequence`: every block exactly 0.0 over 304 boundaries. |
+
+Environment note: a helper's `conda install -n lattix boost bison` (for the FLAME build) downgraded elegant/impactx/hdf5 and broke 28 tests; the env was repaired by removing those packages and pinning `elegant=2026.3.0 impactx=26.08 impact-z=2.7.7 gsl=2.7` (the elegant binary links `libgsl.25`). Never `conda install` into `lattix` without pinning those four.
+
+## Field maps (Phase 3, 2026-09-03)
+
+`lattix.ir.fieldmap.integrate_map` ports HELIX `field_map.py::advance_ref` in SI (midpoint sub-steps
+over the card length, β updated after every step, SET_SYNC_PHASE fixed-point calibration).  On
+`mebt+hwr.dat` every one of the 20 RF/static maps agrees with HELIX to ≤ 2e-13 relative on the
+cavities (the −90° bunchers gain milli-eV, where the relative figure is cancellation noise: worst
+absolute 3.2e-6 eV); `mebt+hwr+ssr1+ssr2.dat` (100 maps) ends at 169.820410859731 MeV vs HELIX
+…734.6.  The summary carries `v_c` (self-consistent complex voltage magnitude) and its synchronous
+phase so that `dE_ref = v_c·cos φ_sync` identically — that pair is what writers emit
+(`FM_TO_CAVITY`), which is why ±90° bunchers convert where `dE/cos φ` would blow up.  Static
+solenoid/quad maps degrade to hard-edge elements preserving ∫B and ∫B² (`L_eff = (∫B)²/∫B²`,
+`B_eff = ∫B²/∫B`).  With the HWR cavities as real `rfcavity`s, MAD-X's own `twiss` fails on the open
+accelerating line ("error with deltap") — the constant-p0 limit of PLAN §8, now reachable; the
+MAD-X gate therefore checks loading and reporting, the physics gate runs on Bmad/elegant.

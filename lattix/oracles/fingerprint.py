@@ -24,8 +24,8 @@ KE_EV = 2.1e6          # proton kinetic energy
 FREQ_HZ = 162.5e6
 V_VOLT = 1.0e6         # cavity effective voltage
 PHI_S_DEG = -30.0      # synchronous phase, cos convention, 0 = crest
-FOLLOWS_P0 = {"helix": True, "bmad": True, "elegant": True, "tracewin": True,
-              "madx": False, "xtrack": False, "impactx": False}
+FOLLOWS_P0 = {"helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True,
+              "impactz": True, "madx": False, "xtrack": False}
 
 _MASS = SPECIES["proton"][0]
 _ETOT_GEV = (_MASS + KE_EV) * 1e-9
@@ -74,6 +74,7 @@ DECKS: dict[str, dict[str, tuple[str, str]]] = {
     },
 }
 DECKS["xtrack"] = DECKS["madx"]
+DECKS["impactx"] = DECKS["madx"]     # ImpactX reads MAD-X through lattix; ShortRF follows p0
 DECKS["tracewin"] = DECKS["helix"]
 
 _SUFFIX = {"madx": ".madx", "tracewin": ".dat", "bmad": ".bmad", "elegant": ".lte"}

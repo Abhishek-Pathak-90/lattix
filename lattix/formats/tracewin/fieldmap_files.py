@@ -17,7 +17,9 @@ A negative ``geom`` asks for TraceWin's second-order off-axis expansion.
 
 from __future__ import annotations
 
+import hashlib
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -162,6 +164,51 @@ def resolve_field_files(geom: int, map_dir: str, base: str) -> tuple[list[str], 
     existing = [f for f in files if Path(f).is_file()]
     missing = [f for f in files if not Path(f).is_file()]
     return existing, missing, None
+
+
+#: sha256 per component file, keyed on (realpath, mtime, size) — a linac references the same
+#: 2.4 MB map template from dozens of cards and the digest never changes in between.
+_SHA_CACHE: dict[tuple[str, float, int], str] = {}
+
+
+def sha256(path: str | os.PathLike, _chunk: int = 1 << 20) -> str:
+    """sha256 of one file, cached on (realpath, mtime, size)."""
+    p = str(path)
+    try:
+        st = os.stat(p)
+        key = (os.path.realpath(p), st.st_mtime, st.st_size)
+    except OSError:
+        key = None
+    if key is not None and key in _SHA_CACHE:
+        return _SHA_CACHE[key]
+    h = hashlib.sha256()
+    with open(p, "rb") as fh:
+        while block := fh.read(_chunk):
+            h.update(block)
+    digest = h.hexdigest()
+    if key is not None:
+        _SHA_CACHE[key] = digest
+    return digest
+
+
+def checksums(paths: Iterable[str | os.PathLike]) -> dict[str, str]:
+    """``{path: sha256}`` for every component file that exists (invariant I-12).
+
+    Recorded by the reader as ``FieldMap.meta["field_files_sha256"]`` so a converted map
+    (Bmad ``grid_field``, ImpactX ``cos_coef``, IMPACT-Z ``rfdata``) can be traced back to
+    the exact bytes it came from, and a corpus whose maps changed underneath fails loudly.
+    """
+    out: dict[str, str] = {}
+    for p in paths:
+        try:
+            out[str(p)] = sha256(p)
+        except OSError:
+            continue
+    return out
+
+
+def clear_checksum_cache() -> None:
+    _SHA_CACHE.clear()
 
 
 def best_relpath(target: str, anchor_dir: str) -> tuple[str, bool]:

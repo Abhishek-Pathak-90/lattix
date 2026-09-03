@@ -53,8 +53,9 @@ from pathlib import Path
 from lattix import __version__
 from lattix.fidelity import FidelityReport
 from lattix.formats.madx.naming import NameMap, is_valid, name_tag
-from lattix.ir.elements import ALL_KINDS, ApertureP, Directive, Drift, Element, Freq, Superposition
+from lattix.ir.elements import ALL_KINDS, ApertureP, Directive, Drift, Element, FieldMap, Freq, Superposition
 from lattix.ir.expr import ExpressionError, evaluate
+from lattix.ir.fieldmap import replacement_for
 from lattix.ir.lattice import Lattice, Placed
 from lattix.ir.reference import ReferenceParticle
 from lattix.ir.rf import madx_lag
@@ -124,8 +125,10 @@ class Writer:
         "Bend": Rule("sbend/rbend"),
         "Solenoid": Rule("solenoid"),
         "RFCavity": Rule("rfcavity"),
-        "FieldMap": Rule("drift", "LOSSY", "FM_TO_DRIFT",
-                         "field map replaced by a drift of the same length"),
+        "FieldMap": Rule("rfcavity/solenoid/quadrupole/drift", "LOSSY", "FM_TO_DRIFT",
+                         "field map degraded per its integrated summary: RF → rfcavity "
+                         "(FM_TO_CAVITY), static solenoid/quadrupole → hard edge with drift "
+                         "padding (FM_SOL_HARDEDGE / FM_QUAD_HARDEDGE), otherwise a drift"),
         "NCells": Rule("drift", "LOSSY", "NCELLS_TO_DRIFT",
                        "NCELLS cell train replaced by a drift of the same length"),
         "RFQCell": Rule("drift", "LOSSY", "RFQ_TO_DRIFT",
@@ -275,11 +278,33 @@ class Writer:
                                     element=el.name, kind="Superposition")
                         continue
                     s0 = p.s_in + offset
+                    if isinstance(child, FieldMap):     # the ladder applies inside a cluster too
+                        out.extend(self._fieldmap_items(child, s0, ref, rep))
+                        continue
                     out.append(_Item(child, s0, s0 + child.length, ref.brho_signed, 0.0))
+                continue
+            if isinstance(el, FieldMap):
+                out.extend(self._fieldmap_items(el, p.s_in, ref, rep))
                 continue
             out.append(_Item(el, p.s_in, p.s_out, ref.brho_signed,
                              energy_gain_eV(el, ref)))
         return self._resolve_overlaps(out, rep)
+
+    @staticmethod
+    def _fieldmap_items(el: FieldMap, s_in: float, ref: ReferenceParticle,
+                        rep: FidelityReport) -> list[_Item]:
+        """The field map's degradation ladder (PLAN §4.3): an RF map becomes a full-length
+        ``rfcavity`` (MAD-X applies its kick at the centre between two L/2 drifts), a static
+        solenoid/quadrupole map a hard edge centred in the map, anything unknown a drift."""
+        r = replacement_for(el)
+        rep.add(r.cls, r.code, r.message, element=el.name, kind="FieldMap", **r.details)
+        for cls, code, message in r.extra:
+            rep.add(cls, code, message, element=el.name, kind="FieldMap")
+        out, s = [], s_in
+        for part in r.parts:
+            out.append(_Item(part, s, s + part.length, ref.brho_signed, energy_gain_eV(part, ref)))
+            s += part.length
+        return out
 
     @staticmethod
     def _resolve_overlaps(items: list[_Item], rep: FidelityReport) -> list[_Item]:
@@ -585,11 +610,13 @@ class Writer:
             attrs.append(f"harmon={int(harmon)}")
         return "rfcavity", attrs
 
-    def _def_fieldmap(self, el, brho, lat, ux, rep):
+    def _def_fieldmap(self, el, brho, lat, ux, rep):   # pragma: no cover - expanded in _items
         return "drift", [f"l={_num(el.length)}"]
 
-    _def_ncells = _def_fieldmap
-    _def_rfqcell = _def_fieldmap
+    def _def_ncells(self, el, brho, lat, ux, rep):
+        return "drift", [f"l={_num(el.length)}"]
+
+    _def_rfqcell = _def_ncells
 
     def _def_kicker(self, el, brho, lat, ux, rep):
         if el.electric:
@@ -686,9 +713,17 @@ class Writer:
         def ref_name(ref: str) -> str:
             if ref in line_names:
                 return line_names[ref]
+            el = lattice.elements.get(ref)
+            if isinstance(el, FieldMap):          # a padded hard edge is a sub-line of its parts
+                parts = replacement_for(el).parts
+                if len(parts) > 1:
+                    nm = f"{ref}_fm".replace("$", "_").lower()
+                    body = ", ".join(by_name[q.name] for q in parts if q.name in by_name)
+                    sup_lines.append(f"{nm}: line=({body});")
+                    return nm
+                return by_name.get(parts[0].name, ref)
             if ref in by_name:
                 return by_name[ref]
-            el = lattice.elements.get(ref)
             if isinstance(el, Superposition):     # children were emitted, the parent was not
                 nm = ref.replace("$", "_").lower()
                 body = ", ".join(by_name[c] for _, c in el.children if c in by_name)

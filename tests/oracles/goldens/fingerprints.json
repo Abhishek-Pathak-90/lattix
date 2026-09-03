@@ -59,6 +59,26 @@
       "max_abs_err_common": 4.318767565791859e-14
     }
   },
+  "impactx": {
+    "basis": "impactx",
+    "cavity": {
+      "R65_common": -4.304575240811582,
+      "R65_native": -0.02280724133591901,
+      "R66_native": 0.8412443022520899,
+      "follows_p0": true,
+      "gain_eV": 866025.4037854802,
+      "gain_expected_eV": 866025.4037844387,
+      "row": "c"
+    },
+    "drift": {
+      "R56_common": 0.9955386698310204,
+      "R56_expected": 0.9955386698310196,
+      "R56_native": 223.14839568543672,
+      "R65_native": 0.0,
+      "length_m": 1.0,
+      "max_abs_err_common": 7.771561172376096e-16
+    }
+  },
   "madx": {
     "basis": "madx",
     "cavity": {

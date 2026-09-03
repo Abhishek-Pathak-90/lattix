@@ -1,0 +1,272 @@
+{
+ "element_names": [
+  "QF",
+  "D1",
+  "B1",
+  "D2",
+  "SOL",
+  "D3",
+  "CAV",
+  "D4",
+  "COR",
+  "D5",
+  "COLL",
+  "COLL_x0",
+  "D6",
+  "B2",
+  "D7",
+  "QD",
+  "END"
+ ],
+ "elements": {
+  "B1": {
+   "__class__": "Bend",
+   "angle": 0.1,
+   "edge_entry_angle": 0.05,
+   "edge_entry_fint": 0.5,
+   "edge_entry_hgap": 0.02,
+   "edge_exit_angle": 0.05,
+   "edge_exit_fint": 0.5,
+   "edge_exit_hgap": 0.02,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 1.0,
+   "order": 5
+  },
+  "B2": {
+   "__class__": "Bend",
+   "angle": -0.1,
+   "edge_entry_angle": -0.05,
+   "edge_exit_angle": -0.05,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 1.0,
+   "order": 5
+  },
+  "CAV": {
+   "__class__": "Cavity",
+   "frequency": 325000000.0,
+   "phase": 1.0471975511965979,
+   "voltage": 1000000.0
+  },
+  "COLL": {
+   "__class__": "LimitRect",
+   "max_x": 0.02,
+   "max_y": 0.03,
+   "min_x": -0.02,
+   "min_y": -0.03
+  },
+  "COLL_x0": {
+   "__class__": "Drift",
+   "length": 0.1
+  },
+  "COR": {
+   "__class__": "Multipole",
+   "knl": [
+    -0.001
+   ],
+   "knl_rel": [
+    0.0
+   ],
+   "ksl": [
+    -0.002
+   ],
+   "ksl_rel": [
+    0.0
+   ]
+  },
+  "D1": {
+   "__class__": "Drift",
+   "length": 0.5
+  },
+  "D2": {
+   "__class__": "Drift",
+   "length": 0.5
+  },
+  "D3": {
+   "__class__": "Drift",
+   "length": 0.2
+  },
+  "D4": {
+   "__class__": "Drift",
+   "length": 0.2
+  },
+  "D5": {
+   "__class__": "Drift",
+   "length": 0.3
+  },
+  "D6": {
+   "__class__": "Drift",
+   "length": 0.5
+  },
+  "D7": {
+   "__class__": "Drift",
+   "length": 0.5
+  },
+  "END": {
+   "__class__": "Marker"
+  },
+  "QD": {
+   "__class__": "Quadrupole",
+   "k1": -0.5995785116310367,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 0.3,
+   "order": 5
+  },
+  "QF": {
+   "__class__": "Quadrupole",
+   "k1": 0.6,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 0.3,
+   "order": 5
+  },
+  "SOL": {
+   "__class__": "UniformSolenoid",
+   "ks": 0.3,
+   "length": 0.4,
+   "order": 5
+  }
+ },
+ "metadata": {
+  "lattix": {
+   "charge": 1,
+   "elements": {
+    "B1": {
+     "group": 2,
+     "kind": "Bend",
+     "name": "B1",
+     "role": "main"
+    },
+    "B2": {
+     "group": 12,
+     "kind": "Bend",
+     "name": "B2",
+     "role": "main"
+    },
+    "CAV": {
+     "group": 6,
+     "kind": "RFCavity",
+     "name": "CAV",
+     "role": "main"
+    },
+    "COLL": {
+     "group": 10,
+     "kind": "Collimator",
+     "name": "COLL",
+     "role": "main"
+    },
+    "COLL_x0": {
+     "group": 10,
+     "kind": "Collimator",
+     "name": "COLL",
+     "role": "extra"
+    },
+    "COR": {
+     "group": 8,
+     "kind": "Kicker",
+     "name": "COR",
+     "role": "main"
+    },
+    "D1": {
+     "group": 1,
+     "kind": "Drift",
+     "name": "D1",
+     "role": "main"
+    },
+    "D2": {
+     "group": 3,
+     "kind": "Drift",
+     "name": "D2",
+     "role": "main"
+    },
+    "D3": {
+     "group": 5,
+     "kind": "Drift",
+     "name": "D3",
+     "role": "main"
+    },
+    "D4": {
+     "group": 7,
+     "kind": "Drift",
+     "name": "D4",
+     "role": "main"
+    },
+    "D5": {
+     "group": 9,
+     "kind": "Drift",
+     "name": "D5",
+     "role": "main"
+    },
+    "D6": {
+     "group": 11,
+     "kind": "Drift",
+     "name": "D6",
+     "role": "main"
+    },
+    "D7": {
+     "group": 13,
+     "kind": "Drift",
+     "name": "D7",
+     "role": "main"
+    },
+    "END": {
+     "group": 15,
+     "kind": "Marker",
+     "name": "END",
+     "role": "main"
+    },
+    "QD": {
+     "group": 14,
+     "kind": "Quadrupole",
+     "name": "QD",
+     "role": "main"
+    },
+    "QF": {
+     "group": 0,
+     "kind": "Quadrupole",
+     "name": "QF",
+     "role": "main"
+    },
+    "SOL": {
+     "group": 4,
+     "kind": "Solenoid",
+     "name": "SOL",
+     "role": "main"
+    }
+   },
+   "energy_mode": "local",
+   "kinetic_energy_eV": 800000000.0,
+   "lattice": "demo",
+   "mass_eV": 938272088.16,
+   "source_format": "IR",
+   "species": "proton",
+   "use": "demo",
+   "version": "<version>"
+  }
+ },
+ "particle_ref": {
+  "beta0": 0.8418107060243324,
+  "gamma0": 1.8526311398315611,
+  "mass0": 938272088.16,
+  "p0c": 1463296053.79636,
+  "q0": 1.0
+ }
+}

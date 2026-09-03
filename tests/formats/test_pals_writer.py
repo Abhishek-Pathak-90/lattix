@@ -526,7 +526,7 @@ def test_downgrade_permissive_records_strict_raises(tmp_path, code, element, cls
 
 
 _EQUIVALENT = [
-    ("FM_AS_RFCAVITY", FieldMap(name="fm", length=0.5,
+    ("FM_TO_CAVITY", FieldMap(name="fm", length=0.5,
                                 rf=RFP(voltage_V=1e6, phase_rad=0.0, dE_ref_eV=9e5))),
     ("PALS_PHASE_AS_SYNC", RFCavity(name="cv", rf=RFP(voltage_V=1e6, phase_is_sync=False))),
     ("PERIOD_AS_MARKER", Directive(name="pd", card="LATTICE", role="period_start")),

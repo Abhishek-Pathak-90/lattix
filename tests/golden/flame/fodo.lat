@@ -1,0 +1,35 @@
+# written by lattix <version> (FLAME GLPS)
+
+sim_type = "MomentMatrix";
+IonEs = 938272088.16;
+IonEk = 800000000;
+IonZ = 1;
+IonChargeStates = [1];
+NCharge = [1];
+SampleFreq = 80500000;
+
+BaryCenter0 = [0, 0, 0, 0, 0, 0, 1];
+S0 = [
+  1, 0, 0, 0, 0, 0, 0,
+  0, 1e-06, 0, 0, 0, 0, 0,
+  0, 0, 1, 0, 0, 0, 0,
+  0, 0, 0, 1e-06, 0, 0, 0,
+  0, 0, 0, 0, 1, 0, 0,
+  0, 0, 0, 0, 0, 1e-06, 0,
+  0, 0, 0, 0, 0, 0, 0
+];
+
+S_lattix: source, vector_variable = "BaryCenter", matrix_variable = "S";
+D: drift, L = 0.5;
+QF: quadrupole, L = 0.2, B2 = 7.32154536287414;
+QD: quadrupole, L = 0.2, B2 = -7.32154536287414;
+
+CELL: LINE = (
+  D, QF, D, QD
+);
+
+TOP: LINE = (
+  S_lattix, 2*CELL, -CELL
+);
+
+USE: TOP;

@@ -634,10 +634,8 @@ def _convert_element(ctx: _FromCtx, e: Any, dE_eV: float) -> Element:
                            provenance=Provenance(format=FORMAT, original_name=name,
                                                  original_type="SUPERPOSE_MAP"))
         ctx.superpositions.append((el, kids))
-        rep.lossy("SUPERPOSE_DE_NOT_IN_WALK",
-                  "IR Superposition has no RFP group, so walk() cannot apply its reference "
-                  f"energy gain ({dE_eV:.6g} eV); kept in native['helix']['dE_ref_eV']",
-                  element=name, kind="Superposition", dE_ref_eV=dE_eV)
+        el.rf.dE_ref_eV = dE_eV          # Superposition carries an RFP group; walk() applies it
+        rep.exact(name, "Superposition", message=f"cluster reference gain {dE_eV:.6g} eV from HELIX advance_ref")
         return el
 
     if isinstance(e, mods.Steerer):

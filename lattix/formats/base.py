@@ -58,17 +58,58 @@ FORMATS: dict[str, FormatSpec] = {
                        description="PALS lattice standard"),
     "lattix": FormatSpec("lattix", (".lattix.json",), "lattix.formats.lattix_json",
                          description="lattix IR as JSON (lossless)"),
+    "flame": FormatSpec("flame", (".flame.lat", ".lat"), "lattix.formats.flame", description="FLAME GLPS deck"),
+    "impactx": FormatSpec("impactx", (".impactx.in", ".impactx.py"), "lattix.formats.impactx",
+                          description="ImpactX inputs / python"),
+    "impactz": FormatSpec("impactz", ("impactz.in",), "lattix.formats.impactz", description="IMPACT-Z ImpactZ.in"),
+    # keep last: a bare .json is xtrack's unless the content says otherwise (sniffed below)
+    "xtrack": FormatSpec("xtrack", (".json",), "lattix.formats.xtrack", description="xtrack Line/Environment JSON"),
 }
 
 
+def _sniff_lat(p: Path) -> str | None:
+    """`.lat` is both MAD8 flat and FLAME GLPS.  `!` comments and `:=` are illegal in GLPS;
+    `sim_type =` and `USE:` (colon) only exist in FLAME."""
+    import re
+
+    try:
+        head = p.read_text(encoding="latin-1", errors="replace")[:8192]
+    except OSError:
+        return None
+    if "!" in head or ":=" in head:
+        return "mad8"
+    body = re.sub(r"#.*", "", head)
+    if re.search(r"\bsim_type\s*=", body) or re.search(r"^\s*USE\s*:", body, re.M):
+        return "flame"
+    return None
+
+
 def guess_format(path: str | Path) -> str:
+    """Longest matching suffix wins (`.pals.json` before `.json`, `.flame.lat` before `.lat`);
+    a bare `.lat`/`.flat` is sniffed for FLAME vs MAD8, a bare `.json` for xtrack vs lattix."""
     p = Path(path)
     name = p.name.lower()
+    best: tuple[int, str] | None = None
     for spec in FORMATS.values():
         for suf in spec.suffixes:
-            if name.endswith(suf):
-                return spec.name
-    raise ValueError(f"cannot guess the lattice format of {p.name!r}; pass fmt=")
+            if name.endswith(suf) and (best is None or len(suf) > best[0]):
+                best = (len(suf), spec.name)
+    if best is None:
+        raise ValueError(f"cannot guess the lattice format of {p.name!r}; pass fmt=")
+    fmt = best[1]
+    if fmt in ("mad8", "flame") and name.endswith((".lat", ".flat")) and not name.endswith(".flame.lat"):
+        sniffed = _sniff_lat(p) if p.is_file() else None
+        return sniffed or "mad8"
+    if fmt == "xtrack" and p.is_file():
+        try:
+            import json
+
+            head = json.loads(p.read_text()[:200000] if p.stat().st_size < 200000 else "{}") or {}
+        except Exception:  # noqa: BLE001
+            head = {}
+        if isinstance(head, dict) and "reference" in head and "elements" in head and "lines" in head:
+            return "lattix"
+    return fmt
 
 
 def read(path: str | Path, fmt: str | None = None, **options) -> tuple[Lattice, FidelityReport]:

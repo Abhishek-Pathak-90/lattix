@@ -1,0 +1,440 @@
+{
+ "element_names": [
+  "dr",
+  "qp",
+  "sx",
+  "oc",
+  "mp",
+  "bd",
+  "sl",
+  "cv",
+  "fm",
+  "nc",
+  "rq",
+  "kk",
+  "cl",
+  "cl_x0",
+  "mk",
+  "bp",
+  "fl",
+  "ty",
+  "pt_xy",
+  "pt_yrot",
+  "pt_srot",
+  "rc",
+  "fq",
+  "dv",
+  "sup_child"
+ ],
+ "elements": {
+  "bd": {
+   "__class__": "Bend",
+   "angle": 0.1,
+   "edge_entry_angle": 0.02,
+   "edge_entry_fint": 0.45,
+   "edge_entry_hgap": 0.03,
+   "edge_exit_angle": 0.03,
+   "edge_exit_fint": 0.5,
+   "edge_exit_hgap": 0.03,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 1.0,
+   "order": 5,
+   "rot_s_rad": 0.1
+  },
+  "bp": {
+   "__class__": "Drift",
+   "length": 0.05
+  },
+  "cl": {
+   "__class__": "LimitEllipse",
+   "a": 0.02,
+   "a_b_squ": 3.6e-07,
+   "a_squ": 0.0004,
+   "b": 0.03,
+   "b_squ": 0.0009
+  },
+  "cl_x0": {
+   "__class__": "Drift",
+   "length": 0.1
+  },
+  "cv": {
+   "__class__": "Cavity",
+   "frequency": 325000000.0,
+   "length": 0.5,
+   "phase": 1.0471975511965979,
+   "voltage": 2000000.0
+  },
+  "dr": {
+   "__class__": "Drift",
+   "length": 0.4
+  },
+  "dv": {
+   "__class__": "Marker"
+  },
+  "fl": {
+   "__class__": "Marker"
+  },
+  "fm": {
+   "__class__": "Cavity",
+   "frequency": 325000000.0,
+   "length": 0.6,
+   "phase": 1.0471975511965979,
+   "voltage": 1732050.8075688772
+  },
+  "fq": {
+   "__class__": "Marker"
+  },
+  "kk": {
+   "__class__": "Multipole",
+   "isthick": true,
+   "knl": [
+    -0.001
+   ],
+   "knl_rel": [
+    0.0
+   ],
+   "ksl": [
+    -0.002
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 0.1
+  },
+  "mk": {
+   "__class__": "Marker"
+  },
+  "mp": {
+   "__class__": "Multipole",
+   "knl": [
+    0.01,
+    0.0,
+    0.3
+   ],
+   "knl_rel": [
+    0.0
+   ],
+   "ksl": [
+    0.0,
+    0.030000000000000002,
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "order": 2
+  },
+  "nc": {
+   "__class__": "Drift",
+   "length": 0.7
+  },
+  "oc": {
+   "__class__": "Octupole",
+   "k3": 2.5,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 0.2,
+   "order": 5
+  },
+  "pt_srot": {
+   "__class__": "SRotation",
+   "angle": 17.188733853924695,
+   "cos_z": 0.955336489125606
+  },
+  "pt_xy": {
+   "__class__": "XYShift",
+   "dx": 0.001
+  },
+  "pt_yrot": {
+   "__class__": "YRotation",
+   "angle": 0.11459155902616465
+  },
+  "qp": {
+   "__class__": "Quadrupole",
+   "k1": 0.6,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 0.3,
+   "order": 5,
+   "rot_s_rad": 0.02
+  },
+  "rc": {
+   "Delta_p0c": 37394478.09582317,
+   "__class__": "ReferenceEnergyIncrease"
+  },
+  "rq": {
+   "__class__": "Drift",
+   "length": 0.05
+  },
+  "sl": {
+   "__class__": "UniformSolenoid",
+   "ks": 0.3,
+   "length": 0.4,
+   "order": 5
+  },
+  "sup_child": {
+   "__class__": "Drift",
+   "length": 0.2
+  },
+  "sx": {
+   "__class__": "Sextupole",
+   "k2": 1.5,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 0.2,
+   "order": 5
+  },
+  "ty": {
+   "__class__": "FirstOrderTaylorMap",
+   "length": 0.2,
+   "m0": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.001,
+    0.0
+   ],
+   "m1": [
+    [
+     1.0,
+     0.5,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   ]
+  }
+ },
+ "metadata": {
+  "lattix": {
+   "charge": 1,
+   "elements": {
+    "bd": {
+     "group": 5,
+     "kind": "Bend",
+     "name": "bd",
+     "role": "main"
+    },
+    "bp": {
+     "group": 14,
+     "kind": "Instrument",
+     "name": "bp",
+     "role": "main"
+    },
+    "cl": {
+     "group": 12,
+     "kind": "Collimator",
+     "name": "cl",
+     "role": "main"
+    },
+    "cl_x0": {
+     "group": 12,
+     "kind": "Collimator",
+     "name": "cl",
+     "role": "extra"
+    },
+    "cv": {
+     "group": 7,
+     "kind": "RFCavity",
+     "name": "cv",
+     "role": "main"
+    },
+    "dr": {
+     "group": 0,
+     "kind": "Drift",
+     "name": "dr",
+     "role": "main"
+    },
+    "dv": {
+     "group": 20,
+     "kind": "Directive",
+     "name": "dv",
+     "role": "main"
+    },
+    "fl": {
+     "group": 15,
+     "kind": "Foil",
+     "name": "fl",
+     "role": "main"
+    },
+    "fm": {
+     "group": 8,
+     "kind": "FieldMap",
+     "name": "fm",
+     "role": "main"
+    },
+    "fq": {
+     "group": 19,
+     "kind": "Freq",
+     "name": "fq",
+     "role": "main"
+    },
+    "kk": {
+     "group": 11,
+     "kind": "Kicker",
+     "name": "kk",
+     "role": "main"
+    },
+    "mk": {
+     "group": 13,
+     "kind": "Marker",
+     "name": "mk",
+     "role": "main"
+    },
+    "mp": {
+     "group": 4,
+     "kind": "Multipole",
+     "name": "mp",
+     "role": "main"
+    },
+    "nc": {
+     "group": 9,
+     "kind": "NCells",
+     "name": "nc",
+     "role": "main"
+    },
+    "oc": {
+     "group": 3,
+     "kind": "Octupole",
+     "name": "oc",
+     "role": "main"
+    },
+    "pt_srot": {
+     "group": 17,
+     "kind": "Patch",
+     "name": "pt",
+     "role": "patch"
+    },
+    "pt_xy": {
+     "group": 17,
+     "kind": "Patch",
+     "name": "pt",
+     "role": "patch"
+    },
+    "pt_yrot": {
+     "group": 17,
+     "kind": "Patch",
+     "name": "pt",
+     "role": "patch"
+    },
+    "qp": {
+     "group": 1,
+     "kind": "Quadrupole",
+     "name": "qp",
+     "role": "main"
+    },
+    "rc": {
+     "group": 18,
+     "kind": "ReferenceChange",
+     "name": "rc",
+     "role": "main"
+    },
+    "rq": {
+     "group": 10,
+     "kind": "RFQCell",
+     "name": "rq",
+     "role": "main"
+    },
+    "sl": {
+     "group": 6,
+     "kind": "Solenoid",
+     "name": "sl",
+     "role": "main"
+    },
+    "sup_child": {
+     "group": 21,
+     "kind": "Drift",
+     "name": "sup_child",
+     "role": "main"
+    },
+    "sx": {
+     "group": 2,
+     "kind": "Sextupole",
+     "name": "sx",
+     "role": "main"
+    },
+    "ty": {
+     "group": 16,
+     "kind": "Taylor",
+     "name": "ty",
+     "role": "main"
+    }
+   },
+   "energy_mode": "local",
+   "kinetic_energy_eV": 100000000.0,
+   "lattice": "allkinds",
+   "mass_eV": 938272088.16,
+   "rf_frequency_Hz": 325000000.0,
+   "source_format": "IR",
+   "species": "proton",
+   "use": "allkinds",
+   "version": "<version>"
+  }
+ },
+ "particle_ref": {
+  "beta0": 0.4281954849788153,
+  "gamma0": 1.1065788924789453,
+  "mass0": 938272088.16,
+  "p0c": 444583420.3296385,
+  "q0": 1.0
+ }
+}

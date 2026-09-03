@@ -1,0 +1,189 @@
+{
+ "element_names": [
+  "qf",
+  "drift_0",
+  "b1",
+  "drift_1",
+  "qd",
+  "drift_2",
+  "b1_2",
+  "drift_3",
+  "m1"
+ ],
+ "elements": {
+  "b1": {
+   "__class__": "Bend",
+   "angle": 0.1,
+   "edge_entry_angle": 0.05,
+   "edge_exit_angle": 0.05,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 1.0,
+   "order": 5
+  },
+  "b1_2": {
+   "__class__": "Bend",
+   "angle": 0.1,
+   "edge_entry_angle": 0.05,
+   "edge_exit_angle": 0.05,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 1.0,
+   "order": 5
+  },
+  "drift_0": {
+   "__class__": "Drift",
+   "length": 0.7
+  },
+  "drift_1": {
+   "__class__": "Drift",
+   "length": 1.0
+  },
+  "drift_2": {
+   "__class__": "Drift",
+   "length": 1.0
+  },
+  "drift_3": {
+   "__class__": "Drift",
+   "length": 1.2999999999999998
+  },
+  "m1": {
+   "__class__": "Marker"
+  },
+  "qd": {
+   "__class__": "Quadrupole",
+   "k1": -0.6,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 0.3,
+   "order": 5
+  },
+  "qf": {
+   "__class__": "Quadrupole",
+   "k1": 0.6,
+   "knl_rel": [
+    0.0
+   ],
+   "ksl_rel": [
+    0.0
+   ],
+   "length": 0.3,
+   "order": 5
+  }
+ },
+ "metadata": {
+  "lattix": {
+   "charge": 1,
+   "elements": {
+    "b1": {
+     "group": 2,
+     "kind": "Bend",
+     "name": "b1",
+     "original_name": "b1",
+     "original_type": "sbend",
+     "role": "main",
+     "source_format": "madx"
+    },
+    "b1_2": {
+     "group": 6,
+     "kind": "Bend",
+     "name": "b1",
+     "original_name": "b1",
+     "original_type": "sbend",
+     "role": "main",
+     "source_format": "madx"
+    },
+    "drift_0": {
+     "group": 1,
+     "kind": "Drift",
+     "name": "drift_0",
+     "original_name": "drift_0",
+     "original_type": "drift",
+     "role": "main",
+     "source_format": "madx"
+    },
+    "drift_1": {
+     "group": 3,
+     "kind": "Drift",
+     "name": "drift_1",
+     "original_name": "drift_1",
+     "original_type": "drift",
+     "role": "main",
+     "source_format": "madx"
+    },
+    "drift_2": {
+     "group": 5,
+     "kind": "Drift",
+     "name": "drift_2",
+     "original_name": "drift_2",
+     "original_type": "drift",
+     "role": "main",
+     "source_format": "madx"
+    },
+    "drift_3": {
+     "group": 7,
+     "kind": "Drift",
+     "name": "drift_3",
+     "original_name": "drift_3",
+     "original_type": "drift",
+     "role": "main",
+     "source_format": "madx"
+    },
+    "m1": {
+     "group": 8,
+     "kind": "Marker",
+     "name": "m1",
+     "original_name": "m1",
+     "original_type": "marker",
+     "role": "main",
+     "source_format": "madx"
+    },
+    "qd": {
+     "group": 4,
+     "kind": "Quadrupole",
+     "name": "qd",
+     "original_name": "qd",
+     "original_type": "quadrupole",
+     "role": "main",
+     "source_format": "madx"
+    },
+    "qf": {
+     "group": 0,
+     "kind": "Quadrupole",
+     "name": "qf",
+     "original_name": "qf",
+     "original_type": "quadrupole",
+     "role": "main",
+     "source_format": "madx"
+    }
+   },
+   "energy_mode": "local",
+   "kinetic_energy_eV": 799999911.84,
+   "lattice": "fodo",
+   "mass_eV": 938272088.16,
+   "source_format": "madx",
+   "species": "proton",
+   "use": "fodo",
+   "version": "<version>"
+  }
+ },
+ "particle_ref": {
+  "beta0": 0.8418106884709223,
+  "gamma0": 1.8526310458716098,
+  "mass0": 938272088.16,
+  "p0c": 1463295949.0697272,
+  "q0": 1.0
+ }
+}

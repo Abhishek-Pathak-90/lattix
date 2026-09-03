@@ -5,10 +5,11 @@ Translate a lattice deck from one accelerator code's format to another's
 IMPACT-Z, FLAME, xtrack) through a code-neutral intermediate representation, with
 a fidelity report on every conversion and validation against the real engines.
 
-**Status: Phase 2 complete** — readers and writers for TraceWin, MAD-X, MAD8 flat, Elegant, Bmad
-and PALS, the HELIX adapter, the fidelity report and the CLI are in, each validated against its real
-engine; field maps, ImpactX/IMPACT-Z/FLAME/xtrack are Phase 3 (see `PLAN.md`, `docs/oracles.md`,
-`docs/corpus.md`).
+**Status: Phase 3 complete** — readers and writers for TraceWin, MAD-X, MAD8 flat, Elegant, Bmad,
+PALS, ImpactX, IMPACT-Z, FLAME and xtrack, TraceWin field maps integrated into equivalent cavities and
+hard-edge magnets, the HELIX adapter, the fidelity report and the CLI — each validated against its real
+engine (see `PLAN.md`, `docs/oracles.md`, `docs/corpus.md`). Phase 4 (HELIX GUI/MCP integration,
+nightly corpus runs, release) is next.
 
 ## What works today
 
@@ -20,6 +21,9 @@ PYTHONPATH=. python3 -m lattix.cli inspect mebt.dat --read-option species=h- --e
 PYTHONPATH=. python3 -m lattix.cli convert BTL2025v0703.lat btl.bmad          # MAD8 -> Bmad
 PYTHONPATH=. python3 -m lattix.cli convert fodo.madx fodo.lte                  # MAD-X -> Elegant (species-aware RF phase)
 PYTHONPATH=. python3 -m lattix.cli convert fodo.madx fodo.pals.yaml            # -> PALS (loads in ImpactX, validates with pals-schema)
+PYTHONPATH=. python3 -m lattix.cli convert mebt+hwr.dat mebt_hwr.bmad --read-option species=h- \
+    --read-option kinetic_energy_eV=2.1e6      # field maps -> lcavities with HELIX-equivalent gains
+PYTHONPATH=. python3 -m lattix.cli convert fodo.madx ImpactZ.in --to impactz   # -> IMPACT-Z deck
 
 # which engines this machine can run (MAD-X via cpymad, xtrack, Bmad/Tao, elegant, HELIX, TraceWin)
 PYTHONPATH=. python3 -m lattix.cli oracles

@@ -73,13 +73,17 @@ def transform_matrix(basis: Basis, kinetic_eV: float, mass_eV: float,
         d[4] = zs * beta * lam / (2 * np.pi)
         d[5] = 1e6 * (mass_eV / mpn) / (beta * beta * gamma * mass_eV)
     elif basis is Basis.IMPACTZ:
+        # MEASURED 2026-09-03 (impact-z 2.7.7): native (x/Scxl, γβx, y/Scxl, γβy, ω(t−t_ref) [rad,
+        # late-positive], γ_ref−γ) with Scxl = c/(2πf); a 1 m drift then gives R56_common = +0.9955387
         if not rf_frequency_Hz:
             raise ValueError("IMPACT-Z basis needs the RF frequency")
         lam = C_LIGHT / rf_frequency_Hz
+        xl = lam / (2 * np.pi)
         bg = beta * gamma
-        d[1] = d[3] = 1.0 / bg            # px/(mc) -> px/p0
-        d[4] = zs * beta * lam / (2 * np.pi)
-        d[5] = 1.0 / (beta * beta * gamma)  # dE/mc² -> δ
+        d[0] = d[2] = xl
+        d[1] = d[3] = 1.0 / bg               # γβ_x -> px/p0
+        d[4] = zs * beta * xl                # phase [rad] -> z
+        d[5] = -1.0 / (beta * beta * gamma)  # γ_ref − γ  ->  δ (sign: energy DEFICIT is positive)
     else:  # pragma: no cover
         raise NotImplementedError(basis)
     return np.diag(d)

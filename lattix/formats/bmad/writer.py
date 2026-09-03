@@ -76,10 +76,12 @@ from lattix.ir.elements import (
     ApertureP,
     Directive,
     Element,
+    FieldMap,
     Freq,
     Superposition,
 )
 from lattix.ir.expr import ExpressionError, evaluate
+from lattix.ir.fieldmap import replacement_for
 from lattix.ir.lattice import Lattice, Placed
 from lattix.ir.reference import ReferenceParticle
 from lattix.ir.rf import bmad_phi0
@@ -151,8 +153,11 @@ class Writer:
         "Bend": Rule("sbend/rbend"),
         "Solenoid": Rule("solenoid"),
         "RFCavity": Rule("lcavity"),
-        "FieldMap": Rule("lcavity/drift", "EQUIVALENT", "FM_AS_LCAVITY",
-                         "field map written as a thick lcavity with the map's reference gain"),
+        "FieldMap": Rule("lcavity/solenoid/quadrupole/drift", "EQUIVALENT", "FM_TO_CAVITY",
+                         "field map degraded per its integrated summary: RF → a thick lcavity "
+                         "carrying the map's reference gain (FM_TO_CAVITY), static "
+                         "solenoid/quadrupole → hard edge with drift padding "
+                         "(FM_SOL_HARDEDGE / FM_QUAD_HARDEDGE), otherwise a drift"),
         "NCells": Rule("drift", "LOSSY", "NCELLS_TO_DRIFT",
                        "NCELLS cell train replaced by a drift of the same length"),
         "RFQCell": Rule("drift", "LOSSY", "RFQ_TO_DRIFT",
@@ -276,9 +281,32 @@ class Writer:
                                     element=el.name, kind="Superposition")
                         continue
                     s0 = p.s_in + offset
+                    if isinstance(child, FieldMap):     # the ladder applies inside a cluster too
+                        out.extend(self._fieldmap_items(child, s0, ref, rep))
+                        continue
                     out.append(_Item(child, s0, s0 + child.length, ref.brho_signed))
                 continue
+            if isinstance(el, FieldMap):
+                out.extend(self._fieldmap_items(el, p.s_in, ref, rep))
+                continue
             out.append(_Item(el, p.s_in, p.s_out, ref.brho_signed))
+        return out
+
+    @staticmethod
+    def _fieldmap_items(el: FieldMap, s_in: float, ref: ReferenceParticle,
+                        rep: FidelityReport) -> list[_Item]:
+        """The field map's degradation ladder (PLAN §4.3).  Bmad keeps the RF map *thick*: an
+        ``lcavity`` of the map's own length reproduces its reference gain and the adiabatic
+        damping along it, where a zero-length one is a fatal Bmad error unless it is written
+        ``cavity_type = traveling_wave`` (docs/oracles.md)."""
+        r = replacement_for(el)
+        rep.add(r.cls, r.code, r.message, element=el.name, kind="FieldMap", **r.details)
+        for cls, code, message in r.extra:
+            rep.add(cls, code, message, element=el.name, kind="FieldMap")
+        out, s = [], s_in
+        for part in r.parts:
+            out.append(_Item(part, s, s + part.length, ref.brho_signed))
+            s += part.length
         return out
 
     # -- header -------------------------------------------------------------
@@ -626,18 +654,7 @@ class Writer:
                 attrs.append("n_cell = 0")
         return "lcavity", attrs
 
-    def _def_fieldmap(self, el, brho, lat, ux, rep):
-        rf = el.rf
-        dE = rf.dE_ref_eV
-        cosphi = math.cos(rf.phase_rad)
-        if dE is not None and abs(cosphi) > 1e-9 and el.length > 0:
-            rep.equivalent("FM_AS_LCAVITY",
-                           "field map written as a thick lcavity with voltage = dE_ref/cos(phase)",
-                           element=el.name, kind="FieldMap", dE_ref_eV=dE, files=list(el.files))
-            return self._cavity(el, rf, el.length, lat, ux, rep, voltage=dE / cosphi)
-        rep.lossy("FM_TO_DRIFT",
-                  "field map replaced by a drift of the same length (its reference gain is unknown)",
-                  element=el.name, kind="FieldMap", files=list(el.files))
+    def _def_fieldmap(self, el, brho, lat, ux, rep):   # pragma: no cover - expanded in _items
         return "drift", [f"l = {_num(el.length)}"]
 
     def _def_ncells(self, el, brho, lat, ux, rep):
@@ -740,9 +757,16 @@ class Writer:
         def ref_name(ref: str) -> str:
             if ref in line_names:
                 return line_names[ref]
+            el = lattice.elements.get(ref)
+            if isinstance(el, FieldMap):          # a padded hard edge is a sub-line of its parts
+                parts = replacement_for(el).parts
+                if len(parts) > 1:
+                    nm = re.sub(r"[^A-Za-z0-9_]", "_", f"{ref}_fm").lower()
+                    sup_lines.append(f"{nm}: line = ({', '.join(by_name[q.name] for q in parts if q.name in by_name)})")
+                    return nm
+                return by_name.get(parts[0].name, ref)
             if ref in by_name:
                 return by_name[ref]
-            el = lattice.elements.get(ref)
             if isinstance(el, Superposition):     # children were emitted, the parent was not
                 nm = re.sub(r"[^A-Za-z0-9_]", "_", ref).lower()
                 kids = [by_name[c] for _, c in el.children if c in by_name]

@@ -392,7 +392,7 @@ def test_fieldmap_with_a_known_gain_becomes_an_lcavity():
     lat = Lattice.from_sequence("f", [fm], ref)
     p = _written(lat)
     rep = Writer().write(lat, p)
-    assert "FM_AS_LCAVITY" in rep.codes()
+    assert "FM_TO_CAVITY" in rep.codes()
     volt = 1.5e6 / math.cos(-math.pi / 6)
     assert f"voltage = {volt:.15g}" in p.read_text()
     back, _ = Reader().read(p)
