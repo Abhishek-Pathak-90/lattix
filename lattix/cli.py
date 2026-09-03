@@ -117,12 +117,66 @@ def cmd_validate(a) -> int:
     return 0
 
 
-def _not_yet(name):
-    def run(a):
-        print(f"{name}: arrives with the IR in Phase 1 (see PLAN.md)", file=sys.stderr)
-        return 3
+def cmd_convert(a) -> int:
+    from lattix.formats import translate
 
-    return run
+    rep = translate(a.src, a.dst, src_fmt=a.from_fmt, dst_fmt=a.to, strict=a.strict,
+                    read_options=_kv(a.read_option), write_options=_kv(a.write_option))
+    rep.print_summary()
+    if a.report:
+        rep.to_json(a.report)
+    return 0 if rep.ok else 1
+
+
+def cmd_inspect(a) -> int:
+    from collections import Counter
+
+    from lattix.formats import read
+    from lattix.ir.walk import propagate
+
+    lat, rep = read(a.src, a.from_fmt, **_kv(a.read_option))
+    warns: list[str] = []
+    placed = propagate(lat, warnings=warns)
+    kinds = Counter(p.element.kind for p in placed)
+    r0, r1 = lat.reference, placed[-1].ref_out if placed else lat.reference
+    print(f"{a.src}: {len(placed)} placed elements, {len(lat.elements)} definitions, "
+          f"{len(lat.lines)} lines, L = {placed[-1].s_out if placed else 0:.6f} m")
+    print(f"reference: {r0.species.name} {r0.kinetic_energy_eV * 1e-6:.6g} MeV -> "
+          f"{r1.kinetic_energy_eV * 1e-6:.6g} MeV; RF clock {r0.rf_frequency_Hz}")
+    for k, n in sorted(kinds.items(), key=lambda kv: -kv[1]):
+        print(f"  {k:16s} {n}")
+    if a.elements:
+        for p in placed:
+            print(f"{p.index:5d} {p.s_out:12.6f} {p.element.kind:14s} {p.name:24s} L={p.length:.6g}")
+    rep.print_summary()
+    for w in warns[:10]:
+        print("walk:", w, file=sys.stderr)
+    return 0
+
+
+def cmd_report(a) -> int:
+    from lattix.formats import read, write
+
+    lat, rep_in = read(a.src, a.from_fmt, **_kv(a.read_option))
+    wr_fmt = a.to
+    tmp = Path(tempfile.mkdtemp(prefix="lattix_report_")) / ("out." + wr_fmt)
+    rep = write(lat, tmp, wr_fmt, strict=False, **_kv(a.write_option))
+    rep.entries = rep_in.entries + rep.entries
+    print(rep.summary())
+    if a.json:
+        rep.to_json(a.json)
+    return 0
+
+
+def _kv(items: list[str] | None) -> dict:
+    out: dict = {}
+    for it in items or []:
+        k, _, v = it.partition("=")
+        try:
+            out[k] = float(v) if v.replace(".", "", 1).replace("e", "", 1).lstrip("-+").isdigit() else v
+        except ValueError:
+            out[k] = v
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -149,10 +203,32 @@ def main(argv: list[str] | None = None) -> int:
     _add_beam_args(s)
     s.set_defaults(func=cmd_validate)
 
-    for name in ("convert", "inspect", "report"):
-        s = sub.add_parser(name)
-        s.add_argument("args", nargs="*")
-        s.set_defaults(func=_not_yet(name))
+    s = sub.add_parser("convert", help="translate a deck between formats")
+    s.add_argument("src")
+    s.add_argument("dst")
+    s.add_argument("--from", dest="from_fmt", default=None)
+    s.add_argument("--to", default=None)
+    s.add_argument("--strict", action="store_true", help="fail on the first LOSSY/DROPPED element")
+    s.add_argument("--report", default=None, help="write the fidelity report JSON here")
+    s.add_argument("--read-option", action="append", help="KEY=VALUE for the reader (e.g. species=h-)")
+    s.add_argument("--write-option", action="append", help="KEY=VALUE for the writer (e.g. energy_mode=local)")
+    s.set_defaults(func=cmd_convert)
+
+    s = sub.add_parser("inspect", help="summarise a deck through the IR")
+    s.add_argument("src")
+    s.add_argument("--from", dest="from_fmt", default=None)
+    s.add_argument("--elements", action="store_true")
+    s.add_argument("--read-option", action="append")
+    s.set_defaults(func=cmd_inspect)
+
+    s = sub.add_parser("report", help="fidelity report of a conversion without keeping the output")
+    s.add_argument("src")
+    s.add_argument("--from", dest="from_fmt", default=None)
+    s.add_argument("--to", required=True)
+    s.add_argument("--json", default=None)
+    s.add_argument("--read-option", action="append")
+    s.add_argument("--write-option", action="append")
+    s.set_defaults(func=cmd_report)
 
     a = p.parse_args(argv)
     return a.func(a)

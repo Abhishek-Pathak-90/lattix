@@ -1,0 +1,14 @@
+! lattix <version> from IR
+
+beam, particle=proton, mass=0.93827208816, charge=1, energy=1.73827208816;
+
+! --- elements
+qf: quadrupole, l=0.3, k1=0.6;   ! lattix: name="QF"
+d1: drift, l=0.5;   ! lattix: name="D1"
+b1: sbend, l=1, angle=0.1, e1=0.05, e2=0.05, fint=0.5, hgap=0.02;   ! lattix: name="B1"
+end: marker;   ! lattix: name="END"
+
+cell: line=(qf, d1);
+demo: line=(2*cell, -cell, b1, end);
+
+use, sequence=demo;
