@@ -74,7 +74,9 @@ def drift(tmp_path_factory):
 def test_structure(fodo):
     assert fodo.engine == "xtrack" and fodo.basis is Basis.XTRACK
     assert not any(n.endswith(("$start", "$end")) for n in fodo.names)
-    user = [n for n in fodo.names if not n.startswith("drift")]
+    # implicit drifts are "drift_N" from cpymad + MadLoader and "||drift_N" from xtrack's own
+    # MAD-X parser (used when cpymad is absent, e.g. macOS CI): ignore both spellings
+    user = [n for n in fodo.names if "drift" not in n.lower()]
     assert user == ["qf", "d1", "m1", "qd"]          # auto drift fills 1.1..1.6
     assert fodo.length[fodo.names.index("m1")] == 0.0
     assert fodo.s_out[-1] == pytest.approx(1.6, abs=1e-12)
