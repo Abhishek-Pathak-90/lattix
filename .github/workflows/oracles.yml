@@ -20,6 +20,9 @@ jobs:
           auto-activate-base: false
       - name: "Bmad/Tao environment (separate env, bmad pins python 3.13)"
         run: conda env create -q -f environment-bmad.yml
+      - name: MAD-X via cpymad (Linux wheels only)
+        if: runner.os == 'Linux'
+        run: pip install cpymad
       - name: Install lattix
         run: |
           pip install -e . --no-deps

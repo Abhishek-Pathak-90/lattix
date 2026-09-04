@@ -18,7 +18,7 @@ dependencies:
   - impact-z
   - pip
   - pip:
-      - cpymad
+      # cpymad has no macOS arm64 wheel: the workflows pip-install it on Linux only
       - xtrack
       - pysdds
       - pals-schema
