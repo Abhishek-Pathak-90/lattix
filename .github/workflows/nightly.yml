@@ -1,6 +1,6 @@
 name: nightly
 on:
-  schedule: [{ cron: "0 7 * * *" }]
+  # schedule: [{ cron: "0 7 * * *" }]   # enable once the self-hosted runner (labels: macOS, lattix) is registered
   workflow_dispatch:
 jobs:
   corpus:

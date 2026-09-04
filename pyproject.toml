@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-oracles = ["cpymad>=1.16", "xtrack>=0.60", "pysdds>=0.6"]
+oracles = ["cpymad>=1.16", "xtrack>=0.60", "xpart>=0.20", "pysdds>=0.6"]
 pals = ["pals-schema>=0.3"]
 dev = ["pytest>=7", "pytest-cov", "hypothesis>=6", "ruff", "mypy"]
 
