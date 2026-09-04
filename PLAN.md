@@ -280,3 +280,7 @@ pytest tests/oracles -m "not oracle_tracewin"                                   
 - **Name-length limits** (MAD-X 48?, MAD8 16?, Bmad 40?) to verify against manuals in 1.5/2.2/2.3.
 - **Private data**: PIP-II decks, `Fields/`, `Tracewin_code/`, `TraceWIn_Tools/` never enter the repo or CI (manifest + `require_data`).
 - HELIX side note: `tests/io/test_madx_conventions.py` leaves a `sectormap` file at HELIX's repo root (cpymad writes to cwd) — gitignore or `m.chdir()` in HELIX.
+
+## Phase 5
+
+The remaining codes (Cheetah, xsuite completion, Ocelot, LightWin, IMPACT-T, PyORBIT3, DYNAC, Synergia2, OPAL-X, the Bmad bridge) are surveyed and planned in [PLAN_PHASE5.md](PLAN_PHASE5.md) (2026-09-04).
