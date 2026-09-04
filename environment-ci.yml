@@ -13,12 +13,14 @@ dependencies:
   - pytest
   - pytest-cov
   - hypothesis
-  - elegant
-  - impactx
-  - impact-z
+  - elegant=2026.3.0
+  - impactx=26.08
+  - impact-z=2.7.7
+  - gsl=2.7          # elegant links libgsl.25
   - pip
   - pip:
       # cpymad has no macOS arm64 wheel: the workflows pip-install it on Linux only
       - xtrack
+      - xpart
       - pysdds
-      - pals-schema
+      - pals-schema>=0.3.0

@@ -18,6 +18,7 @@ divergences the tests below pin are recorded in ``docs/oracles.md``.
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -43,8 +44,21 @@ from lattix.ir import (
 )
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "public"
-BMAD_PYTHON = Path("/Users/abhishekpathak/anaconda3/envs/bmad/bin/python")
-BMAD_TAO = Path("/Users/abhishekpathak/anaconda3/envs/bmad/bin/tao")
+
+
+def _bmad_tools() -> tuple[Path | None, Path | None]:
+    """Bmad interpreter and Tao binary through the adapter's discovery (LATTIX_BMAD_PYTHON /
+    LATTIX_BMAD_ENV / conda roots), so CI's ``lattix-bmad`` env is found like the local ``bmad``."""
+    from lattix.oracles.pytao import _resolve_python
+
+    python, _tried = _resolve_python(os.environ.get("LATTIX_BMAD_ENV", "bmad"))
+    if not python:
+        return None, None
+    tao = Path(python).parent / ("tao.exe" if sys.platform == "win32" else "tao")
+    return Path(python), (tao if tao.exists() else None)
+
+
+BMAD_PYTHON, BMAD_TAO = _bmad_tools()
 
 try:                                    # pals-schema, import name `pals`
     import pals as pals_schema
@@ -62,7 +76,7 @@ needs_pals_schema = pytest.mark.skipif(
 needs_impactx = pytest.mark.skipif(
     _impactx is None, reason="impactx not importable in this environment")
 needs_bmad = pytest.mark.skipif(
-    not BMAD_TAO.exists(), reason=f"Tao not found at {BMAD_TAO}")
+    BMAD_TAO is None, reason="Tao not found (set LATTIX_BMAD_PYTHON or LATTIX_BMAD_ENV)")
 
 
 def proton_ref(ke: float = 8e8) -> ReferenceParticle:
@@ -348,4 +362,4 @@ def test_interop_environment_is_reported():
     """Never silently green: say which oracle legs ran (visible with ``pytest -s``)."""
     print(f"\npals-schema: {'yes' if pals_schema else 'no'}   "
           f"impactx: {'yes' if _impactx else 'no'}   "
-          f"tao: {'yes' if BMAD_TAO.exists() else 'no'}   ({sys.executable})")
+          f"tao: {'yes' if BMAD_TAO else 'no'}   ({sys.executable})")

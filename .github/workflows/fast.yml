@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
-      - run: pip install -e ".[dev]" pysdds pals-schema
+      - run: pip install -e ".[dev]" pysdds "pals-schema>=0.3.0"
       # cpymad ships Linux wheels only for this Python on the hosted runners; without it the
       # MAD-X reader tests skip (MissingDependencyError -> skip) and coverage drops a few points.
       - if: runner.os == 'Linux'
