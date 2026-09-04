@@ -82,7 +82,9 @@ def test_structure(fodo):
     assert fodo.s_out[-1] == pytest.approx(1.6, abs=1e-12)
     assert fodo.total_length == pytest.approx(1.6, abs=1e-12)
     assert np.all(np.diff(fodo.s_out) >= 0)
-    assert not fodo.warnings, fodo.warnings
+    # without cpymad the adapter says so once and uses xtrack's own MAD-X parser: not a defect
+    unexpected = [w for w in fodo.warnings if not w.startswith("cpymad unavailable")]
+    assert not unexpected, unexpected
 
 
 def test_energy_is_constant(fodo):
