@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
-from lattix.fidelity import FidelityReport
+from lattix.fidelity import FidelityReport, TranslationError
 from lattix.ir.elements import ALL_KINDS
 from lattix.ir.lattice import Lattice
 
@@ -129,7 +129,13 @@ def write(lattice: Lattice, path: str | Path, fmt: str | None = None, *, strict:
     wr = FORMATS[fmt].writer()
     if wr is None:
         raise ValueError(f"format {fmt!r} has no writer")
-    rep = wr.write(lattice, Path(path), strict=strict, **options)
+    existed = Path(path).exists()
+    try:
+        rep = wr.write(lattice, Path(path), strict=strict, **options)
+    except TranslationError:
+        if strict and not existed and Path(path).exists():
+            Path(path).unlink()          # a strict failure leaves no half-written deck behind
+        raise
     rep.target_format = fmt
     rep.target_file = str(path)
     rep.raise_if(strict)

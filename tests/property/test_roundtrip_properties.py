@@ -108,7 +108,7 @@ def _assert_same_physics(a, b, tol=1e-9):
     assert pa[-1].ref_out.kinetic_energy_eV == pytest.approx(pb[-1].ref_out.kinetic_energy_eV, rel=1e-9)
 
 
-@settings(max_examples=60, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(lat=st_lattice())
 def test_tracewin_roundtrip_preserves_physics(tmp_path_factory, lat):
     from lattix.formats import read, write
@@ -122,7 +122,7 @@ def test_tracewin_roundtrip_preserves_physics(tmp_path_factory, lat):
     _assert_same_physics(lat, back)
 
 
-@settings(max_examples=40, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(lat=st_lattice())
 def test_madx_roundtrip_preserves_physics(tmp_path_factory, lat):
     """MAD-X keeps p0: quads downstream of cavities re-read with the constant rigidity, so

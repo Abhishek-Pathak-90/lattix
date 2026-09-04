@@ -103,7 +103,8 @@ def cmd_validate(a) -> int:
         print("need at least two engines to compare", file=sys.stderr)
         return 2
     worst = 0.0
-    for pc in compare_all(results):
+    comparisons = compare_all(results)
+    for pc in comparisons:
         print(pc.row() + ("  " + "; ".join(pc.notes) if pc.notes else ""))
         worst = max(worst, pc.max_rcum_abs)
     if a.json:
@@ -111,6 +112,10 @@ def cmd_validate(a) -> int:
                        "R_cum_common": r.to_common().R_cum.tolist(),
                        "ke_out": r.ref_kinetic_eV_out.tolist()} for e, r in results.items()}
         Path(a.json).write_text(json.dumps(payload) + "\n")
+    if a.html:
+        from lattix.report_html import write_validate_html
+
+        write_validate_html(a.html, comparisons, title=", ".join(str(p) for p in decks.values()))
     if a.tol is not None and worst > a.tol:
         print(f"FAIL: max cumulative-map difference {worst:.3e} > tol {a.tol:.1e}")
         return 1
@@ -162,6 +167,8 @@ def cmd_report(a) -> int:
     tmp = Path(tempfile.mkdtemp(prefix="lattix_report_")) / ("out." + wr_fmt)
     rep = write(lat, tmp, wr_fmt, strict=False, **_kv(a.write_option))
     rep.entries = rep_in.entries + rep.entries
+    rep.source_format = rep_in.source_format
+    rep.source_file = rep_in.source_file
     print(rep.summary())
     if a.json:
         rep.to_json(a.json)
@@ -198,6 +205,7 @@ def main(argv: list[str] | None = None) -> int:
                    help="FORMAT=PATH (repeatable; one deck per format, e.g. madx=fodo.madx bmad=fodo.bmad)")
     s.add_argument("--oracles", default="madx,xtrack,bmad,helix")
     s.add_argument("--tol", type=float, default=None, help="fail if max ΔR̂cum exceeds this")
+    s.add_argument("--html", default=None, help="write an HTML report: per-boundary map differences vs s")
     s.add_argument("--workdir", default=None)
     s.add_argument("--json", default=None)
     _add_beam_args(s)
@@ -231,7 +239,13 @@ def main(argv: list[str] | None = None) -> int:
     s.set_defaults(func=cmd_report)
 
     a = p.parse_args(argv)
-    return a.func(a)
+    from lattix.fidelity import TranslationError
+
+    try:
+        return a.func(a)
+    except TranslationError as exc:
+        print(f"lattix: error: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":  # pragma: no cover

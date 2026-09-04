@@ -28,6 +28,7 @@ class PairComparison:
     survey_end_abs: float | None
     blocks: dict[str, float] = field(default_factory=dict)   # max abs diff per block, see BLOCKS
     notes: list[str] = field(default_factory=list)
+    per_boundary: list[tuple[float, dict[str, float]]] = field(default_factory=list)  # (s, block diffs)
 
     def row(self) -> str:
         se = "n/a" if self.survey_end_abs is None else f"{self.survey_end_abs:.2e}"
@@ -92,6 +93,7 @@ def compare_pair(a: OracleResult, b: OracleResult, tol_s: float = 1e-9) -> PairC
     pb0 = momentum_eV(cb.ref_kinetic_eV_in[0], cb.mass_eV)
     diffs, rels = [], []
     blocks = {k: 0.0 for k in BLOCKS}
+    per_boundary: list[tuple[float, dict[str, float]]] = []
     for ia, ib in pairs:
         ma = rescale_to_constant_p0(Ra[ia], pa0, momentum_eV(ca.ref_kinetic_eV_out[ia], ca.mass_eV))
         mb = rescale_to_constant_p0(Rb[ib], pb0, momentum_eV(cb.ref_kinetic_eV_out[ib], cb.mass_eV))
@@ -99,8 +101,10 @@ def compare_pair(a: OracleResult, b: OracleResult, tol_s: float = 1e-9) -> PairC
         d = float(np.max(dm))
         diffs.append(d)
         rels.append(d / max(np.max(np.abs(ma)), 1e-300))
-        for k, (r, c) in BLOCKS.items():
-            blocks[k] = max(blocks[k], float(np.max(dm[r, c])))
+        here = {k: float(np.max(dm[r, c])) for k, (r, c) in BLOCKS.items()}
+        for k, v in here.items():
+            blocks[k] = max(blocks[k], v)
+        per_boundary.append((float(ca.s_out[ia]), here))
     ea = ca.ref_kinetic_eV_out[[p[0] for p in pairs]]
     eb = cb.ref_kinetic_eV_out[[p[1] for p in pairs]]
     energy_rel = float(np.max(np.abs(ea - eb) / np.maximum(np.abs(ea), 1e-300)))
@@ -114,7 +118,7 @@ def compare_pair(a: OracleResult, b: OracleResult, tol_s: float = 1e-9) -> PairC
         notes.append("total length differs")
     return PairComparison(a.engine, b.engine, len(pairs), a.total_length, b.total_length,
                           float(np.max(diffs)), float(np.max(rels)), float(diffs[-1]),
-                          energy_rel, sv, blocks, notes)
+                          energy_rel, sv, blocks, notes, per_boundary=per_boundary)
 
 
 def compare_all(results: dict[str, OracleResult]) -> list[PairComparison]:

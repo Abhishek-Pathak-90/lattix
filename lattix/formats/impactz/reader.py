@@ -476,16 +476,17 @@ class Reader:
 
     def _unsupported(self, card: Card) -> Element:
         """Unknown or unmodelled type code: keep the geometry, drop the physics."""
-        known = card.itype in TYPE_NAMES
-        cls, code = ("LOSSY", "UNMODELLED_IMPACTZ_TYPE") if known else \
-                    ("DROPPED", "UNSUPPORTED_IMPACTZ_TYPE")
         name = self._name(card, TYPE_NAMES.get(card.itype, "type"))
         el: Element = (Drift(name=name, length=card.length) if card.length > 0
                        else Marker(name=name))
-        self.rep.add(cls, code,
-                     f"IMPACT-Z type {card.itype} ({card.name}) has no IR kind; "
-                     f"kept as a {el.kind} with the raw columns in native['impactz']",
-                     element=name, kind=el.kind, line=card.line, type=card.itype)
+        message = (f"IMPACT-Z type {card.itype} ({card.name}) has no IR kind; "
+                   f"kept as a {el.kind} with the raw columns in native['impactz']")
+        if card.itype in TYPE_NAMES:      # a type IMPACT-Z documents but the IR does not model
+            self.rep.add("LOSSY", "UNMODELLED_IMPACTZ_TYPE", message,
+                         element=name, kind=el.kind, line=card.line, type=card.itype)
+        else:                             # a type code unknown to IMPACT-Z itself
+            self.rep.add("DROPPED", "UNSUPPORTED_IMPACTZ_TYPE", message,
+                         element=name, kind=el.kind, line=card.line, type=card.itype)
         return self._common(el, card, passthrough=True)
 
     # -- positive type codes ---------------------------------------------

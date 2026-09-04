@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use lattix, please cite it as below."
+type: software
+title: "lattix: accelerator lattice translator with engine-backed validation"
+version: 0.1.0
+date-released: 2026-09-03
+license: BSD-3-Clause
+repository-code: "https://github.com/Abhishek-Pathak-90/lattix"
+authors:
+  - family-names: Pathak
+    given-names: Abhishek
+keywords:
+  - accelerator physics
+  - lattice
+  - TraceWin
+  - MAD-X
+  - Elegant
+  - Bmad
+  - PALS

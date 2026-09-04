@@ -5,11 +5,11 @@ Translate a lattice deck from one accelerator code's format to another's
 IMPACT-Z, FLAME, xtrack) through a code-neutral intermediate representation, with
 a fidelity report on every conversion and validation against the real engines.
 
-**Status: Phase 3 complete** — readers and writers for TraceWin, MAD-X, MAD8 flat, Elegant, Bmad,
+**Status: Phase 4 (0.1.0)** — documentation, CI and a local release build are in place; HELIX GUI/MCP integration is deferred. Phase 3 delivered — readers and writers for TraceWin, MAD-X, MAD8 flat, Elegant, Bmad,
 PALS, ImpactX, IMPACT-Z, FLAME and xtrack, TraceWin field maps integrated into equivalent cavities and
 hard-edge magnets, the HELIX adapter, the fidelity report and the CLI — each validated against its real
-engine (see `PLAN.md`, `docs/oracles.md`, `docs/corpus.md`). Phase 4 (HELIX GUI/MCP integration,
-nightly corpus runs, release) is next.
+engine (see `PLAN.md`, `docs/oracles.md`, `docs/corpus.md`). Still open: the HELIX GUI/MCP integration (deferred), the nightly
+self-hosted runner registration, and a PyPI upload (the 0.1.0 wheel and sdist are built locally).
 
 ## What works today
 
@@ -61,3 +61,13 @@ PYTHONPATH=. python3 -m pytest tests -m "not oracle_tracewin" -q   # what CI run
 
 Markers: `oracle_madx`, `oracle_xtrack`, `oracle_bmad`, `oracle_elegant`, `oracle_impactx`,
 `oracle_impactz`, `oracle_flame`, `oracle_helix`, `oracle_tracewin` (local only), `corpus`, `slow`.
+
+## Documentation
+
+* [docs/index.md](docs/index.md) — map of the documentation
+* [docs/tutorial.md](docs/tutorial.md) — install, convert, read the fidelity summary, strict mode, Python API
+* [docs/conventions.md](docs/conventions.md) — units, rigidity, energy walk, RF phase per format, bends, bases
+* [docs/fidelity.md](docs/fidelity.md) — the ledger and the catalogue of every fidelity code
+* [docs/oracles.md](docs/oracles.md) — engines, adapters and every measured convention
+* [docs/formats/](docs/formats/) — one page per format
+* [CITATION.cff](CITATION.cff) — how to cite

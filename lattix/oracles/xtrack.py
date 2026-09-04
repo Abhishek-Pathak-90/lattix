@@ -47,6 +47,7 @@ from pathlib import Path
 
 import numpy as np
 
+from lattix.formats.xtrack.convert import allow_jit
 from lattix.oracles.base import (
     SPECIES,
     Basis,
@@ -153,6 +154,7 @@ class XtrackOracle:
 
     def available(self) -> tuple[bool, str]:
         try:
+            allow_jit()
             import xtrack as xt
         except Exception as e:  # noqa: BLE001
             return False, f"xtrack import failed: {e}"
@@ -162,6 +164,7 @@ class XtrackOracle:
     def run(self, deck: Path, *, fmt: str | None = None, beam: BeamSpec | None = None,
             probe: Probe | None = None, workdir: Path | None = None,
             sequence: str | None = None) -> OracleResult:
+        allow_jit()
         import xtrack as xt
 
         deck = Path(deck).resolve()
@@ -260,6 +263,7 @@ class XtrackOracle:
     @staticmethod
     def _load_madx(deck: Path, wd: Path, beam: BeamSpec | None, sequence: str | None,
                    warnings: list[str]):
+        allow_jit()
         import xtrack as xt
 
         try:
