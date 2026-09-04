@@ -12,7 +12,5 @@ jobs:
           source ~/anaconda3/etc/profile.d/conda.sh && conda activate lattix && pip install -e .
           python -m lattix.corpus verify --root "$LATTIX_CORPUS_DIR"
           pytest -m "corpus or oracle_tracewin or slow" -ra --hypothesis-profile=nightly
-        env:
-          LATTIX_CORPUS_DIR: ${{ vars.LATTIX_CORPUS_DIR }}
-          TRACEWIN_EXE: ${{ vars.TRACEWIN_EXE }}
-          HELIX_ROOT: ${{ vars.HELIX_ROOT }}
+        # LATTIX_CORPUS_DIR, TRACEWIN_EXE and HELIX_ROOT come from the runner's own `.env`
+        # file (~/actions-runner-lattix/.env): local paths stay on the machine, not on GitHub.
