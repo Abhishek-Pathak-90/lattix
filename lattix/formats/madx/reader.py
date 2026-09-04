@@ -179,7 +179,9 @@ class Reader:
         try:
             from cpymad.madx import Madx
         except Exception as exc:  # noqa: BLE001
-            raise RuntimeError("MAD-X reader needs cpymad (pip install cpymad)") from exc
+            from lattix.errors import MissingDependencyError
+
+            raise MissingDependencyError("MAD-X reader needs cpymad (pip install cpymad)") from exc
 
         path = Path(path).resolve()
         text = path.read_text(encoding="utf-8", errors="replace")

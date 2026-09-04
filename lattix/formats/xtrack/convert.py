@@ -61,6 +61,7 @@ conventions when it is not (a foreign line from ``xt.load`` or ``from_madx_seque
 from __future__ import annotations
 
 import math
+import os
 import re
 import warnings
 from dataclasses import dataclass
@@ -106,8 +107,26 @@ from lattix.ir.reference import SPECIES, ReferenceParticle, Species
 from lattix.ir.units import C_LIGHT
 from lattix.ir.walk import energy_gain_eV, propagate
 
+
 #: an element counts as accelerating above 1 µeV of reference gain (same tolerance as
 #: the MAD-X writer: far below any physical gain, far above ``cos(±π/2)`` noise).
+def allow_jit() -> None:
+    """Let xtrack compile its kernels just in time.
+
+    xtrack >= 0.112 refuses to build a tracker unless xsuite's prebuilt kernels are installed or
+    just-in-time compilation is explicitly allowed; lattix only needs a C compiler, so it opts in
+    (environment variable for a fresh import, ``xobjects.settings`` when xobjects is already loaded).
+    """
+    os.environ.setdefault("XSUITE_ALLOW_KERNEL_COMPILATION", "1")
+    try:
+        import xobjects as xo
+    except ImportError:  # pragma: no cover - xtrack absent
+        return
+    settings = getattr(xo, "settings", None)
+    if settings is not None and hasattr(settings, "allow_kernel_compilation"):
+        settings.allow_kernel_compilation = True
+
+
 _ACCEL_TOL_eV = 1e-6
 
 #: characters xtrack tolerates in an element name and MAD-X can still read back.
@@ -254,6 +273,7 @@ def _has_shift_fields(cls) -> bool:
 
 def _aperture_elements(ap: ApertureP, name: str, rep: FidelityReport, kind: str):
     """``ApertureP`` → one xtrack limit element (``LimitRect`` or ``LimitEllipse``)."""
+    allow_jit()
     import xtrack as xt
 
     xl = ap.x_limits
@@ -334,6 +354,7 @@ def to_line(lattice: Lattice, *, energy_mode: str = "local", report: FidelityRep
         emit ``LimitRect``/``LimitEllipse`` elements for :class:`ApertureP` data
         attached to ordinary elements (a :class:`Collimator` always becomes one).
     """
+    allow_jit()
     import xtrack as xt
 
     if energy_mode not in ("local", "constant"):
@@ -487,6 +508,7 @@ def _emit(b: _Builder, el: Element, brho: float, ref: ReferenceParticle, lattice
 
 def _emit_patch(b: _Builder, el: Patch, group: int, rep: FidelityReport) -> None:
     """A ``Patch`` becomes the xtrack frame elements it is made of, in survey order."""
+    allow_jit()
     import xtrack as xt
 
     n = 0
@@ -538,6 +560,7 @@ def _make_rotation(cls, angle_rad: float):
 
 
 def _cavity(el, brho, ref, rep, *, voltage: float, length: float):
+    allow_jit()
     import xtrack as xt
 
     rf = el.rf
@@ -567,6 +590,7 @@ def _cavity(el, brho, ref, rep, *, voltage: float, length: float):
 
 def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport):
     """``(main xtrack element, [extra elements])`` for one IR element."""
+    allow_jit()
     import xtrack as xt
 
     # a passthrough recorded by from_line for a class the IR cannot model
@@ -748,6 +772,7 @@ def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport
 
 def _from_element_dict(d: dict):
     """Rebuild an xtrack element from its ``to_dict`` payload."""
+    allow_jit()
     import xtrack as xt
 
     cls = getattr(xt, d.pop("__class__"))

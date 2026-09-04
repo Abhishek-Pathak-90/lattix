@@ -15,3 +15,7 @@ runs/
 .DS_Store
 .env
 *.digested*
+
+# cffi/xobjects kernel builds that land in the cwd during xtrack tests
+/*.c
+*.o.tmp
