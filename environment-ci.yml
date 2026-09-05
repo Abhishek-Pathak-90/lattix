@@ -16,6 +16,7 @@ dependencies:
   - elegant=2026.3.0
   - impactx=26.08
   - impact-z=2.7.7
+  - impact-t=3.1.5
   - gsl=2.7          # elegant links libgsl.25
   - pip
   - pip:

@@ -43,6 +43,7 @@ markers = [
   "oracle_lightwin: needs LightWin (python >= 3.12, conda env `lightwin` or LATTIX_LIGHTWIN_PYTHON)",
   "oracle_cheetah: needs Cheetah + torch (conda env `cheetah` or LATTIX_CHEETAH_PYTHON)",
   "oracle_pyorbit: needs PyORBIT3 (conda env `pyorbit` or LATTIX_PYORBIT_PYTHON)",
+  "oracle_impactt: needs the IMPACT-T binary (ImpactTexe; conda-forge impact-t)",
   "oracle_helix: needs a HELIX checkout (HELIX_ROOT)",
   "oracle_tracewin: needs a licensed TraceWin binary (TRACEWIN_EXE); local only",
   "corpus: needs LATTIX_CORPUS_DIR with the private corpus manifest",

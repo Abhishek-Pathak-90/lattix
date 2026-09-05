@@ -55,7 +55,11 @@ public field-map deck of the battery: it exercises every `FM_TO_CAVITY`/`FM_AS_C
 against LightWin's envelope.  A writer-only format (MAD-NG)
 has no fixed point and is not a battery pair; its tests live with the xtrack ones.  Cheetah's LatticeJSON
 is a battery format with Cheetah as its engine, and PyORBIT3's linac XML one with PyORBIT3 as its
-engine (its thin gaps carry PyORBIT's own focusing, so pairs with thin cavities are Equivalent tier).  TraceWin decks
+engine (its thin gaps carry PyORBIT's own focusing, so pairs with thin cavities are Equivalent tier).  IMPACT-T's
+`ImpactT.in` is a battery format with IMPACT-T as its engine: its solenoid tables and RF profiles are
+Equivalent tier, and decks with bends are report-only (the engine's dipole has no pole-face focusing).  A derived
+IMPACT-T or IMPACT-Z deck gets a directory of its own under `derived/`: their `rfdataN` and `1TN.T7` files are
+numbered from 1 per deck and would otherwise overwrite each other.  TraceWin decks
 are checked with HELIX where it exists and with LightWin's `Envelope3D` otherwise (CI); a pair whose
 LightWin run skipped or drift-substituted elements is report-only.
 

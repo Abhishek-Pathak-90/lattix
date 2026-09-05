@@ -16,6 +16,7 @@ recalled.  Re-run `lattix fingerprint` / `pytest tests/oracles` after any engine
 | xtrack | base env 0.103.5; env `lattix` 0.112.0 | — | (x, px, y, py, ζ, δ) | constant | Native Lark MAD-X parser rejects some MAD-X (e.g. `sequence, l=…, refer=centre` header in HELIX's fodo.madx) → load through cpymad `Line.from_madx_sequence`. |
 | LightWin | env `lightwin` (python 3.12, LightWin 0.16.5, MIT) | `lattix/oracles/lightwin.py` + `lightwin_worker.py` | (x, x', y, y', z [m], dp/p) — TraceWin's, SI | follows the field maps | Envelope3D only: DRIFT, QUAD, SOLENOID, BEND, FIELD_MAP (1-D); EDGE/THIN_STEERING/APERTURE/DIAG_* propagated as drifts, GAP/NCELLS/DTL_CEL skipped — both audited in `meta` and report-only in the battery. |
 | Cheetah | env `cheetah` (torch 2.14 CPU, cheetah-accelerator 0.8.4, GPL-3) | `lattix/oracles/cheetah.py` + `cheetah_worker.py` | (x, px, y, py, τ = cΔt late-positive [m], ΔE/(p0 c)) | follows the cavities | 7×7 first-order maps per element; cavity phase runs the other way (`phase = −φ`), k1/k charge-blind (signed rigidity in the writer); zero-length cavity is inf (1 µm substituted). |
+| IMPACT-T | conda-forge `impact-t` 3.1.5 (`ImpactTexe`, BSD) in env `lattix` | 3.1.5 | fixed-time `(x, γβx, y, γβy, z, γβz)` dumps drifted to the reference plane → the common basis | follows | `lattix/oracles/impactt.py`: `-2` dumps and `-4` step changes at every boundary, each element its own `dt = L/(N βc)` so the reference lands on the boundaries; 13-particle probes from `partcl.data` (`flagdist 16`); `R_elem = J_i·J_{i−1}⁻¹`; ≤ 90 controls per run (chunked, `theta0` shifted by `360·f·t`); dipoles re-base the frame one step past the face; **the dipole model has no pole-face focusing (report only)**. |
 | PyORBIT3 | env `pyorbit` (python 3.10, meson build of PyORBIT3 `22b45fa` 2026-05-14 with `USE_MPI=none`, MIT; `libfftw3` preloaded on macOS) | `lattix/oracles/pyorbit.py` + `pyorbit_worker.py` | (x [m], x′, y [m], y′, z [m] ahead-positive, dE [GeV]) | follows the gaps | `LinacTrMatricesController` maps at every node entrance, cumulated from the first node (per-node map `R[k+1]·R[k]⁻¹`, one extra node at the exit); 13-particle symmetric probes tracked at two amplitudes and Richardson-extrapolated; one `<Cavity>` per gap. |
 | ImpactX / IMPACT-Z | env `lattix` (`impactx` 26.08, `impact-z` 2.7.7, both osx-arm64 builds) | — | Phase 3 | follows | `ImpactZexe` on PATH in the env; `impactx` importable. |
 | SciBmad | `julia` (juliaup 1.10) with `SciBmad` 0.5.2 (Beamlines.jl + BeamTracking.jl) through `lattix/oracles/scibmad_worker.jl`; `LATTIX_JULIA` or PATH | 0.5.2 (2026-09-05) | (x, px, y, py, z, pz), z ahead-positive (drift R56 = +L/γ² measured) | constant (one reference momentum per `Beamline`; nesting and `Patch(dE_ref)` past the first element are refused) | `RFCavity` gain is **−V·cos(phi0)** with `phi0` in radians for protons and electrons alike (writer negates the voltage: `GAIN_SIGN`); a zero-length cavity and `edge1_int/edge2_int` cannot be tracked (worker substitutes 1 µm / 0 and says so); `g_ref` alone is a curved frame — the dipole field is `Kn0`; `LineElement(transport_map=f)` with `f(v, q, p=nothing)` works as a thin lens; `using Beamlines` fails in an environment that only has `SciBmad` (worker strips `using` lines). `Species("#1H-")` is H⁻ (m_p + 2 m_e); `Species("H-")` is the isotope-averaged anion. Startup ~13 s, a run ~8 s. |
@@ -429,3 +430,79 @@ MAD-X gate therefore checks loading and reporting, the physics gate runs on Bmad
   solenoid test deck are text fixed points.  `.dat` → XML vs HELIX: `fodo_cell` 1.2e-11,
   `solenoid_channel` 9e-13, `bend_line` 2.9e-11, `csr_chicane` 1.1e-8 (Exact), `mebt_line` 4.3e-3
   (Equivalent).
+
+## Phase 5.5 measurements (IMPACT-T 3.1.5, 2026-09-05)
+
+* **Deck rules.**  `flagdist 16` reads `partcl.data` (nine columns: `x, γβx, y, γβy, z, γβz,
+  q/m, weight, id`; `nemission −1`); `-2` writes `fort.<mapstp>` as a fixed-time snapshot with
+  the same columns; `-1` steers (`Param2` = time, `Param3..8` = `dx, dpx, dy, dpy, dz, dpz` in
+  γβ units); `-4` changes `dt` from the push of the iteration starting nearest; `-11` collimates
+  (`xmin xmax ymin ymax`, flag ≤ 10 rectangular); `-99` stops when the bunch passes `Param3`.
+  Every negative-type card of a run lives in one array of `Nbpmmax = 200` (`NumConst.f90`; PSB's
+  267 of them crashed the binary), drifts in 1400, quadrupoles in 400, dipoles in 100.  A control
+  fires on the integration step nearest to its position (a card ±0.25 step from a boundary acts
+  at the landing step, ±0.75 one step off), so the oracle puts every card exactly on a boundary
+  and gives each element its own `dt = L/(N βc)`: quads agree with the analytic map to 4e-8,
+  drifts to 5e-13.
+* **Centroid triggers, in-order lists.**  The trigger position `distance` is the bunch centroid
+  `<z>` (`globalrange`), and each control list is walked in order: a control the centroid passes
+  inside a dipole loop (no triggers there) is skipped and blocks every later control of its kind.
+  ELENA and PSB showed it — under IMPACT-T's dipole model (no dispersion or edge focusing) the
+  momentum probes run away (4 cm at 24 m) and drag the centroid 1.2 mm behind the reference, and
+  PSB's 3 µm drift after a bend got a `dt` of 6e-21 s (its length minus the dipole's overshoot).
+  The oracle now keeps 1 cm field-free clearances before and after a dipole, dumps before one
+  only where a drift holds the clearance, lets an element shorter than the overshoot carry it to
+  the next, chunks at 186 BPM-type cards with each chunk's deck trimmed to what its bunch can
+  reach (which also made the ring runs 10× faster), and resumes a chunk from the last dump that
+  was written (`meta["missing_dumps"]`, a warning).  Both rings complete as report-only cases.
+* **No field at z < 0.**  A solenoid table starting at −0.3 mm (the first element of a deck)
+  delivered 55 % of its entrance kick (`R11` 0.884 vs 0.789 for 0.4 m at 0.5 T); the same table
+  after a 0.3 m drift, or the whole deck moved by +1 m, the full kick.  The writer moves a fresh
+  deck whose first field region would start below zero (`IMPACTT_DECK_OFFSET`, a deck from
+  IMPACT-T keeps its origin), and the deck's clock is the reference at z = 0: the reader starts
+  the walk with the field-free flight to the nominal start, the oracle launches the probes
+  before the first control and delays the driven phases by the flight to z = 0.
+* **Solenoid tables.**  `getfldt_Sol` has no analytic field: type 3 needs `1T<id>.T7`
+  (`Rmin Rmax NrIntv`, `Zmin Zmax NzIntv` in cm, then `Br Bz` rows with r fastest), scaled by
+  `Param2`; file id 0 stops the run and particles beyond `Rmax` are lost.  A paraxial lab-frame
+  integration of the bilinear table reproduces IMPACT-T's own map to 1e-9, which let the writer's
+  edge be designed offline: three intervals straddling each nominal end with
+  `Bz/B = 0, −0.2318182, 1.2318182, 1` and `Br/(B·r/h) = 0, −¼, −¼, 0` give the hard-edge map to
+  `O(h²)` (3e-8 at `h = 0.2 mm` for 0.4 m, 0.5 T, 2.1 MeV protons; a plain `0 → ½ → 1` ramp with
+  ∫Bz and ∫Bz² compensated is `O(h)`: 8.8e-6, reproduced by the model to three digits).
+  Tracked: 9.2e-7 at a 1 ps step, 6.2e-7 as `dt → 0`, 4.9e-5 when the interval has only five
+  steps — the oracle uses at least ten (`solenoid_channel.dat` 9.3e-7 vs HELIX).
+* **Cavities.**  A type-104 profile is `scale·Ez(u)·cos(2πf·t + θ0)` on the absolute time, so
+  `theta0` is calibrated at lattix's time of flight by integrating the reference through the
+  profile (RK4; `V` = the largest gain over `theta0`, `φs` from the gain and its slope, to
+  machine precision).  The first-order transit-time calibration was 5.3e-4 off on a thin gap and
+  *reflected* the reference of a 0.2 m, 1 MV cavity at 325 MHz (a bump spanning 3 βλ has a
+  vanishing transit factor, the calibrated field was 1.4 GV/m): the bump is now no wider than
+  βλ/2.  IMPACT-T's reference leaves each cavity a little earlier or later than the IR's point
+  gain says, and the writer carries that to the cavities downstream (without it the MEBT's energy
+  was 2.4e-4 off, with it 1.5e-7).  Measured gains at φs = −30°: a 1 MV thin gap 866 025.7 eV for
+  the proton and for H⁻ (4e-7 of V·cos 30°; 3.3e-6 as a 1 mm surrogate), 0.2 m/1 MV/325 MHz
+  6.7e-7, 0.1 m/300 kV 2.6e-7; the slope bunches (`R65 < 0`).
+* **Thin gaps.**  A thin gap becomes a short cavity whose length the neighbouring drifts give up
+  (tag `L=0 pad=…`; the reader restores the gap and the drifts).  No length reproduces the
+  thin-gap formula's transverse focusing in a field integration: the kick is smeared over the
+  bump (the MEBT's 80 kV gaps vs HELIX: 6e-3 at 1–4 mm, 1.6e-2 at 12 mm, 3.6e-2 at βλ/2) while a
+  strong short bump adds ponderomotive focusing (a 577 kV DTL gap: `R21` −9.1 vs 2.7 at 1 mm,
+  1.9 at 10 mm, 2.63–2.86 at 20–60 mm).  The length now balances the two,
+  `0.4·sqrt(qVλ/(2π mc² βγ³ |sin φ|))` within `[1 mm, βλ/2]` (5 mm for the MEBT, 16–20 mm for the
+  DTL): `mebt_line.dat` vs HELIX 8.1e-3 transverse and 1.5e-7 on the energy (Equivalent), the DTL
+  section 5 on the cumulative map (its gaps take 27 % of the energy each — beyond the thin-gap
+  model, and report-only in the battery).
+* **Dipoles.**  Type 4 needs the 22-value pole-face file (`csr_flag, γ_in, k1, b1 … k4, b4, z01,
+  z02, c1 … c8, zcsr1, zcsr2`; without it the run is NaN).  The tracked dipole bends the whole
+  bunch by the reference angle: `R21 = R26 = 0` (fodo.madx bends 1e-2 vs cpymad, its quads and
+  drifts 1.2e-9), so bend decks are report-only in the battery.  The bend loop starts when the
+  *first* particle reaches the face and re-bases the frame one step past the exit
+  (`δ = (n+1)·dt·βc − arc` with `dt = arc/((n+1e-4) βc)`), which is where the oracle's step switch
+  and dump go (plus the 1 cm clearance).
+* **Gates.**  `fodo_cell.dat` 2.3e-8 vs HELIX (Exact), `solenoid_channel.dat` 9.3e-7,
+  `mebt_line.dat` 8.1e-3 / energy 1.5e-7 (Equivalent), `bend_line.dat` report-only; `fodo.madx`
+  quads and drifts 1.2e-9 vs cpymad; `Sample1` (SolRF, CCL, three overlapping cards) reads,
+  rewrites bit-exact with its data files under their original ids, and the all-kinds lattice is a
+  text fixed point for protons and H⁻; the battery's IMPACT-T pairs (every source format,
+  the derived decks, PSB and ELENA as report-only rings) are all within tier.

@@ -13,7 +13,8 @@ from lattix.oracles.fingerprint import DECKS, GAIN_RTOL, fingerprint
 
 GOLDEN = Path(__file__).parent / "goldens" / "fingerprints.json"
 # analytic-drift tolerance per engine: file-based engines are limited by their output precision
-DRIFT_TOL = {"tracewin": 1e-6}   # Transfer_matrix1.dat is written with 7 significant digits
+DRIFT_TOL = {"tracewin": 1e-6,   # Transfer_matrix1.dat is written with 7 significant digits
+             "impactt": 5e-8}    # a time-stepped 1 m drift: 5e4 pushes of roundoff on the probe positions
 # collection-time markers so `-m "not oracle_tracewin"` etc. deselect correctly
 ENGINES = [pytest.param(e, marks=getattr(pytest.mark, f"oracle_{e}"), id=e) for e in DECKS]
 

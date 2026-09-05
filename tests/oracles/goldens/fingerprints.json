@@ -79,6 +79,26 @@
       "max_abs_err_common": 4.318767565791859e-14
     }
   },
+  "impactt": {
+    "basis": "common",
+    "cavity": {
+      "R65_common": -3.724672184837448,
+      "R65_native": -3.724672184837448,
+      "R66_native": 0.5001654857076825,
+      "follows_p0": true,
+      "gain_eV": 866028.3460504054,
+      "gain_expected_eV": 866025.4037844387,
+      "row": "cavity_25"
+    },
+    "drift": {
+      "R56_common": 0.995538683726631,
+      "R56_expected": 0.9955386698310196,
+      "R56_native": 0.995538683726631,
+      "R65_native": 0.0,
+      "length_m": 1.0,
+      "max_abs_err_common": 1.3895611439274091e-08
+    }
+  },
   "impactx": {
     "basis": "impactx",
     "cavity": {

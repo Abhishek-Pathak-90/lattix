@@ -187,7 +187,8 @@ class Reader:
         # but only the main element may claim it (they are folded back onto it afterwards)
         name = str(meta.get("name") or jname) if role in (None, "main") else jname
         kind = meta.get("kind")
-        prov = Provenance(format="cheetah", original_name=jname, original_type=ctype)
+        prov = Provenance(format="cheetah", original_name=jname,
+                          original_type=str(meta.get("original_type") or ctype))
         common = {"name": name, "provenance": prov}
         length = _f(params, "length")
         mis = params.get("misalignment")

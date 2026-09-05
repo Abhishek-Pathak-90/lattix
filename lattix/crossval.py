@@ -87,6 +87,10 @@ DERIVED_BASES: list[tuple[str, str, dict]] = [
 DERIVATION_TIER = "_derivation_tier"
 
 
+#: formats whose decks come with data files next to them (IMPACT-T and IMPACT-Z's rfdataN, 1TN.T7)
+_SIDE_FILE_FORMATS = frozenset({"impactt", "impactz"})
+
+
 def derived_decks(workdir: Path, bases: list[tuple[str, str, dict]] | None = None) -> list[tuple[Path, str, dict]]:
     """Write every base deck to every other format; the results are sources for the matrix.
     Each derived deck remembers the tier of the write that produced it (a thin gap that became
@@ -100,6 +104,10 @@ def derived_decks(workdir: Path, bases: list[tuple[str, str, dict]] | None = Non
             if target == fmt:
                 continue
             path = d / f"{Path(rel).stem}.{target}{_suffix(target)}"
+            if target in _SIDE_FILE_FORMATS:
+                # rfdataN / 1TN.T7 files are numbered from 1 per deck: one directory per derived deck
+                path = d / f"{Path(rel).stem}.{target}" / f"{Path(rel).stem}.{target}"
+                path.parent.mkdir(parents=True, exist_ok=True)
             try:
                 rep = write(lat, path, target, strict=False)
             except Exception:  # noqa: BLE001 - a writer that cannot hold the deck is a normal finding elsewhere
@@ -121,12 +129,12 @@ def _cap_tier(tier: str, cap: str | None) -> str:
 ENGINE_FOR_FORMAT: dict[str, str | None] = {
     "madx": "madx", "xtrack": "xtrack", "bmad": "bmad", "elegant": "elegant", "impactx": "impactx",
     "impactz": "impactz", "flame": "flame", "tracewin": "helix", "mad8": None, "pals": None, "lattix": None,
-    "scibmad": "scibmad", "cheetah": "cheetah", "pyorbit": "pyorbit",
+    "scibmad": "scibmad", "cheetah": "cheetah", "pyorbit": "pyorbit", "impactt": "impactt",
 }
 #: fallback engines per format, tried in order when the primary one is unavailable (CI has no HELIX)
 ENGINE_CANDIDATES: dict[str, tuple[str, ...]] = {"tracewin": ("helix", "lightwin")}
 FOLLOWS_P0 = {"helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True, "lightwin": True,
-              "cheetah": True, "pyorbit": True,
+              "cheetah": True, "pyorbit": True, "impactt": True,
               "impactz": True, "flame": True, "madx": False, "xtrack": False, "scibmad": False}
 
 RTOL = 1e-9
@@ -171,6 +179,8 @@ AFFECTS: dict[str, set[str]] = {
     "PYORBIT_MULTIPOLE_AS_CORRECTOR": {"BnL0", "BsL0", "hkick", "vkick"},
     "PYORBIT_QUAD_TILT_DROPPED": {"BnL1", "BsL1"},
     "PYORBIT_GAP_NEEDS_FREQUENCY": {"gain", "volt", "energy"},
+    "IMPACTT_MULTIPOLE_AS_KICK": {"BnL0", "BsL0", "hkick", "vkick"},
+    "IMPACTT_CAVITY_TO_DRIFT": {"gain", "volt", "energy"},
     "PYORBIT_NO_MULTIPOLE": {*[f"BnL{k}" for k in range(6)], *[f"BsL{k}" for k in range(6)]},
     "FLAME_NO_ENG_DATA_DIR": set(), "FLAME_PER_NUCLEON": set(), "FLAME_SOURCE_ADDED": set(),
     "DEFINITION_NOT_IN_LINE": set(), "ELEGANT_PHASE_FOR_SPECIES": set(),
@@ -627,6 +637,18 @@ def _engine_check(res: CaseResult, deck: Path, src: str, out: Path, dst: str, la
             # itself gives the positive-bend block with R16/R26 flipped) — report only for such decks
             res.tier = "lossy"
             res.engine_note = "HELIX negative-angle bend body (known HELIX limit, report only); "
+    if "impactt" in (ea, eb):
+        # MEASURED (docs/oracles.md, Phase 5.5): IMPACT-T's dipole (getfldt_Dipole) bends the whole
+        # bunch by the reference angle — no pole-face focusing, R21 = R26 = 0 — so bend decks are report
+        # only; its solenoid is a generated (r, z) table (9e-7 at a 1 ps step) and its thin gaps are
+        # short profile cavities with the profile's own RF focusing (mebt_line 8.1e-3) — Equivalent tier
+        if has_bends and res.tier != "lossy":
+            res.tier = "lossy"
+            res.engine_note = "IMPACT-T dipole model (no pole-face focusing, report only); "
+        elif res.tier == "exact" and any(e.kind in ("Solenoid", "RFCavity", "FieldMap", "NCells")
+                                         for e in lat.elements.values()):
+            res.tier = "equivalent"
+            res.engine_note = "IMPACT-T solenoid table / RF profile: engine models differ; "
     fm_derived = any(c.startswith("FM_") for c in res.codes)
     if has_rf and (FOLLOWS_P0[ea] != FOLLOWS_P0[eb] or "elegant" in (ea, eb) or fm_derived):
         # a field map integrated by one engine and a cavity element in the other agree on the

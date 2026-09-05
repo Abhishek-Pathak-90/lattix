@@ -150,3 +150,16 @@ to the clone root.
 | `pyorbit3/sns_mebt.xml` | pyorbit | `examples/SNS_Linac/sns_linac_xml/sns_linac.xml`: the `<sns>` root and its `<MEBT>` sequence only (212 lines verbatim; the whole SNS linac is 862 kB) |
 | `pyorbit3/ess_mebt.xml` | pyorbit | `examples/ESS_Linac/ess_linac_xml/ess_linac.xml` |
 | `pyorbit3/solenoid_test.xml` | pyorbit | `examples/ESS_Linac/linac_solenoid_test/test_solenoid_lattice.xml` |
+
+## IMPACT-T
+
+- Upstream: <https://github.com/impact-lbl/IMPACT-T> (`tier1_linac/IMPACT-T`)
+- Commit: `75de6c3e3f467543df1b48f88dd3e7a74e952302` (vendored 2026-09-05)
+- License: BSD (LBNL), The Regents of the University of California (`LICENSES/IMPACT-T.txt`)
+
+| File | Format | Upstream path |
+|---|---|---|
+| `impactt/Sample1/ImpactT.in` | impactt | `examples/Sample1/ImpactT.in` (annotated photoinjector deck: SolRF gun and solenoids, a CCL and a drift) |
+| `impactt/Sample1/rfdata1` | table | `examples/Sample1/rfdata1` (SolRF Fourier blocks: E field, then solenoid B) |
+| `impactt/Sample1/rfdata2` | table | `examples/Sample1/rfdata2` |
+| `impactt/Sample1/rfdata3` | table | `examples/Sample1/rfdata3` |

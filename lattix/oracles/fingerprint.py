@@ -26,7 +26,7 @@ V_VOLT = 1.0e6         # cavity effective voltage
 PHI_S_DEG = -30.0      # synchronous phase, cos convention, 0 = crest
 FOLLOWS_P0 = {"scibmad": False, "helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True,
               "impactz": True, "madx": False, "xtrack": False, "lightwin": True, "cheetah": True,
-              "pyorbit": True}
+              "pyorbit": True, "impactt": True}
 
 _MASS = SPECIES["proton"][0]
 _ETOT_GEV = (_MASS + KE_EV) * 1e-9
@@ -152,7 +152,31 @@ DECKS["pyorbit"] = {
 }
 _SUFFIX["pyorbit"] = ".pyorbit.xml"
 #: engines whose fingerprint cavity is an integrated field map, not a thin gap of exactly V_VOLT
-GAIN_RTOL = {"lightwin": 0.05}
+
+
+def _impactt_deck(cavity: bool) -> tuple[str, str, dict[str, str]]:
+    """The drift / thin-cavity decks through lattix's own IMPACT-T writer (a raised-cosine surrogate
+    cavity stands in for the thin gap; its rfdata file travels with the deck)."""
+    from lattix.formats.impactt import Writer
+    from lattix.ir.elements import RFP, Drift, RFCavity
+    from lattix.ir.lattice import Lattice
+    from lattix.ir.reference import ReferenceParticle, species
+
+    ref = ReferenceParticle(species=species("proton"), kinetic_energy_eV=KE_EV, rf_frequency_Hz=FREQ_HZ)
+    if cavity:
+        els = [Drift(name="d1", length=0.5),
+               RFCavity(name="c", length=0.0, rf=RFP(frequency_Hz=FREQ_HZ, voltage_V=V_VOLT,
+                                                    phase_rad=math.radians(PHI_S_DEG))),
+               Drift(name="d2", length=0.5)]
+    else:
+        els = [Drift(name="d", length=1.0)]
+    text, files = Writer().render(Lattice.from_sequence("fp", els, ref))
+    return "impactt", text, files
+
+
+DECKS["impactt"] = {"drift": _impactt_deck(False), "cavity": _impactt_deck(True)}
+_SUFFIX["impactt"] = ".impactt.in"
+GAIN_RTOL = {"lightwin": 0.05, "impactt": 1e-5}     # IMPACT-T: MEASURED 4e-7 (surrogate gap, 1 ps step)
 
 
 def write_decks(engine: str, workdir: Path) -> dict[str, tuple[Path, str]]:

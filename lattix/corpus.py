@@ -103,6 +103,7 @@ FORMATS: tuple[str, ...] = (
     "flame",
     "impactx",
     "impactz",
+    "impactt",
     "pyorbit",
     "tfs",
     "fieldmap",
@@ -113,7 +114,7 @@ FORMATS: tuple[str, ...] = (
 """Format ids the sniffer can return (lattice formats first, then data files)."""
 
 LATTICE_FORMATS: frozenset[str] = frozenset(
-    {"tracewin", "madx", "mad8", "elegant", "bmad", "pals", "flame", "impactx", "impactz", "pyorbit"}
+    {"tracewin", "madx", "mad8", "elegant", "bmad", "pals", "flame", "impactx", "impactz", "impactt", "pyorbit"}
 )
 
 # --------------------------------------------------------------------------- sniffing
@@ -446,7 +447,17 @@ def sniff_text(text: str, path: str | os.PathLike[str] | None = None) -> str:
 
     if tw_cards and tw_cards >= mad_defs:
         return "tracewin"
+    if impactz_rows >= 1 and lower_name in ("impactt.in", "impactt.in.txt") and not mad_defs:
+        return "impactt"
     if impactz_rows >= 3 and not mad_defs and not tw_cards:
+        # IMPACT-T's second header record starts with the time step (a float < 1e-6 s); IMPACT-Z's with
+        # the phase-space dimension (an integer)
+        try:
+            second = [float(t) for t in _strip_comment(nonblank[1]).replace("d", "e").replace("D", "e").split()]
+        except (ValueError, IndexError):
+            second = []
+        if second and 0.0 < abs(second[0]) < 1e-6:
+            return "impactt"
         return "impactz"
     if impactz_rows >= 1 and lower_name in ("impactz.in", "impact.in", "impactz.in.txt") and not mad_defs:
         return "impactz"

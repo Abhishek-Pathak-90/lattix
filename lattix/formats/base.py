@@ -62,6 +62,7 @@ FORMATS: dict[str, FormatSpec] = {
     "impactx": FormatSpec("impactx", (".impactx.in", ".impactx.py"), "lattix.formats.impactx",
                           description="ImpactX inputs / python"),
     "impactz": FormatSpec("impactz", ("impactz.in",), "lattix.formats.impactz", description="IMPACT-Z ImpactZ.in"),
+    "impactt": FormatSpec("impactt", ("impactt.in",), "lattix.formats.impactt", description="IMPACT-T ImpactT.in"),
     "scibmad": FormatSpec("scibmad", (".scibmad.jl", ".jl"), "lattix.formats.scibmad",
                           description="SciBmad / Beamlines.jl lattice (Julia)"),
     "madng": FormatSpec("madng", (".madng",), "lattix.formats.madng", reader_attr=None,

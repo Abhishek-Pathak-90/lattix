@@ -27,10 +27,10 @@ jobs:
         run: |
           pip install -e . --no-deps
           python -c "from lattix.oracles import available_oracles; print(available_oracles())"
-      - name: Oracle-backed tests (elegant, MAD-X, xtrack, Bmad, ImpactX, IMPACT-Z)
+      - name: Oracle-backed tests (elegant, MAD-X, xtrack, Bmad, ImpactX, IMPACT-Z, IMPACT-T)
         env:
           LATTIX_BMAD_ENV: lattix-bmad
-        run: pytest -m "(oracle_madx or oracle_xtrack or oracle_bmad or oracle_elegant or oracle_impactx or oracle_impactz) and not crossval" -ra
+        run: pytest -m "(oracle_madx or oracle_xtrack or oracle_bmad or oracle_elegant or oracle_impactx or oracle_impactz or oracle_impactt) and not crossval" -ra
       - name: Cross-format battery (every pair on every public deck; engine pairs where engines exist)
         env:
           LATTIX_BMAD_ENV: lattix-bmad
