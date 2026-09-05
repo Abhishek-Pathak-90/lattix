@@ -506,3 +506,29 @@ MAD-X gate therefore checks loading and reporting, the physics gate runs on Bmad
   rewrites bit-exact with its data files under their original ids, and the all-kinds lattice is a
   text fixed point for protons and H⁻; the battery's IMPACT-T pairs (every source format,
   the derived decks, PSB and ELENA as report-only rings) are all within tier.
+
+## Phase 5.6 measurements (Bmad bridge, Bmad 20260828, 2026-09-05)
+
+* **What runs.**  The conda `bmad` package ships the Fortran converters (`bmad_to_astra`,
+  `bmad_to_gpt`, `bmad_to_csrtrack`, `bmad_to_merlin`, `bmad_to_slicktrack`,
+  `bmad_to_mad_sad_elegant`, `bmad_to_scibmad`, `ptc_flat_file_to_bmad`) but not the Python ones
+  (`sad_to_bmad.py`, `sxf_to_bmad.py`, `accelerator_toolkit_to_bmad.py`, `madx/mad8/elegant_to_bmad.py`):
+  those need a Bmad source tree (`LATTIX_BMAD_UTIL_DIR`).  `bmad_to_astra`, `bmad_to_gpt` and
+  `bmad_to_csrtrack` read a namelist file named on the command line (GPT's is
+  `gpt_lat_param%fieldmap_dimension`, not the README's `field_map_dimension`); `bmad_to_merlin`
+  names its output `<input>.tfs` including the `.bmad` suffix; `bmad_to_slicktrack` `<name>.slick`.
+* **Tao `write`.**  Accepts `mad`, `mad8`, `madx`, `pals`, `sad`, `elegant`, `scibmad`; `write opal`,
+  `write opal_latice` (the spelling in the source's case list) and `write xsif` all fail
+  (`UNKNOWN "WHAT"`, `BAD OUT_TYPE: XSIF`) — no OPAL-T or XSIF through this bridge.
+* **Converter notes.**  GPT: `TRANSLATION TO GPT FOR BEND NOT YET IMPLEMENTED! SIMULATION WILL BE
+  INVALID` (recorded as `BMAD_CONVERTER_LOSS`; strict mode refuses).  CSRtrack: Bmad also
+  initialises a bunch and needs Twiss the lattice does not carry (`NON-POSITIVE BETA DETECTED AT
+  ELEMENT: BEGINNING`), the lattice section is complete.  SAD: "Bmad lattice elements have
+  attributes that cannot be translated" (a generic note).  The Python scripts emit
+  `SyntaxWarning`s that are filtered out.
+* **Round trips.**  `fodo.madx` → SAD (Tao) → `sad_to_bmad.py` → IR: every element and strength
+  returns (SAD's `MOMENTUM` carries no species: `species=` on read; the kinetic energy agrees to
+  1e-9).  MAD-X `sxfwrite` → `sxf_to_bmad.py` → IR: the same lattice comes back as superimposed
+  elements (`SUPERIMPOSE_RESOLVED`); SXF carries no energy at all, so `species=` and
+  `kinetic_energy_eV=` are read options.  Every target's intermediate Bmad file re-reads to the
+  IR (the bridge's consistency check); no engine runs the converted files.

@@ -57,9 +57,10 @@ def test_every_format_has_a_page_and_is_indexed():
 
     index = _read(DOCS / "index.md")
     for key in [*FORMATS, "helix"]:
-        page = DOCS / "formats" / f"{key}.md"
+        name = FORMATS[key].options.get("doc", key) if key in FORMATS else key      # bridged formats share a page
+        page = DOCS / "formats" / f"{name}.md"
         assert page.exists(), f"missing {page.relative_to(ROOT)}"
-        assert f"formats/{key}.md" in index, f"docs/index.md does not link formats/{key}.md"
+        assert f"formats/{name}.md" in index, f"docs/index.md does not link formats/{name}.md"
         text = _read(page)
         for section in FORMAT_PAGE_SECTIONS:
             assert section in text, f"{page.name} lacks the section {section!r}"

@@ -708,8 +708,11 @@ def _engine_check(res: CaseResult, deck: Path, src: str, out: Path, dst: str, la
 # the matrix
 
 def readable_formats() -> list[str]:
-    """Formats with both a reader and a writer (a writer-only format cannot be read back)."""
-    return [f for f, spec in FORMATS.items() if spec.reader_attr and spec.writer_attr]
+    """Formats with both a reader and a writer (a writer-only format cannot be read back); the
+    formats reached through Bmad's converters are not battery formats (no engine, an external
+    Bmad source tree for their readers)."""
+    return [f for f, spec in FORMATS.items()
+            if spec.reader_attr and spec.writer_attr and not spec.options.get("bridge")]
 
 
 def pairs(formats: list[str] | None = None) -> list[tuple[str, str]]:

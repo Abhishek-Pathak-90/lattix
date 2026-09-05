@@ -46,8 +46,14 @@ def _by_name(cards):
     return out
 
 
+_NUM = re.compile(r"-?\d+\.\d+(?:[eE][-+]?\d+)?")
+
+
 def _normalise(text: str) -> str:
-    return re.sub(r"written by lattix \S+", "written by lattix <ver>", text)
+    """The version line aside, numbers are compared at 12 significant digits: the RF calibration
+    (an RK4 integration and a Newton search) differs in the last ulp between platforms."""
+    text = re.sub(r"written by lattix \S+", "written by lattix <ver>", text)
+    return _NUM.sub(lambda m: f"{float(m.group(0)):.12g}", text)
 
 
 def _golden(name: str, path: Path) -> None:
