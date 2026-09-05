@@ -24,9 +24,18 @@ def engine_cache() -> dict:
     return {}
 
 
+def _skip_if_reader_missing(r) -> None:
+    """A source format whose reader needs an optional package that is not installed here (cpymad on
+    the macOS runner) is a skip, not a failure — the same rule the conftest applies to raised
+    MissingDependencyErrors."""
+    if r.error.startswith("MissingDependencyError"):
+        pytest.skip(r.error)
+
+
 @pytest.mark.parametrize("rel,fmt,opts,dst", _CASES, ids=_IDS)
 def test_ir_roundtrip_and_fixed_point(rel, fmt, opts, dst, tmp_path):
     r = crossval.run_case(crossval.PUBLIC / rel, fmt, dst, tmp_path, engines=False, read_options=opts)
+    _skip_if_reader_missing(r)
     assert not r.error, r.error
     assert r.ir_ok, "IR round trip differs beyond the ledger:\n  " + "\n  ".join(r.ir_problems)
     assert r.fixed_ok, f"write→read→write is not a fixed point: {r.fixed_note}"
@@ -53,6 +62,7 @@ def test_engines_agree(rel, fmt, opts, dst, tmp_path, engine_cache):
             pytest.skip(why)
     r = crossval.run_case(crossval.PUBLIC / rel, fmt, dst, tmp_path, engines=True, engine_cache=engine_cache,
                           read_options=opts)
+    _skip_if_reader_missing(r)
     assert not r.error, r.error
     if r.engine_ok is None:
         pytest.skip(r.engine_note)

@@ -193,13 +193,16 @@ def test_every_writable_kind_survives_the_engine(tmp_path):
     deck = tmp_path / "all.impactx.in"
     rep = Writer().write(lat, deck, flavor="inputs")
     assert not rep.ok, "the all-kinds lattice is expected to have downgrades"
-    lat2, _ = Reader().read(deck)
+    lat2, rep2 = Reader().read(deck)
     written = deck.read_text().split("lattice.elements = ", 1)[1].splitlines()[0].split()
     r = get_oracle("impactx").run(deck, fmt="impactx", beam=None, workdir=tmp_path / "wd")
     assert r.names == written
     assert np.all(np.isfinite(r.R_elem))
-    # the reader folds the two dipedges back into their Bend, so it sees fewer elements
-    assert len(lat2.flatten()) == len(written) - 2
+    # the reader folds the two dipedges back into their Bend and every drift + ShortRF + drift
+    # triple back into one thick cavity, so it sees fewer elements
+    restored = rep2.codes().get("THICK_CAVITY_RESTORED", 0)
+    assert restored == 2                       # the thick RFCavity and the field map's cavity
+    assert len(lat2.flatten()) == len(written) - 2 - 2 * restored
     assert r.total_length == pytest.approx(lat2.total_length, abs=1e-12)
 
 
