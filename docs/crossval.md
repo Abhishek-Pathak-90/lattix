@@ -48,7 +48,8 @@ relative difference, fixed-point result, engine metric, and the first problem.
 `lattix crossval --derived` (and the `slow` tests) also use decks lattix itself wrote from five base
 decks as sources, so Elegant, ImpactX, IMPACT-Z, xtrack and lattix JSON — which have no public deck
 of their own — are exercised as sources too, and against their engines.  With HELIX available this
-gives 56 engine pairs on 5 decks (~10 min).
+gives 56 engine pairs on 5 decks (~10 min); SciBmad adds one engine on both ends of every pair where
+`julia` with SciBmad is installed (each run starts Julia: ~8 s a case).
 
 ## What it found (2026-09-04)
 

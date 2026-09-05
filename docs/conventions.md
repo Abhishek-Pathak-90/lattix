@@ -67,7 +67,7 @@ magnet.  HELIX's importers were inconsistent here (signed for MAD-X, unsigned fo
 IR has one rule and the invariant tests pin it with cpymad and Bmad running a `charge = −1`
 beam.
 
-Constant-p0 codes (MAD-X, MAD8, xtrack) know one rigidity per deck.  Their reference particle
+Constant-p0 codes (MAD-X, MAD8, xtrack, SciBmad) know one rigidity per deck.  Their reference particle
 keeps `p0` but *does* pick up the RF gains the deck contains as `δ = Δp/p0` (measured: MAD-X
 `twiss` carries the gain in the orbit's `pt`, xtrack in `delta`), while an explicit reference
 change (TraceWin `SET_BEAM_ENERGY`, a `ReferenceChange`) cannot reach it at all.  Writing an

@@ -34,7 +34,7 @@ jobs:
       - name: Cross-format battery (every pair on every public deck; engine pairs where engines exist)
         env:
           LATTIX_BMAD_ENV: lattix-bmad
-        run: pytest tests/crossval -m "crossval and not oracle_flame and not oracle_helix and not oracle_tracewin" -ra
+        run: pytest tests/crossval -m "crossval and not oracle_flame and not oracle_scibmad and not oracle_helix and not oracle_tracewin" -ra
       - uses: actions/upload-artifact@v4
         if: always()
         with:

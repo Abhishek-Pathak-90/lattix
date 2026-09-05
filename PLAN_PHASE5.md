@@ -75,6 +75,16 @@ Toolchain on this Mac (2026-09-04): cmake 4.3.2, Boost 1.92 (Homebrew), **no gfo
 
 ## 3. Tasks
 
+### 5.0 SciBmad (Beamlines.jl) — done 2026-09-05
+- [x] Measured on the local `SciBmad` 0.5.2 (Julia 1.10): constant reference momentum per `Beamline`, `phi0` in
+      radians with gain `−V·cos(phi0)`, `g_ref` is a curved frame without `Kn0`, thin cavities and fringe integrals
+      untrackable, `LineElement(transport_map)` lenses work, `Species("#1H-")` for H⁻ (docs/oracles.md).
+- [x] `lattix/formats/scibmad/` writer + reader (Julia subset incl. Bmad's `bmad_to_scibmad` output), delta energy
+      mode + phase slip, tags for the IR-only attributes; `lattix/oracles/scibmad.py` + `scibmad_worker.jl`
+      (finite differences around the tracked orbit); battery, fingerprints, goldens, docs page.
+- [x] Gate: `fodo.madx` → SciBmad vs cpymad T4×4 `8e-11`; `mebt_line.dat`/`dtl_section.dat` → SciBmad vs HELIX
+      T4×4 `1.2e-10` / `1.6e-11`; all-kinds round trip and fixed point.
+
 ### 5.1 xsuite completion (1 week)
 - [ ] Reader: `RBend`, `Magnet`, `Misalignment` → `BodyShiftP` (and `ds`/`anchor` → Patch when it cannot be absorbed), `DipoleEdge`/`MagnetEdge`/`MultipoleEdge` folded into the adjacent magnet (the MAD-X `dipedge` rule, `DIPEDGE_FOLDED`), `Wedge` → Bend with `k`/`k1`, `LimitPolygon/RectEllipse/Racetrack` → `Collimator` (bounding shape, LOSSY `APERTURE_SHAPE`), `LongitudinalLimitRect` → DROPPED, `RFMultipole` → RFCavity + LOSSY `RF_MULTIPOLE_TERMS_DROPPED`, `CrabCavity/ACDipole/Elens/Wire/Exciter/NonLinearLens/LineSegmentMap` → DROPPED with their own codes, `SecondOrderTaylorMap` → `Taylor` (order 2 when the IR carries `T`, else `TAYLOR_ORDER_TRUNCATED`), `VariableSolenoid` → hard-edge solenoid preserving ∫B and ∫B² (`FM_SOL_HARDEDGE` rule).
 - [ ] Expressions: `_var_management_data` → IR `variables` + `Expr` on element attributes; writer emits `env[name] = value` and attribute expression strings; MAD-X `:=` knobs survive TraceWin → MAD-X → xtrack → MAD-X (gate: `psb.seq` knobs identical after the round trip).
@@ -153,4 +163,4 @@ Toolchain on this Mac (2026-09-04): cmake 4.3.2, Boost 1.92 (Homebrew), **no gfo
 * Ocelot is electron-only: record it, do not silently scale.
 
 ## 6. Order and effort (~10 weeks)
-5.1 xsuite (1) → 5.2 LightWin (1) → 5.3 Cheetah (1) → 5.4 PyORBIT3 (1.5) → 5.5 IMPACT-T (1.5) → 5.6 Bmad bridge (0.6) → 5.7 Ocelot (1) → 5.8 DYNAC (1.5) → 5.9 Synergia2 (1) → 5.10 OPAL-T (1).
+5.0 SciBmad (done) → 5.1 xsuite (1) → 5.2 LightWin (1) → 5.3 Cheetah (1) → 5.4 PyORBIT3 (1.5) → 5.5 IMPACT-T (1.5) → 5.6 Bmad bridge (0.6) → 5.7 Ocelot (1) → 5.8 DYNAC (1.5) → 5.9 Synergia2 (1) → 5.10 OPAL-T (1).

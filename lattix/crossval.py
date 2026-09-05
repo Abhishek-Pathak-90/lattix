@@ -119,9 +119,10 @@ def _cap_tier(tier: str, cap: str | None) -> str:
 ENGINE_FOR_FORMAT: dict[str, str | None] = {
     "madx": "madx", "xtrack": "xtrack", "bmad": "bmad", "elegant": "elegant", "impactx": "impactx",
     "impactz": "impactz", "flame": "flame", "tracewin": "helix", "mad8": None, "pals": None, "lattix": None,
+    "scibmad": "scibmad",
 }
 FOLLOWS_P0 = {"helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True,
-              "impactz": True, "flame": True, "madx": False, "xtrack": False}
+              "impactz": True, "flame": True, "madx": False, "xtrack": False, "scibmad": False}
 
 RTOL = 1e-9
 #: lattice-level codes after which normalized strengths no longer mean the same thing
@@ -294,6 +295,11 @@ def _last_per_s(s_out: np.ndarray, tol: float = 1e-9) -> list[int]:
     return out
 
 
+#: absolute floors for the relative comparison: a cavity at the zero crossing has a gain that is pure
+#: roundoff of V·cos(φ) (nano-eV on a megavolt), not a translation difference
+_FLOOR = {"gain": 1e3, "volt": 1e3}
+
+
 def compare_profiles(src: Profile, dst: Profile, *, rtol: float = RTOL, skip_energy: bool = False,
                      skip: set[str] | None = None, fuzzy: dict[str, float] | None = None,
                      max_problems: int = 12) -> IRDiff:
@@ -339,7 +345,7 @@ def compare_profiles(src: Profile, dst: Profile, *, rtol: float = RTOL, skip_ene
             if q in skip or (moved and q == "length"):
                 continue
             a, b = arr[i], dst.cum[q][jj]
-            scale = max(1.0, abs(a), abs(b))
+            scale = max(_FLOOR.get(q, 1.0), abs(a), abs(b))
             d = abs(a - b) / scale
             worst = max(worst, d)
             if d > rtol and len(problems) < max_problems:
@@ -584,6 +590,18 @@ def _engine_check(res: CaseResult, deck: Path, src: str, out: Path, dst: str, la
     res.engine_metric = metric
     scale = max(1.0, pc.max_rcum_abs / max(pc.max_rcum_rel, 1e-300)) if pc.max_rcum_rel else 1.0
     metric_rel = metric / scale
+    if "scibmad" in (ea, eb) and res.tier == "exact" and any(
+            e.kind == "RFCavity" and e.length > 0 and (e.rf.voltage_V or e.rf.gradient_V_per_m)
+            for e in lat.elements.values()):
+        # SciBmad's thick RFCavity applies its own transverse RF focusing (measured, docs/oracles.md);
+        # MAD-X, xtrack and Elegant kick at the centre only
+        res.tier = "equivalent"
+        res.engine_note = "SciBmad thick-cavity RF focusing: engine models differ; "
+    if "scibmad" in (ea, eb) and _has_fringe_bends(lat) and res.tier != "lossy":
+        # BeamTracking 0.5 stores edge1_int/edge2_int but cannot track them (the worker zeroes them):
+        # the fringe correction is missing entirely, not modelled differently — report only
+        res.tier = "lossy"
+        res.engine_note = "SciBmad 0.5 does not track fringe integrals (report only); "
     if res.tier == "exact" and _has_fringe_bends(lat) and ea != eb:
         # the codes agree on the parameters but not on the fringe-field model: MAD-X and Bmad
         # differ at O(ψ²) in the fint·hgap correction (8.6e-4 on ELENA's 60° bend, 0 without it)

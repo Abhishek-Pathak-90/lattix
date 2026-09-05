@@ -62,6 +62,8 @@ FORMATS: dict[str, FormatSpec] = {
     "impactx": FormatSpec("impactx", (".impactx.in", ".impactx.py"), "lattix.formats.impactx",
                           description="ImpactX inputs / python"),
     "impactz": FormatSpec("impactz", ("impactz.in",), "lattix.formats.impactz", description="IMPACT-Z ImpactZ.in"),
+    "scibmad": FormatSpec("scibmad", (".scibmad.jl", ".jl"), "lattix.formats.scibmad",
+                          description="SciBmad / Beamlines.jl lattice (Julia)"),
     # keep last: a bare .json is xtrack's unless the content says otherwise (sniffed below)
     "xtrack": FormatSpec("xtrack", (".json",), "lattix.formats.xtrack", description="xtrack Line/Environment JSON"),
 }
@@ -173,7 +175,7 @@ def note_quad_higher_orders(el, rep, target: str) -> None:
 
 #: targets whose thin cavity has no transverse RF kick but which carry a first-order matrix
 #: element, so TraceWin's thin-gap defocusing travels as an explicit thin lens
-RF_FOCUSING_AS_MATRIX = frozenset({"madx", "elegant", "bmad", "xtrack", "pals", "impactx", "flame"})
+RF_FOCUSING_AS_MATRIX = frozenset({"madx", "elegant", "bmad", "xtrack", "pals", "impactx", "flame", "scibmad"})
 #: targets that have neither (the kick is lost and recorded)
 RF_FOCUSING_LOST = frozenset({"mad8", "impactz"})
 _RF_FOCUS_SUFFIX = "_rfdefocus"

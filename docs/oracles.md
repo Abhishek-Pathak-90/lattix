@@ -15,6 +15,7 @@ recalled.  Re-run `lattix fingerprint` / `pytest tests/oracles` after any engine
 | elegant | conda env `lattix` (`conda-forge elegant 2026.3.0`, osx-arm64) + `pysdds` 0.6 (text fallback via `sdds2stream`) | 2026.3.0 (2026-07-02) | (x, x′, y, y′, s, δ) with **s = path length**: its matrices carry no velocity-bunching term (drift R56 = 0); the adapter adds −L/γ² per element so maps land in the arrival-time common basis | follows with `change_p0=1` | **RFCA phase convention follows the charge sign relative to the electron**: negative species crest at +90°, positive species (protons) at −90° — `phase = 60` *decelerates* protons, `phase = 240` gives +V·cos30°. Its RFCA *matrix* phase slip is ultra-relativistic (R65 = β·true value; tracking is physical). Constants are CODATA-86 (m_e = 0.51099906 MeV; built-in `proton` = 938.2866 MeV, 1.5e-5 off) → adapter uses `change_particle name=custom, mass_ratio, charge_ratio`. conda-forge build ships no `defns.rpn` (adapter embeds one and passes `-rpnDefns=<abs path>`). |
 | xtrack | base env 0.103.5; env `lattix` 0.112.0 | — | (x, px, y, py, ζ, δ) | constant | Native Lark MAD-X parser rejects some MAD-X (e.g. `sequence, l=…, refer=centre` header in HELIX's fodo.madx) → load through cpymad `Line.from_madx_sequence`. |
 | ImpactX / IMPACT-Z | env `lattix` (`impactx` 26.08, `impact-z` 2.7.7, both osx-arm64 builds) | — | Phase 3 | follows | `ImpactZexe` on PATH in the env; `impactx` importable. |
+| SciBmad | `julia` (juliaup 1.10) with `SciBmad` 0.5.2 (Beamlines.jl + BeamTracking.jl) through `lattix/oracles/scibmad_worker.jl`; `LATTIX_JULIA` or PATH | 0.5.2 (2026-09-05) | (x, px, y, py, z, pz), z ahead-positive (drift R56 = +L/γ² measured) | constant (one reference momentum per `Beamline`; nesting and `Patch(dE_ref)` past the first element are refused) | `RFCavity` gain is **−V·cos(phi0)** with `phi0` in radians for protons and electrons alike (writer negates the voltage: `GAIN_SIGN`); a zero-length cavity and `edge1_int/edge2_int` cannot be tracked (worker substitutes 1 µm / 0 and says so); `g_ref` alone is a curved frame — the dipole field is `Kn0`; `LineElement(transport_map=f)` with `f(v, q, p=nothing)` works as a thin lens; `using Beamlines` fails in an environment that only has `SciBmad` (worker strips `using` lines). `Species("#1H-")` is H⁻ (m_p + 2 m_e); `Species("H-")` is the isotope-averaged anion. Startup ~13 s, a run ~8 s. |
 
 Not installable as-is: `lightwin` (needs Python ≥ 3.12; the TraceWin runner pattern was
 reused instead), `flame-code` (Phase 3, pip).
@@ -259,6 +260,14 @@ MAD-X gate therefore checks loading and reporting, the physics gate runs on Bmad
 * **FLAME's `tmatrix` is read into SI now** (the reader used to keep millimetres with a
   `basis="flame"` flag every other writer ignored: an RF-defocusing lens read from FLAME came
   out 1000× too weak in Elegant/Bmad/xtrack, 4.2 on the MEBT line).
+* **SciBmad 0.5.2 (Phase 5, 2026-09-05)**, measured before writing a line of the format: see the
+  engines table for the conventions.  With the delta energy mode, the `LineElement` RF lens and the
+  worker's 1 µm substitution for thin gaps, lattix-written SciBmad decks agree with HELIX on the
+  transverse block to `1.2e-10` (`mebt_line.dat`) and `1.6e-11` (`dtl_section.dat`, 66 % energy
+  gain) and with cpymad to `8e-11` on `fodo.madx`; Bmad's own `bmad_to_scibmad` reference output
+  parses (its `SaganCavity(num_cells=…)` and `PhaseReference.*` spellings differ from 0.5.2's API
+  and are kept as native text).  Fringe integrals are stored but untracked there, so bends with
+  `fint` are report-only against SciBmad.
 * **Derived sources keep the tier of the write that made them**: the MEBT line written to FLAME
   has no cavity model (`RFCAVITY_NEEDS_CAVTYPE`), to IMPACT-Z a 1 mm short cavity whose own
   field integration gives a different transverse kick than TraceWin's thin-gap formula

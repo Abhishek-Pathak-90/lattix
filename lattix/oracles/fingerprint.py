@@ -24,7 +24,7 @@ KE_EV = 2.1e6          # proton kinetic energy
 FREQ_HZ = 162.5e6
 V_VOLT = 1.0e6         # cavity effective voltage
 PHI_S_DEG = -30.0      # synchronous phase, cos convention, 0 = crest
-FOLLOWS_P0 = {"helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True,
+FOLLOWS_P0 = {"scibmad": False, "helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True,
               "impactz": True, "madx": False, "xtrack": False}
 
 _MASS = SPECIES["proton"][0]
@@ -76,8 +76,20 @@ DECKS: dict[str, dict[str, tuple[str, str]]] = {
 DECKS["xtrack"] = DECKS["madx"]
 DECKS["impactx"] = DECKS["madx"]     # ImpactX reads MAD-X through lattix; ShortRF follows p0
 DECKS["tracewin"] = DECKS["helix"]
+# SciBmad (Beamlines.jl): phi0 in radians, measured gain −V·cos(phi0) (the writer's GAIN_SIGN), one
+# reference momentum per beamline; a zero-length cavity is substituted by 1 µm in the worker
+DECKS["scibmad"] = {
+    "drift": ("scibmad", "using Beamlines\n@elements begin\n  d = Drift(L = 1.0)\nend\n"
+                         f"fp = Beamline([d]; E_ref = {_ETOT_GEV * 1e9:.12g}, "
+                         "species_ref = Species(\"proton\"))\n"),
+    "cavity": ("scibmad", "using Beamlines\n@elements begin\n  d1 = Drift(L = 0.5)\n  d2 = Drift(L = 0.5)\n"
+                          f"  c = RFCavity(L = 0, voltage = {-V_VOLT:.6g}, phi0 = {math.radians(PHI_S_DEG):.12g}, "
+                          f"rf_frequency = {FREQ_HZ:.6g})\nend\n"
+                          f"fp = Beamline([d1, c, d2]; E_ref = {_ETOT_GEV * 1e9:.12g}, "
+                          "species_ref = Species(\"proton\"))\n"),
+}
 
-_SUFFIX = {"madx": ".madx", "tracewin": ".dat", "bmad": ".bmad", "elegant": ".lte"}
+_SUFFIX = {"madx": ".madx", "tracewin": ".dat", "bmad": ".bmad", "elegant": ".lte", "scibmad": ".jl"}
 
 
 def write_decks(engine: str, workdir: Path) -> dict[str, tuple[Path, str]]:

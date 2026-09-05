@@ -64,7 +64,7 @@ RIGIDITY_MESSAGE = {
 
 _MOMENTUM_ROWS = (1, 3, 5)
 #: reader notes that a bend's k0 differs from angle/l (undone when the energy mode explains it)
-_K0_NOTES = ("BEND_K0_NE_ANGLE", "BEND_K0_NE_H")
+_K0_NOTES = ("BEND_K0_NE_ANGLE", "BEND_K0_NE_H", "BEND_K0_NE_G")
 
 
 def record_rigidity_mode(rep, energy_mode: str, *, element: str, kind: str, **details) -> None:
@@ -250,7 +250,7 @@ def restore_energy_mode(lat: Lattice, rep, energy_mode: str, *, brho_read: float
             # the writer set k0 = h·r so the engine's delta-carrying orbit follows the design
             # angle: that is the convention, not a field/geometry mismatch
             g = e.bend.g_ref(e.length) if e.length else 0.0
-            for fmt in ("madx", "xtrack"):
+            for fmt in ("madx", "xtrack", "scibmad"):
                 nat = e.native.get(fmt) or {}
                 k0 = nat.get("k0")
                 if k0 is not None and abs(k0 - g * r) <= 1e-9 * max(1.0, abs(g * r)):
