@@ -221,7 +221,7 @@ def _load_adapters() -> None:
     import importlib
 
     for mod in ("cpymad", "xtrack", "pytao", "helix", "elegant", "tracewin", "impactx", "impactz", "flame",
-                "scibmad"):
+                "scibmad", "lightwin"):
         try:
             importlib.import_module(f"lattix.oracles.{mod}")
         except ModuleNotFoundError as e:  # adapter module itself missing (not its engine)

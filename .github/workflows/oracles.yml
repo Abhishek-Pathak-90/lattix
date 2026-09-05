@@ -34,10 +34,25 @@ jobs:
       - name: Cross-format battery (every pair on every public deck; engine pairs where engines exist)
         env:
           LATTIX_BMAD_ENV: lattix-bmad
-        run: pytest tests/crossval -m "crossval and not oracle_flame and not oracle_scibmad and not oracle_helix and not oracle_tracewin" -ra
+        run: pytest tests/crossval -m "crossval and not oracle_flame and not oracle_scibmad and not oracle_lightwin and not oracle_helix and not oracle_tracewin" -ra
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: fidelity-${{ matrix.os }}
           path: "**/*.fidelity.json"
           if-no-files-found: ignore
+  lightwin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install LightWin and lattix (LightWin needs python >= 3.12; runs in-process)
+        run: |
+          pip install lightwin
+          pip install -e . pytest
+          python -c "from lattix.oracles import get_oracle; print(get_oracle('lightwin').available())"
+      - name: LightWin-backed tests (fingerprint, adapter, battery fallback)
+        run: pytest -m "oracle_lightwin and not oracle_helix" -ra
+

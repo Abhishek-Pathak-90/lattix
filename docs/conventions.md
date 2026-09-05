@@ -235,3 +235,12 @@ negative drifts (the BTL contains one, −0.204288 m): the MAD-X writer orders e
 position, shortens the preceding drift and keeps every element where the source put it;
 genuine thick-element collisions are shifted and recorded (`LOSSY OVERLAP_SHIFTED`).
 Zero-length sequences fall back to line mode (`ZERO_LENGTH_LINE_MODE`).
+
+### Field-map phases (TraceWin `FIELD_MAP`, measured 2026-09-05)
+
+| Card | Meaning in the IR | Integration |
+|---|---|---|
+| `SET_SYNC_PHASE` + `FIELD_MAP … φ …` | `rf.phase_is_sync = True`, φ is the synchronous phase | the RF phase is calibrated so the integrated gain has that synchronous phase |
+| `FIELD_MAP … φ … P=0` | relative phase: the RF phase when the reference particle enters the map | `Ez(z)·cos(ω t(z) + φ)` with `t = 0` at the entrance — no bunch-clock term (LightWin/TraceWin; HELIX adds the running phase: a HELIX bug) |
+| `FIELD_MAP … φ … P=1` | treated as synchronous (HELIX's reading; no reference deck) | as the first row |
+

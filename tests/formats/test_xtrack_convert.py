@@ -6,6 +6,7 @@ build; the engine-backed sign and map checks live in ``test_xtrack_oracle.py``.
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import pytest
 
@@ -135,8 +136,9 @@ def test_every_kind_produces_at_least_one_xtrack_element():
     line = to_line(lat)
     rows = line.metadata[METADATA_KEY]["elements"]
     covered = {row["kind"] for row in rows.values() if "kind" in row}
-    # Superposition is expanded into its children, which carry the child's kind
-    assert set(RULES) - covered == {"Superposition"}
+    # Superposition is expanded into its children, which carry the child's kind; a FieldMap's row
+    # describes the cavity (or drift) it became, since the reader cannot give a map back
+    assert set(RULES) - covered == {"Superposition", "FieldMap"}
     assert len(line.element_names) >= len(lat.flatten())
 
 
@@ -679,18 +681,47 @@ def test_from_line_unknown_class_is_a_marker_with_a_native_passthrough():
     el = lat.elements["ee"]
     assert el.kind == "Marker"
     assert el.native["xtrack"]["element"]["__class__"] == "Elens"
-    assert "UNSUPPORTED_XTRACK_ELEMENT" in rep.codes()
+    assert "ELENS_DROPPED" in rep.codes()           # dropped by name (Phase 5.1), never silently
     # and it is re-emitted verbatim
     line = to_line(lat)
     assert isinstance(line.element_dict["ee"], xt.Elens)
 
 
-def test_from_line_dipole_edge_is_unsupported_but_preserved():
+def test_from_line_dipole_edge_alone_is_a_thin_lens_and_comes_back_verbatim():
     lat, rep = _round_trip_kinds([xt.DipoleEdge(e1=0.05, k=0.1, fint=0.5, hgap=0.02)], ["de"])
-    assert "UNSUPPORTED_XTRACK_ELEMENT" in rep.codes()
+    assert "DIPEDGE_AS_MATRIX" in rep.codes()          # no bend beside it: the lens it applies
+    de = lat.elements["de"]
+    assert de.kind == "Taylor" and de.matrix[1][0] == pytest.approx(0.1 * math.tan(0.05), rel=1e-6)
     line = to_line(lat)
     assert isinstance(line.element_dict["de"], xt.DipoleEdge)
     assert float(line.element_dict["de"].e1) == pytest.approx(0.05)
+
+
+def test_from_line_dipole_edges_fold_into_the_bend():
+    lat, rep = _round_trip_kinds([xt.DipoleEdge(e1=0.05, k=0.1, fint=0.5, hgap=0.02, side="entry"),
+                                  xt.Bend(length=1.0, angle=0.1),
+                                  xt.DipoleEdge(e1=0.07, k=0.1, fint=0.5, hgap=0.02, side="exit")],
+                                 ["e1", "b", "e2"])
+    names = [p.element.name for p in lat.flatten()]
+    assert names == ["b"]
+    b = lat.elements["b"]
+    assert b.bend.e1 == pytest.approx(0.05) and b.bend.e2 == pytest.approx(0.07)
+    assert b.bend.edge_int1 == pytest.approx(0.5) and b.bend.hgap == pytest.approx(0.02)
+    assert rep.codes()["DIPEDGE_FOLDED"] == 2
+
+
+def test_from_line_misalignment_pair_becomes_the_body_shift():
+    q = xt.Quadrupole(length=0.5, k1=0.3)
+    lat, rep = _round_trip_kinds([xt.Misalignment(dx=1e-3, dy=-2e-3, psi=0.01, anchor=0.25, length=0.5),
+                                  q,
+                                  xt.Misalignment(dx=1e-3, dy=-2e-3, psi=0.01, anchor=0.25, length=0.5,
+                                                  is_exit=True)],
+                                 ["m_in", "q", "m_out"])
+    names = [p.element.name for p in lat.flatten()]
+    assert names == ["q"]
+    sh = lat.elements["q"].shift
+    assert sh is not None and sh.x_offset == 1e-3 and sh.y_offset == -2e-3 and sh.tilt == 0.01
+    assert "MISALIGNMENT_FOLDED" in rep.codes() and "MISALIGNMENT_ANCHOR" not in rep.codes()
 
 
 def _sliced_line(mode: str):
@@ -843,9 +874,322 @@ def test_known_classes_matches_what_from_line_actually_maps():
         from_line(line, proton_ref(), report=rep)
         assert "UNSUPPORTED_XTRACK_ELEMENT" not in rep.codes(), cname
 
-    line = xt.Line(elements=[xt.Elens(current=1.0)], element_names=["e"])
-    line.particle_ref = xt.Particles(mass0=938272088.16, q0=1, kinetic_energy0=8e8)
+    # Phase 5.1 gate: every BeamElement class xtrack ships is known to the reader
+    import inspect
+
+    from xtrack.base_element import BeamElement
+
+    from lattix.formats.xtrack.convert import is_known_class
+
+    classes = sorted(n for n, c in vars(xt).items()
+                     if inspect.isclass(c) and issubclass(c, BeamElement) and c is not BeamElement)
+    unknown = [c for c in classes if not is_known_class(c)]
+    assert not unknown, f"xtrack {xt.__version__} classes the reader does not know: {unknown}"
+
+
+# ------------------------------------------------------------- Phase 5.1: the rest of the zoo
+def test_magnet_with_curvature_is_a_bend_and_straight_one_a_quadrupole():
+    lat, rep = _round_trip_kinds([xt.Magnet(length=1.0, angle=0.1, k1=0.2, edge_entry_angle=0.05,
+                                            edge_entry_fint=0.4, edge_entry_hgap=0.02),
+                                  xt.Magnet(length=0.5, k1=0.3, k2=1.0)], ["mb", "mq"])
+    b = lat.elements["mb"]
+    assert b.kind == "Bend" and b.bend.angle == pytest.approx(0.1) and b.bend.e1 == pytest.approx(0.05)
+    assert b.bend.edge_int1 == pytest.approx(0.4) and b.bend.hgap == pytest.approx(0.02)
+    q = lat.elements["mq"]
+    brho = proton_ref().brho_signed
+    assert q.kind == "Quadrupole" and q.multipole.Bn[1] == pytest.approx(0.3 * brho)
+    assert q.multipole.Bn[2] == pytest.approx(1.0 * brho)
+    assert "MAGNET_AS_BEND" in rep.codes() and "MAGNET_AS_MULTIPOLE_MAGNET" in rep.codes()
+
+
+def test_limits_become_bounding_boxes_with_their_shape_noted():
+    lat, rep = _round_trip_kinds([xt.LimitPolygon(x_vertices=[-0.01, 0.02, 0.02, -0.01],
+                                                  y_vertices=[-0.03, -0.03, 0.04, 0.04]),
+                                  xt.LimitRectEllipse(max_x=0.02, max_y=0.01, a=0.03, b=0.02),
+                                  xt.LimitRacetrack(min_x=-0.02, max_x=0.02, min_y=-0.01, max_y=0.01, a=0.005, b=0.005),
+                                  _new(xt.LongitudinalLimitRect, min_zeta=-1, max_zeta=1, min_pzeta=-1, max_pzeta=1)],
+                                 ["lp", "lre", "lrt", "llr"])
+    assert lat.elements["lp"].aperture.x_limits == pytest.approx((-0.01, 0.02))
+    assert lat.elements["lp"].aperture.y_limits == pytest.approx((-0.03, 0.04))
+    assert lat.elements["lre"].aperture.x_limits == pytest.approx((-0.02, 0.02))
+    assert lat.elements["lrt"].aperture.shape == "RECTANGULAR"
+    assert rep.codes()["APERTURE_SHAPE"] == 3
+    assert lat.elements["llr"].kind == "Marker" and "LONGITUDINAL_APERTURE_DROPPED" in rep.codes()
+
+
+def test_rf_multipole_monitors_patches_and_named_drops():
+    lat, rep = _round_trip_kinds([xt.RFMultipole(voltage=1e5, frequency=4e8, lag=90.0, knl=[0.0, 0.01]),
+                                  xt.BeamPositionMonitor(),
+                                  xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=1, num_particles=1),
+                                  _new(xt.Rotation, rot_s_rad=0.1), _new(xt.Translation, shift_x=1e-3),
+                                  xt.CrabCavity(crab_voltage=1e5, frequency=4e8), _new(xt.RandomNormal),
+                                  xt.ReferenceEnergyChange(p0c=2e9)],
+                                 ["rfm", "bpm", "pm", "rot", "tr", "crab", "rnd", "rec"])
+    rfm = lat.elements["rfm"]
+    assert rfm.kind == "RFCavity" and rfm.rf.voltage_V == 1e5 and rfm.rf.phase_rad == pytest.approx(0.0)
+    assert "RF_MULTIPOLE_TERMS_DROPPED" in rep.codes()
+    assert lat.elements["bpm"].kind == "Instrument" and lat.elements["bpm"].family == "BPM"
+    assert lat.elements["pm"].kind == "Instrument"
+    assert lat.elements["rot"].kind == "Patch" and lat.elements["rot"].tilt == pytest.approx(0.1)
+    assert lat.elements["tr"].kind == "Patch" and lat.elements["tr"].x_offset == pytest.approx(1e-3)
+    assert lat.elements["crab"].kind == "Marker" and "CRAB_CAVITY_DROPPED" in rep.codes()
+    assert "NON_LATTICE_ELEMENT" in rep.codes()
+    rec = lat.elements["rec"]
+    assert rec.kind == "ReferenceChange"
+    assert rec.energy_eV == pytest.approx(math.sqrt(2e9**2 + 938272088.16**2) - 938272088.16, rel=1e-9)
+
+
+def test_second_order_map_wedge_and_variable_solenoid():
+    import numpy as np
+
+    R = np.eye(6)
+    R[0, 1] = 0.5
+    T = np.zeros((6, 6, 6))
+    T[0, 1, 1] = 0.1
+    lat, rep = _round_trip_kinds([xt.SecondOrderTaylorMap(R=R, T=T, length=0.5),
+                                  xt.Wedge(angle=0.02, k=0.01),
+                                  xt.VariableSolenoid(length=0.4, ks_profile=[0.2, 0.4]),
+                                  xt.SimpleThinQuadrupole(knl=[0.0, 0.3]), xt.SimpleThinBend(knl=[0.01], hxl=0.01)],
+                                 ["som", "wd", "vs", "stq", "stb"])
+    som = lat.elements["som"]
+    assert som.kind == "Taylor" and som.matrix[0][1] == 0.5 and som.length == 0.5
+    assert "TAYLOR_ORDER_TRUNCATED" in rep.codes()
+    brho = proton_ref().brho_signed
+    assert lat.elements["wd"].kind == "Multipole" and lat.elements["wd"].multipole.BnL[0] == pytest.approx(0.01 * brho)
+    assert "WEDGE_AS_THIN_DIPOLE" in rep.codes()
+    vs = lat.elements["vs"]
+    assert vs.kind == "Solenoid" and vs.solenoid.Bsol_T == pytest.approx(0.3 * brho)
+    assert lat.elements["stq"].multipole.BnL[1] == pytest.approx(0.3 * brho)
+    assert lat.elements["stb"].multipole.BnL[0] == pytest.approx(0.01 * brho)
+    line = to_line(lat)
+    assert isinstance(line.element_dict["som"], xt.SecondOrderTaylorMap)      # re-emitted verbatim
+
+
+def test_unpaired_misalignment_is_a_patch():
+    lat, rep = _round_trip_kinds([xt.Misalignment(dx=1e-3, length=0.0), xt.Marker()], ["m", "mk"])
+    assert lat.elements["m"].kind == "Patch" and lat.elements["m"].x_offset == pytest.approx(1e-3)
+    assert "MISALIGNMENT_AS_PATCH" in rep.codes()
+
+
+# ------------------------------------------------------------- Phase 5.1: knobs
+def _knob_lattice():
+    from lattix.ir.expr import Expression
+    from lattix.ir.lattice import Variable
+
+    ref = proton_ref()
+    brho = ref.brho_signed
+    q1 = Quadrupole(name="q1", length=0.5, multipole=MagneticMultipoleP(Bn={1: 0.36 * brho}))
+    q1.expressions["multipole.Bn[1]"] = Expression(text="kq", deferred=True)
+    q2 = Quadrupole(name="q2", length=0.5, multipole=MagneticMultipoleP(Bn={1: -0.396 * brho}))
+    q2.expressions["multipole.Bn[1]"] = Expression(text="kd", deferred=True)
+    k = Kicker(name="k", hkick=2e-3)
+    k.expressions["hkick"] = Expression(text="2*kick0", deferred=True)
+    lat = Lattice.from_sequence("knobs", [q1, Drift(name="d", length=1.0), q2, k], ref)
+    lat.variables["kq"] = Variable(value=0.36)
+    lat.variables["kd"] = Variable(value=-0.396, expression=Expression(text="-kq*1.1", deferred=True))
+    lat.variables["kick0"] = Variable(value=1e-3)
+    return lat
+
+
+def test_knobs_survive_to_line_and_from_line():
+    lat = _knob_lattice()
+    from lattix.fidelity import FidelityReport
+
     rep = FidelityReport()
-    from_line(line, proton_ref(), report=rep)
-    assert "UNSUPPORTED_XTRACK_ELEMENT" in rep.codes()
-    assert "Elens" not in KNOWN_CLASSES
+    line = to_line(lat, report=rep)
+    assert any(e.code == "KNOBS_WRITTEN" for e in rep.entries)
+    assert str(line.element_refs["q1"].k1._expr) == "vars['kq']"
+    assert str(line.vars["kd"]._expr) == "((-vars['kq']) * 1.1)"
+    assert str(line.element_refs["k"].knl[0]._expr) == "(-(2.0 * vars['kick0']))"
+    line.vars["kq"] = 0.5                                            # the knob really drives the deck
+    assert float(line["q1"].k1) == pytest.approx(0.5) and float(line["q2"].k1) == pytest.approx(-0.55)
+    line.vars["kq"] = 0.36
+    back = from_line(line, proton_ref(), report=FidelityReport())
+    assert back.variables["kq"].value == 0.36 and back.variables["kd"].expression.text == "((-kq) * 1.1)"
+    assert back.elements["q1"].expressions["multipole.Bn[1]"].text == "kq"
+    assert back.elements["k"].expressions["hkick"].text == "-((-(2.0 * kick0)))" or \
+        back.elements["k"].hkick == pytest.approx(2e-3)
+    assert back.elements["q1"].multipole.Bn[1] == pytest.approx(lat.elements["q1"].multipole.Bn[1], rel=1e-12)
+
+
+def test_knob_round_trip_through_json(tmp_path):
+    from lattix import read, write
+
+    lat = _knob_lattice()
+    out = tmp_path / "knobs.json"
+    write(lat, out, "xtrack")
+    back, rep = read(out, "xtrack")
+    assert any(e.code == "KNOBS_READ" for e in rep.entries)
+    assert set(back.variables) == {"kq", "kd", "kick0"}
+    assert back.elements["q2"].expressions["multipole.Bn[1]"].text == "kd"
+
+
+def test_psb_knobs_survive_madx_to_xtrack_to_madx(tmp_path):
+    """Phase 5.1 gate B1 (the knob half): every ``:=`` of psb.seq that the direct MAD-X round trip
+    keeps is also kept after a detour through xtrack JSON."""
+    pytest.importorskip("cpymad")
+    from lattix import read, write
+
+    src = Path(__file__).resolve().parents[1] / "data" / "public" / "xtrack" / "psb.seq"
+    lat, _ = read(src, "madx", species="proton", kinetic_energy_eV=160e6)
+    assert lat.variables, "psb.seq has knobs"
+    direct = tmp_path / "direct.madx"
+    write(lat, direct, "madx")
+    via = tmp_path / "via.json"
+    write(lat, via, "xtrack")
+    back, rep = read(via, "xtrack")
+    assert any(e.code == "KNOBS_READ" for e in rep.entries)
+    detour = tmp_path / "detour.madx"
+    write(back, detour, "madx")
+
+    def knobs(text: str) -> set[str]:
+        import re
+
+        return set(re.findall(r"^\s*([a-z][a-z0-9_.]*)\s*:=", text, re.M))
+
+    def deferred_attrs(text: str) -> set[str]:
+        import re
+
+        return set(re.findall(r"^\s*([a-z][a-z0-9_.]*)\s*:.*?\b([a-z0-9_]+)\s*:=", text, re.M | re.I))
+
+    assert knobs(detour.read_text()) == knobs(direct.read_text())
+    assert deferred_attrs(detour.read_text()) == deferred_attrs(direct.read_text())
+
+
+# ------------------------------------------------------------- Phase 5.1: environments
+def test_nested_lines_round_trip_through_an_environment(tmp_path):
+    from lattix import read, write
+    from lattix.ir.lattice import Line, LineItem
+
+    ref = proton_ref()
+    lat = Lattice(name="ring", reference=ref)
+    for el in (Quadrupole(name="qf", length=0.5, multipole=MagneticMultipoleP(Bn={1: 0.3 * ref.brho_signed})),
+               Drift(name="d", length=1.0),
+               Quadrupole(name="qd", length=0.5, multipole=MagneticMultipoleP(Bn={1: -0.3 * ref.brho_signed}))):
+        lat.add_element(el)
+    lat.lines["cell"] = Line(name="cell", items=[LineItem(ref="qf"), LineItem(ref="d"),
+                                                 LineItem(ref="qd"), LineItem(ref="d")])
+    lat.lines["ring"] = Line(name="ring", items=[LineItem(ref="cell", repeat=2), LineItem(ref="cell", reverse=True)])
+    lat.use = "ring"
+    out = tmp_path / "ring.json"
+    rep = write(lat, out, "xtrack")
+    assert rep.ok
+    import json
+
+    doc = json.loads(out.read_text())
+    assert set(doc["lines"]) >= {"cell", "ring"}
+    assert doc["lines"]["ring"]["composer"]["components"][:2] == ["cell", "cell"]
+    back, rep2 = read(out, "xtrack")
+    assert back.use == "ring"
+    assert [p.element.name for p in back.flatten()] == [p.element.name for p in lat.flatten()]
+    assert "cell" in back.lines and [it.ref for it in back.lines["cell"].items] == ["qf", "d", "qd", "d"]
+    assert back.total_length == pytest.approx(lat.total_length)
+    write(back, tmp_path / "ring2.json", "xtrack")
+    assert json.loads((tmp_path / "ring2.json").read_text())["lines"]["cell"]["composer"]["components"] == \
+        doc["lines"]["cell"]["composer"]["components"]
+
+
+# ---------------------------------------------------------------------------------------------
+# Phase 5.1: writer options (rectangular bends, bend/edge models)
+# ---------------------------------------------------------------------------------------------
+
+def _rect_bend_lattice():
+    from lattix.ir.elements import Bend, BendP
+
+    ref = ReferenceParticle(species=species("proton"), kinetic_energy_eV=8e8)
+    # a MAD-X ``rbend, l=0.8, angle=0.08, e1=0.01, e2=0.02`` as the MAD-X reader stores it:
+    # arc length, sector-referenced face angles (e + θ/2), rect flag
+    L = 0.8 * 0.04 / math.sin(0.04)
+    b = Bend(name="rb", length=L, bend=BendP(angle=0.08, e1=0.05, e2=0.06, rect=True))
+    return Lattice.from_sequence("s", [Drift(name="d", length=0.5), b], ref), L
+
+
+def test_rbend_option_writes_xt_rbend_and_reads_back_sector_referenced(tmp_path):
+    from lattix import read, write
+
+    lat, L = _rect_bend_lattice()
+    out = tmp_path / "rb.json"
+    rep = write(lat, out, "xtrack", rbend=True)
+    assert rep.codes()["RBEND_WRITTEN"] == 1
+    rb = xt.Line.from_json(str(out)).element_dict["rb"]
+    assert isinstance(rb, xt.RBend)
+    assert rb.length_straight == pytest.approx(0.8, rel=1e-12)
+    assert rb.length == pytest.approx(L, rel=1e-12)
+    # xt.RBend face angles are relative to the rectangular faces (xtrack's own MAD-X loader
+    # convention, measured against cpymad to 5.1e-10)
+    assert rb.edge_entry_angle == pytest.approx(0.01, abs=1e-15)
+    assert rb.edge_exit_angle == pytest.approx(0.02, abs=1e-15)
+    lat2, _ = read(out, "xtrack")
+    b2 = lat2.elements["rb"]
+    assert b2.bend.rect
+    assert b2.bend.e1 == pytest.approx(0.05, abs=1e-15) and b2.bend.e2 == pytest.approx(0.06, abs=1e-15)
+    assert b2.length == pytest.approx(L, rel=1e-12) and b2.bend.angle == pytest.approx(0.08, rel=1e-12)
+    # the default stays a sector Bend with the sector-referenced angles
+    rep3 = write(lat, tmp_path / "sb.json", "xtrack")
+    assert "RBEND_WRITTEN" not in rep3.codes()
+    sb = xt.Line.from_json(str(tmp_path / "sb.json")).element_dict["rb"]
+    assert type(sb) is xt.Bend and sb.edge_entry_angle == pytest.approx(0.05)
+
+
+def test_foreign_rbend_reads_sector_referenced_edges():
+    """An RBend built the way xtrack's own loader builds one (face-referenced e1/e2)."""
+    line = xt.Line(elements={"rb": xt.RBend(length_straight=0.8, angle=0.08,
+                                            edge_entry_angle=0.01, edge_exit_angle=0.02)},
+                   element_names=["rb"])
+    line.particle_ref = xt.Particles(p0c=1.4e9, mass0=xt.PROTON_MASS_EV)
+    from lattix.fidelity import FidelityReport
+
+    rep = FidelityReport()
+    lat = from_line(line, report=rep)
+    b = lat.elements["rb"]
+    assert b.bend.rect
+    assert b.bend.e1 == pytest.approx(0.05) and b.bend.e2 == pytest.approx(0.06)
+    assert b.length == pytest.approx(0.8 * 0.04 / math.sin(0.04), rel=1e-12)
+    assert "BEND_K0_NE_H" not in rep.codes()
+
+
+def test_bend_and_edge_model_options_pass_through(tmp_path):
+    from lattix import write
+
+    lat, _ = _rect_bend_lattice()
+    out = tmp_path / "opts.json"
+    rep = write(lat, out, "xtrack", bend_model="bend-kick-bend", edge_model="full")
+    assert rep.codes()["BEND_MODEL_OPTION"] == 1
+    sb = xt.Line.from_json(str(out)).element_dict["rb"]
+    assert sb.model == "bend-kick-bend"
+    assert sb.edge_entry_model == "full" and sb.edge_exit_model == "full"
+    rep2 = write(lat, tmp_path / "plain.json", "xtrack")
+    assert "BEND_MODEL_OPTION" not in rep2.codes()
+
+
+def test_dropped_class_codes_are_catalogued():
+    from lattix.fidelity_catalog import scan
+    from lattix.formats.xtrack.extra_elements import DROPPED_CLASSES
+
+    codes = {code for code, _ in DROPPED_CLASSES.values()}
+    assert codes <= set(scan())
+    assert len(DROPPED_CLASSES) == 17
+
+
+def test_field_map_cavity_uses_the_maps_synchronous_phase(tmp_path):
+    """A relative-phase map (card phase 153°, integrated φs = −44°, V_c) must become a Cavity at φs
+    with V_c — the pair that reproduces dE_ref — not one at the card phase (which decelerates)."""
+    from lattix.formats.xtrack.convert import xtrack_phase_rad
+    from lattix.ir.elements import RFP, FieldMap
+
+    ref = ReferenceParticle(species=species("proton"), kinetic_energy_eV=20e6, rf_frequency_Hz=352.2e6)
+    fm = FieldMap(name="fm", length=0.41516, geom=100, files=["Simple_Spoke_1D"],
+                  rf=RFP(frequency_Hz=352.2e6, voltage_V=527068.64, phase_rad=math.radians(153.171),
+                         dE_ref_eV=378615.94), ke=1.55425)
+    fm.meta["map_summary"] = {"kind": "rf", "v_c_V": 526463.19, "phase_sync_rad": 5.515,
+                              "dE_ref_eV": 378615.94}
+    from lattix.fidelity import FidelityReport
+
+    lat = Lattice.from_sequence("s", [Drift(name="d", length=0.5), fm], ref)
+    rep = FidelityReport()
+    line = to_line(lat, report=rep)
+    cav = line.element_dict["fm"]
+    assert type(cav).__name__ == "Cavity"
+    assert cav.voltage == pytest.approx(526463.19)
+    assert cav.phase == pytest.approx(xtrack_phase_rad(5.515), abs=1e-9)
+    assert "FM_AS_CAVITY" in rep.codes()

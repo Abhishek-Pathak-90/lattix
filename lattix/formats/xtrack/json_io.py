@@ -62,7 +62,14 @@ def load_document(path: str | Path, *, line: str | None = None):
                 raise ValueError(f"{Path(path).name}: the environment defines no line")
             if line is None:
                 if len(available) > 1:
-                    chosen = available[-1]
+                    meta_use = ((doc.get("metadata") or {}).get("lattix") or {}).get("use")
+                    chosen = meta_use if meta_use in available else available[-1]
+                    extra = {n: list((doc["lines"][n].get("composer") or {}).get("components") or [])
+                             for n in available if n != chosen}
+                    env.lines[chosen]._lattix_extra_lines = {k: v for k, v in extra.items() if v}
+                    env.lines[chosen]._lattix_chosen = chosen
+                    env.lines[chosen]._lattix_root_components = list(
+                        (doc["lines"][chosen].get("composer") or {}).get("components") or [])
                     return env.lines[chosen], (f"the environment defines {len(available)} lines "
                                                f"{available}; {chosen!r} was used (pass line=)")
                 chosen = available[0]
@@ -70,6 +77,12 @@ def load_document(path: str | Path, *, line: str | None = None):
                 chosen = line
             else:
                 raise KeyError(f"{Path(path).name}: no line {line!r} (has {available})")
+            extra = {n: list((doc["lines"][n].get("composer") or {}).get("components") or [])
+                     for n in available if n != chosen}
+            env.lines[chosen]._lattix_extra_lines = {k: v for k, v in extra.items() if v}
+            env.lines[chosen]._lattix_chosen = chosen
+            env.lines[chosen]._lattix_root_components = list(
+                (doc["lines"][chosen].get("composer") or {}).get("components") or [])
             return env.lines[chosen], None
         if "element_names" not in doc:
             raise ValueError(f"{Path(path).name}: neither 'element_names' (a Line) nor 'lines' "
@@ -92,7 +105,13 @@ class Reader:
             rep.equivalent("MULTI_LINE_ENVIRONMENT", note)
         ref = _reference_override(xline, species, kinetic_energy_eV)
         lat = from_line(xline, ref, report=rep, name=name,           # metadata keeps the lattice name
-                        energy_mode=energy_mode)
+                        energy_mode=energy_mode,
+                        extra_lines=getattr(xline, "_lattix_extra_lines", None),
+                        root_components=getattr(xline, "_lattix_root_components", None))
+        chosen = getattr(xline, "_lattix_chosen", None)
+        if chosen and chosen != lat.use and lat.use in lat.lines:
+            lat.lines[chosen] = lat.lines.pop(lat.use).model_copy(update={"name": chosen})
+            lat.use = chosen
         for el in lat.elements.values():
             if el.provenance is not None:
                 el.provenance.file = str(path)
@@ -108,10 +127,27 @@ class Writer:
 
     def write(self, lattice: Lattice, path: Path, *, strict: bool = False,
               energy_mode: str = "delta", install_apertures: bool = True,
-              indent: int = 1, name: str | None = None) -> FidelityReport:
+              indent: int = 1, name: str | None = None, document: str = "auto",
+              bend_model: str | None = None, edge_model: str | None = None, rbend: bool = False) -> FidelityReport:
+        """``document``: ``"line"`` (a flat ``Line`` JSON), ``"environment"`` (an ``Environment``
+        JSON whose lines mirror the IR's nested lines) or ``"auto"`` (environment when the IR has
+        more than one line)."""
+        if document not in ("auto", "line", "environment"):
+            raise ValueError(f"document must be 'auto', 'line' or 'environment', got {document!r}")
         rep = FidelityReport(target_format="xtrack", target_file=str(path))
+        nested = len(lattice.lines) > 1
+        if document == "environment" or (document == "auto" and nested):
+            from lattix.formats.xtrack.convert import to_environment
+
+            env = to_environment(lattice, energy_mode=energy_mode, report=rep, install_apertures=install_apertures)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", FutureWarning)
+                env.to_json(str(path), indent=indent)
+            rep.raise_if(strict)
+            return rep
         line = to_line(lattice, energy_mode=energy_mode, report=rep,
-                       install_apertures=install_apertures, name=name)
+                       install_apertures=install_apertures, name=name,
+                       bend_model=bend_model, edge_model=edge_model, rbend=rbend)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", FutureWarning)
             line.to_json(str(path), indent=indent)

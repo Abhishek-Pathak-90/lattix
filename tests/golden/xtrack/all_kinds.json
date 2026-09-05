@@ -297,6 +297,7 @@
      "group": 7,
      "kind": "RFCavity",
      "name": "cv",
+     "phase_rad": -0.5235987755982988,
      "role": "main"
     },
     "dr": {
@@ -328,9 +329,11 @@
      "thickness_kg_per_m2": 0.237
     },
     "fm": {
+     "dE_ref_eV": 1500000.0,
      "group": 8,
-     "kind": "FieldMap",
+     "kind": "RFCavity",
      "name": "fm",
+     "phase_rad": -0.5235987755982988,
      "role": "main"
     },
     "fq": {

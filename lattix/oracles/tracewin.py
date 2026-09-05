@@ -103,8 +103,10 @@ class TracewinOracle:
         out.mkdir(exist_ok=True)
         local_deck = wd / Path(deck).name
         shutil.copy(deck, local_deck)
+        local_ini = wd / "project.ini"                # TraceWin rewrites its project file: never the repo copy
+        shutil.copy(_PROJECT_INI, local_ini)
         freq_mhz = (beam.frequency_Hz or 352.21e6) / 1e6
-        args = [str(exe), str(_PROJECT_INI), "hide", f"dat_file={local_deck}", f"path_cal={out}",
+        args = [str(exe), str(local_ini), "hide", f"dat_file={local_deck}", f"path_cal={out}",
                 f"energy1={beam.kinetic_energy_eV * 1e-6:.12g}", "current1=0",
                 f"freq1={freq_mhz:.12g}", f"nbr_part1={nbr_part}"]
         if beam.species.lower() != "proton":

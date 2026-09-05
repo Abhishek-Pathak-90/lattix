@@ -623,6 +623,11 @@ class Reader:
                             f"type {card.itype} phase {card.v(3):g}° is a driven RF phase "
                             "(gain \u221d cos(2\u03c0f\u00b7t + \u03b80)), not a synchronous phase",
                             element=name, kind=el.kind)
+        if isinstance(el, FieldMap) and not getattr(el.rf, "dE_ref_eV", None):
+            self.rep.lossy("IMPACTZ_RF_GAIN_UNKNOWN",
+                           "the reference gain of an rfdata cavity is not integrated on read (the Fourier "
+                           "profile is kept in meta['impactz_rfdata']); dE_ref and the voltage are unknown",
+                           element=name, kind=el.kind)
         return self._common(el, card)
 
     # -- negative (BPM) type codes ---------------------------------------

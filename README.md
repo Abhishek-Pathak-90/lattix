@@ -2,10 +2,10 @@
 
 Translate a lattice deck from one accelerator code's format to another's
 (TraceWin `.dat`, MAD-X, MAD8 flat, Elegant `.lte`, Bmad, PALS; later ImpactX,
-IMPACT-Z, FLAME, xtrack, SciBmad) through a code-neutral intermediate representation, with
+IMPACT-Z, FLAME, xtrack, SciBmad, MAD-NG write-only) through a code-neutral intermediate representation, with
 a fidelity report on every conversion and validation against the real engines.
 
-**Status: Phase 4 (0.1.0)** — documentation, CI and a local release build are in place; HELIX GUI/MCP integration is deferred. Phase 3 delivered — readers and writers for TraceWin, MAD-X, MAD8 flat, Elegant, Bmad,
+**Status: Phase 5 in progress (0.1.0)** — SciBmad, the xsuite completion (every xtrack element class, knobs, environments, MAD-NG output) and LightWin as a second TraceWin-semantics engine have landed; documentation, CI and a local release build are in place; HELIX GUI/MCP integration is deferred. Phase 3 delivered — readers and writers for TraceWin, MAD-X, MAD8 flat, Elegant, Bmad,
 PALS, ImpactX, IMPACT-Z, FLAME, xtrack and SciBmad, TraceWin field maps integrated into equivalent cavities and
 hard-edge magnets, the HELIX adapter, the fidelity report and the CLI — each validated against its real
 engine (see `PLAN.md`, `docs/oracles.md`, `docs/corpus.md`). Still open: the HELIX GUI/MCP integration (deferred), the nightly

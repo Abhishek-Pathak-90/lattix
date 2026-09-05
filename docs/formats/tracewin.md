@@ -75,6 +75,16 @@ both conventions.
 * Kicker field signs are pinned by tracking through the binary (invariant I-10), see
   [../oracles.md](../oracles.md).
 
+* **Field-map phases.**  `SET_SYNC_PHASE` makes the card phase a synchronous phase (calibrated
+  by integrating the map); otherwise, with `P = 0`, it is the RF phase when the reference particle
+  *enters* the map — independent of the bunch clock.  HELIX adds the running bunch phase there;
+  LightWin and TraceWin (by the ADS design deck that only accelerates this way, 20 → 502.24 MeV)
+  do not, and neither does lattix since 2026-09-05 (`docs/oracles.md`, Phase 5.2).
+
+* Write option `static_maps="hard_edge"`: a static solenoid/quadrupole map becomes the hard-edge
+  magnet of `lattix.ir.fieldmap.replacement_for` (∫B and ∫B² preserved, drift padding; the
+  `FM_SOL_HARDEDGE` / `FM_QUAD_HARDEDGE` rows, Equivalent tier) — for engines without static maps (LightWin).
+
 ## Known limits
 
 * Only rectangular (0) and elliptical (1) `APERTURE` types are modelled; 2–6 stay in
@@ -92,3 +102,11 @@ both conventions.
 LightWin runner pattern) and reads `Transfer_matrix1.dat`; marker `oracle_tracewin`, needs
 `TRACEWIN_EXE`, local only.  HELIX (`oracle_helix`, `HELIX_ROOT`) is the second, in-process
 oracle for this format and agrees with TraceWin to 1e-6 on the vertical-bend decks.
+
+LightWin's `Envelope3D` (`lattix/oracles/lightwin.py`, marker `oracle_lightwin`, conda env
+`lightwin`) is a second TraceWin-semantics engine, free of the trial's 20-element limit: DRIFT,
+QUAD, SOLENOID, BEND and 1-D FIELD_MAP cards, `SET_SYNC_PHASE` and relative phases; GAP/NCELLS are
+skipped and EDGE/THIN_STEERING/APERTURE become drifts (audited in the result, report-only in the
+battery).  Measured against HELIX on the field-map fingerprint (0.17 % on the gain) and against
+lattix's own integration on the ADS example deck (2e-4 per cavity).
+

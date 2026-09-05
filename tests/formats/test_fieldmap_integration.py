@@ -96,20 +96,23 @@ def test_sync_phase_gain_is_species_independent(tmp_path):
         assert math.degrees(s.phase_sync_rad) == pytest.approx(-25.0, abs=0.01)
 
 
-def test_non_synchronous_map_uses_the_running_rf_phase(tmp_path):
-    """Without SET_SYNC_PHASE the deck phase is an RF phase: TraceWin adds the reference's
-    own accumulated φs, so the same card gains a different amount further down the line."""
-    # a short gap (0.16 of an RF period at β = 0.067) so "on crest at the entrance" still means
-    # accelerating; over a long map the phase slip alone decides the sign
+def test_relative_phase_map_ignores_the_running_rf_phase(tmp_path):
+    """Without SET_SYNC_PHASE the deck phase is *relative*: the RF phase when the reference particle
+    enters the map, whatever the bunch clock says.  LightWin's Envelope3D reproduces the ADS design
+    deck that way (20 → 502.24 MeV, its own regression value; lattix 502.22 MeV), HELIX adds the
+    running phase and ends at 22.6 MeV — measured 2026-09-05, docs/oracles.md."""
     data = uniform_map(tmp_path, "u", 1.0, 0.02)
     fm = fieldmap(0.02, phase_rad=0.0, freq=162.5e6, sync=False)
     ref = ref_at(2.1e6, 162.5e6)
     a = integrate_map(fm, ref, data, entrance_phase_deg=0.0)
     b = integrate_map(fm, ref, data, entrance_phase_deg=90.0)
-    assert a.dE_ref_eV > 0 > b.dE_ref_eV                       # on crest vs a quarter period later
-    for s in (a, b):                                          # each run is self-consistent
-        assert s.dE_ref_eV == pytest.approx(s.v_c_V * math.cos(s.phase_sync_rad), rel=1e-12)
-    assert math.degrees(b.phase_rf_rad - a.phase_rf_rad) == pytest.approx(90.0)
+    assert a.dE_ref_eV > 0                                    # on crest at the entrance: accelerating
+    assert b.dE_ref_eV == pytest.approx(a.dE_ref_eV, rel=1e-12)   # the bunch clock does not matter
+    assert a.dE_ref_eV == pytest.approx(a.v_c_V * math.cos(a.phase_sync_rad), rel=1e-12)
+    # a quarter period later *in the card* the same map decelerates: the card phase is what counts
+    c = integrate_map(fieldmap(0.02, phase_rad=math.pi / 2, freq=162.5e6, sync=False), ref, data)
+    assert c.dE_ref_eV < 0
+    assert math.degrees(c.phase_rf_rad - a.phase_rf_rad) == pytest.approx(90.0)
     # a synchronous-phase map ignores the running phase entirely (TraceWin SET_SYNC_PHASE)
     sync = fieldmap(0.02, phase_rad=0.0, freq=162.5e6, sync=True)
     assert integrate_map(sync, ref, data, entrance_phase_deg=90.0).dE_ref_eV == \

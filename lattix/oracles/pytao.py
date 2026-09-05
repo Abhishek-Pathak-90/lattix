@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -40,77 +39,23 @@ from typing import ClassVar
 import numpy as np
 
 from lattix.oracles.base import Basis, BeamSpec, OracleResult, Probe, register
+from lattix.oracles.envs import can_import, conda_roots, resolve_python
 
 _WORKER = Path(__file__).with_name("bmad_worker.py")
 _CHECK = "import pytao, sys; print(sys.executable)"
 
 
 def _can_import_pytao(python: str, timeout: float = 120.0) -> tuple[bool, str]:
-    try:
-        proc = subprocess.run([python, "-I", "-c", _CHECK], capture_output=True, text=True,
-                              timeout=timeout, check=False)
-    except (OSError, subprocess.TimeoutExpired) as e:
-        return False, f"{python}: {e}"
-    if proc.returncode != 0:
-        tail = (proc.stderr or proc.stdout).strip().splitlines()
-        return False, f"{python}: {tail[-1] if tail else 'exit ' + str(proc.returncode)}"
-    return True, proc.stdout.strip().splitlines()[-1]
+    return can_import(python, "pytao", timeout)
 
 
 def _conda_roots() -> list[Path]:
-    roots: list[Path] = []
-    prefix = os.environ.get("CONDA_PREFIX")
-    if prefix:
-        p = Path(prefix)
-        roots += [p, p.parent.parent if p.parent.name == "envs" else p.parent]
-    exe = os.environ.get("CONDA_EXE")
-    if exe:
-        roots.append(Path(exe).resolve().parent.parent)
-    home = Path.home()
-    roots += [home / d for d in ("anaconda3", "miniconda3", "miniforge3", "mambaforge", "conda")]
-    roots += [Path(p) for p in ("/opt/conda", "/opt/anaconda3", "/opt/miniconda3",
-                                "/usr/local/anaconda3", "/usr/local/miniconda3")]
-    seen, out = set(), []
-    for r in roots:
-        if r not in seen:
-            seen.add(r)
-            out.append(r)
-    return out
+    return conda_roots()
 
 
 def _resolve_python(env: str) -> tuple[str | None, list[str]]:
     """Interpreter that imports pytao, plus the reasons every candidate was rejected."""
-    tried: list[str] = []
-    explicit = os.environ.get("LATTIX_BMAD_PYTHON")
-    if explicit:
-        ok, why = _can_import_pytao(explicit)
-        if ok:
-            return why, tried
-        tried.append(f"LATTIX_BMAD_PYTHON {why}")
-    exe = "python.exe" if sys.platform == "win32" else "bin/python"
-    for root in _conda_roots():
-        cand = root / "envs" / env / exe
-        if cand.exists():
-            ok, why = _can_import_pytao(str(cand))
-            if ok:
-                return why, tried
-            tried.append(why)
-    conda = os.environ.get("CONDA_EXE") or shutil.which("conda")
-    if conda:
-        try:
-            proc = subprocess.run([conda, "run", "-n", env, "python", "-c", _CHECK],
-                                  capture_output=True, text=True, timeout=300, check=False)
-            lines = proc.stdout.strip().splitlines()
-            if proc.returncode == 0 and lines and Path(lines[-1]).exists():
-                return lines[-1], tried
-            err = (proc.stderr or proc.stdout).strip().splitlines()
-            last = err[-1] if err else f"exit {proc.returncode}"
-            tried.append(f"conda run -n {env}: {last}")
-        except (OSError, subprocess.TimeoutExpired) as e:
-            tried.append(f"conda run -n {env}: {e}")
-    else:
-        tried.append("no conda executable on PATH / CONDA_EXE")
-    return None, tried
+    return resolve_python("pytao", env, "LATTIX_BMAD_PYTHON", try_current=False)
 
 
 @register

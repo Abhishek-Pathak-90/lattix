@@ -11,11 +11,11 @@ from pathlib import Path
 import pytest
 
 from lattix import crossval
-from lattix.formats.base import FORMATS
 
 pytestmark = pytest.mark.crossval
 
-_CASES = [(rel, fmt, opts, dst) for rel, fmt, opts in crossval.DECKS for dst in FORMATS if dst != fmt]
+_CASES = [(rel, fmt, opts, dst) for rel, fmt, opts in crossval.DECKS
+          for dst in crossval.readable_formats() if dst != fmt]
 _IDS = [f"{Path(rel).name}:{fmt}->{dst}" for rel, fmt, opts, dst in _CASES]
 
 

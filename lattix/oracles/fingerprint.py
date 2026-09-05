@@ -25,7 +25,7 @@ FREQ_HZ = 162.5e6
 V_VOLT = 1.0e6         # cavity effective voltage
 PHI_S_DEG = -30.0      # synchronous phase, cos convention, 0 = crest
 FOLLOWS_P0 = {"scibmad": False, "helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True,
-              "impactz": True, "madx": False, "xtrack": False}
+              "impactz": True, "madx": False, "xtrack": False, "lightwin": True}
 
 _MASS = SPECIES["proton"][0]
 _ETOT_GEV = (_MASS + KE_EV) * 1e-9
@@ -91,13 +91,31 @@ DECKS["scibmad"] = {
 
 _SUFFIX = {"madx": ".madx", "tracewin": ".dat", "bmad": ".bmad", "elegant": ".lte", "scibmad": ".jl"}
 
+# LightWin's Envelope3D has no thin-gap model: its cavity is a 1-D field map (constant Ez over 2 cm,
+# amplitude chosen for ~1 MV effective at β = 0.0668) driven at φs = −30° through SET_SYNC_PHASE.
+_FP_MAP_L_M, _FP_MAP_NZ = 0.02, 200
+_FP_MAP_E0 = V_VOLT / (_FP_MAP_L_M * 0.957) * 1e-6          # MV/m; T(β) ≈ 0.957 for 2 cm at 2.1 MeV
+_FP_MAP_TEXT = (f"{_FP_MAP_NZ} {_FP_MAP_L_M:.6g}\n1.0\n"
+                + "".join(f"{_FP_MAP_E0:.9g}\n" for _ in range(_FP_MAP_NZ + 1)))
+DECKS["lightwin"] = {
+    "drift": ("tracewin", f"FREQ {FREQ_HZ * 1e-6:.6g}\nDRIFT 1000 30\nEND\n"),
+    "cavity": ("tracewin", f"FREQ {FREQ_HZ * 1e-6:.6g}\nDRIFT 500 30\nSET_SYNC_PHASE\n"
+                           f"FIELD_MAP 100 {_FP_MAP_L_M * 1e3:.6g} {PHI_S_DEG:.6g} 30 0 1 0 0 fp_map 0\n"
+                           "DRIFT 500 30\nEND\n", {"fp_map.edz": _FP_MAP_TEXT}),
+}
+#: engines whose fingerprint cavity is an integrated field map, not a thin gap of exactly V_VOLT
+GAIN_RTOL = {"lightwin": 0.05}
+
 
 def write_decks(engine: str, workdir: Path) -> dict[str, tuple[Path, str]]:
     workdir.mkdir(parents=True, exist_ok=True)
     out = {}
-    for kind, (fmt, text) in DECKS[engine].items():
+    for kind, entry in DECKS[engine].items():
+        fmt, text = entry[0], entry[1]
         p = workdir / f"fp_{kind}{_SUFFIX[fmt]}"
         p.write_text(text)
+        for name, content in (entry[2] if len(entry) > 2 else {}).items():
+            (workdir / name).write_text(content)          # e.g. a field-map file next to the deck
         out[kind] = (p, fmt)
     return out
 

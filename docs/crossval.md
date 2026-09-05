@@ -49,7 +49,13 @@ relative difference, fixed-point result, engine metric, and the first problem.
 decks as sources, so Elegant, ImpactX, IMPACT-Z, xtrack and lattix JSON — which have no public deck
 of their own — are exercised as sources too, and against their engines.  With HELIX available this
 gives 56 engine pairs on 5 decks (~10 min); SciBmad adds one engine on both ends of every pair where
-`julia` with SciBmad is installed (each run starts Julia: ~8 s a case).
+`julia` with SciBmad is installed (each run starts Julia: ~8 s a case).  LightWin's ADS linac
+(`lightwin/example.dat`, 627 elements, 142 one-dimensional RF maps with relative phases) is the
+public field-map deck of the battery: it exercises every `FM_TO_CAVITY`/`FM_AS_CAVITY` conversion
+against LightWin's envelope.  A writer-only format (MAD-NG)
+has no fixed point and is not a battery pair; its tests live with the xtrack ones.  TraceWin decks
+are checked with HELIX where it exists and with LightWin's `Envelope3D` otherwise (CI); a pair whose
+LightWin run skipped or drift-substituted elements is report-only.
 
 ## What it found (2026-09-04)
 

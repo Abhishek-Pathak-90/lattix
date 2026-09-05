@@ -64,6 +64,8 @@ FORMATS: dict[str, FormatSpec] = {
     "impactz": FormatSpec("impactz", ("impactz.in",), "lattix.formats.impactz", description="IMPACT-Z ImpactZ.in"),
     "scibmad": FormatSpec("scibmad", (".scibmad.jl", ".jl"), "lattix.formats.scibmad",
                           description="SciBmad / Beamlines.jl lattice (Julia)"),
+    "madng": FormatSpec("madng", (".madng",), "lattix.formats.madng", reader_attr=None,
+                        description="MAD-NG Lua sequence (writer only, via xtrack)"),
     # keep last: a bare .json is xtrack's unless the content says otherwise (sniffed below)
     "xtrack": FormatSpec("xtrack", (".json",), "lattix.formats.xtrack", description="xtrack Line/Environment JSON"),
 }

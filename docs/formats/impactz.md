@@ -24,6 +24,11 @@ pole-face curvatures LOSSY `IMPACTZ_POLE_FACE_CURVATURE`, one fringe integral), 
 `BodyShiftP` (`flagerr = 1` required for IMPACT-Z to apply them).  Names live in the
 `! lattix: name=… kind=…` comment the writer adds (`IMPACTZ_NAME_TAG`).
 
+The reference gain of an rfdata cavity is not integrated on read: the element comes back as a
+`FieldMap` with the Fourier profile in `meta["impactz_rfdata"]` and no `dE_ref` (LOSSY
+`IMPACTZ_RF_GAIN_UNKNOWN`), so a lattice with such cavities has no energy profile until the maps are
+re-integrated.
+
 ## Writing
 
 `lattix/formats/impactz/writer.py` writes the header from the reference particle and

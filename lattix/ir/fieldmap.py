@@ -546,6 +546,17 @@ def _calibrate_sync_offset(e_all: list[float], theta_deg: float, sweep_kw: dict,
     return psi
 
 
+#: HELIX's convention for relative field-map phases (running bunch phase added at the entrance).
+#: Off: TraceWin/LightWin's arrival convention.  Kept as a switch for the HELIX lockstep tests.
+_ADD_RUNNING_PHASE = False
+
+
+def _wrap(phase_rad: float) -> float:
+    """Canonical phase in [−π, π): every reader wraps, so a written phase must already be wrapped
+    for write → read → write to be a fixed point."""
+    return (phase_rad + math.pi) % (2.0 * math.pi) - math.pi
+
+
 def integrate_map(fm, ref: ReferenceParticle, data: FieldMapData, *,
                   entrance_phase_deg: float = 0.0, n_steps: int | None = None,
                   with_checksums: bool = False) -> MapSummary:
@@ -600,12 +611,17 @@ def integrate_map(fm, ref: ReferenceParticle, data: FieldMapData, *,
     if n_e and sync:
         psi = _calibrate_sync_offset((e_rf + e_dc).tolist(), theta_deg, sweep_kw)
     rf_phase_deg = theta_deg - psi if sync else theta_deg
-    phi0_deg = 0.0 if sync else float(entrance_phase_deg)
+    # A relative phase (p_flag = 0, no SET_SYNC_PHASE) is the RF phase when the reference particle
+    # *enters the map*: it does not depend on the bunch clock.  HELIX adds the running phase here,
+    # which is what LightWin (and TraceWin, by the design intent of the ADS deck that only
+    # accelerates with the arrival convention) do not do — measured 2026-09-05 (docs/oracles.md):
+    # HELIX's gain-vs-φ0 curve is shifted by exactly 2πf·L/(βc) of the upstream drift.
+    phi0_deg = 0.0 if (sync or not _ADD_RUNNING_PHASE) else float(entrance_phase_deg)
     acc = _sweep(l_rf, l_dc, rf_phase_deg=rf_phase_deg, phi0_deg=phi0_deg, **sweep_kw)
 
     phi_in_deg = rf_phase_deg + phi0_deg
     v_c = math.hypot(acc["re"], acc["im"])
-    phase_sync = math.radians(phi_in_deg + math.degrees(math.atan2(acc["im"], acc["re"]))) if v_c else 0.0
+    phase_sync = _wrap(math.radians(phi_in_deg + math.degrees(math.atan2(acc["im"], acc["re"])))) if v_c else 0.0
 
     # fixed-β transit-time factor and PLAN's V_eff = ∫|E_z|·T at the *entrance* β
     beta_in = _beta_of(float(ref.kinetic_energy_eV), mass)

@@ -101,18 +101,21 @@
      "group": 2,
      "kind": "RFCavity",
      "name": "cav1",
+     "phase_rad": -0.5235987755982988,
      "role": "main"
     },
     "cav2": {
      "group": 6,
      "kind": "RFCavity",
      "name": "cav2",
+     "phase_rad": -0.5235987755982988,
      "role": "main"
     },
     "cav3": {
      "group": 10,
      "kind": "RFCavity",
      "name": "cav3",
+     "phase_rad": -0.5235987755982988,
      "role": "main"
     },
     "da1": {

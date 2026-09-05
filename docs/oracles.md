@@ -14,6 +14,7 @@ recalled.  Re-run `lattix fingerprint` / `pytest tests/oracles` after any engine
 | Bmad / Tao | conda env `bmad` (`pytao` 1.2.4, bmad 20260828.0, py3.13/numpy2) via an out-of-process worker | 20260828.0 | (x, px, y, py, z, pz) | follows (`lcavity`) | Converters shipped: `bmad_to_mad_sad_elegant`, `madx_to_bmad.py`, `elegant_to_bmad.py`, `sad_to_bmad`. `bmad_to_mad_sad_elegant` needs positive initial Twiss (`beginning[beta_a]`) or `-force`. |
 | elegant | conda env `lattix` (`conda-forge elegant 2026.3.0`, osx-arm64) + `pysdds` 0.6 (text fallback via `sdds2stream`) | 2026.3.0 (2026-07-02) | (x, x′, y, y′, s, δ) with **s = path length**: its matrices carry no velocity-bunching term (drift R56 = 0); the adapter adds −L/γ² per element so maps land in the arrival-time common basis | follows with `change_p0=1` | **RFCA phase convention follows the charge sign relative to the electron**: negative species crest at +90°, positive species (protons) at −90° — `phase = 60` *decelerates* protons, `phase = 240` gives +V·cos30°. Its RFCA *matrix* phase slip is ultra-relativistic (R65 = β·true value; tracking is physical). Constants are CODATA-86 (m_e = 0.51099906 MeV; built-in `proton` = 938.2866 MeV, 1.5e-5 off) → adapter uses `change_particle name=custom, mass_ratio, charge_ratio`. conda-forge build ships no `defns.rpn` (adapter embeds one and passes `-rpnDefns=<abs path>`). |
 | xtrack | base env 0.103.5; env `lattix` 0.112.0 | — | (x, px, y, py, ζ, δ) | constant | Native Lark MAD-X parser rejects some MAD-X (e.g. `sequence, l=…, refer=centre` header in HELIX's fodo.madx) → load through cpymad `Line.from_madx_sequence`. |
+| LightWin | env `lightwin` (python 3.12, LightWin 0.16.5, MIT) | `lattix/oracles/lightwin.py` + `lightwin_worker.py` | (x, x', y, y', z [m], dp/p) — TraceWin's, SI | follows the field maps | Envelope3D only: DRIFT, QUAD, SOLENOID, BEND, FIELD_MAP (1-D); EDGE/THIN_STEERING/APERTURE/DIAG_* propagated as drifts, GAP/NCELLS/DTL_CEL skipped — both audited in `meta` and report-only in the battery. |
 | ImpactX / IMPACT-Z | env `lattix` (`impactx` 26.08, `impact-z` 2.7.7, both osx-arm64 builds) | — | Phase 3 | follows | `ImpactZexe` on PATH in the env; `impactx` importable. |
 | SciBmad | `julia` (juliaup 1.10) with `SciBmad` 0.5.2 (Beamlines.jl + BeamTracking.jl) through `lattix/oracles/scibmad_worker.jl`; `LATTIX_JULIA` or PATH | 0.5.2 (2026-09-05) | (x, px, y, py, z, pz), z ahead-positive (drift R56 = +L/γ² measured) | constant (one reference momentum per `Beamline`; nesting and `Patch(dE_ref)` past the first element are refused) | `RFCavity` gain is **−V·cos(phi0)** with `phi0` in radians for protons and electrons alike (writer negates the voltage: `GAIN_SIGN`); a zero-length cavity and `edge1_int/edge2_int` cannot be tracked (worker substitutes 1 µm / 0 and says so); `g_ref` alone is a curved frame — the dipole field is `Kn0`; `LineElement(transport_map=f)` with `f(v, q, p=nothing)` works as a thin lens; `using Beamlines` fails in an environment that only has `SciBmad` (worker strips `using` lines). `Species("#1H-")` is H⁻ (m_p + 2 m_e); `Species("H-")` is the isotope-averaged anion. Startup ~13 s, a run ~8 s. |
 
@@ -275,3 +276,81 @@ MAD-X gate therefore checks loading and reporting, the physics gate runs on Bmad
   are report-only rather than false failures.  ImpactX's `drift + ShortRF + drift` triple is
   read back as the thick cavity it was (`THICK_CAVITY_RESTORED`), so it no longer gains a
   thin-gap lens on the second write.
+
+## Phase 5.1 measurements (xtrack 0.112.0, 2026-09-05)
+
+* **Every element class is read.**  102 `BeamElement` subclasses in `xt.__dict__`, all in the reader
+  table (`tests/formats/test_xtrack_convert.py::test_known_classes_matches_what_from_line_actually_maps`).
+* **`RBend` face angles are face-referenced.**  A hand-built
+  `xt.RBend(length_straight=0.8, angle=0.08, edge_entry_angle=0.01, edge_exit_angle=0.02, k1=0.1)`
+  matches cpymad's `rbend, l=0.8, angle=0.08, e1=0.01, e2=0.02, k1=0.1` (rbarc on) to **5.1e-10** on
+  the transverse block, i.e. the same convention as xtrack's own MAD-X loader (`e1` copied as is,
+  `l` → `length_straight`).  The IR keeps sector-referenced angles (`e1 + θ/2`, `rect=True`), so the
+  reader adds the wedge (`θ/2 ∓ rbend_angle_diff/2`) and the `rbend=True` writer subtracts it; the
+  default sector `Bend` output matches cpymad to 5.0e-10 on the same deck.
+* **Knobs.**  `psb.seq` through the MAD-X reader carries 128 deferred expressions; they come out of
+  xtrack as `element_refs` expressions and of MAD-NG (`--to madng`) as `k2 =\ (k2bi4bsw1l11)`.  A
+  MAD-X deck written with plain `=` (HELIX's `fodo.madx`, `k1=kfocus`) has no knobs to keep: MAD-X
+  evaluates `=` at definition time, only `:=` is deferred.
+* **MAD-NG output** is xtrack's `mad_writer.to_madng_sequence` on the lattix `Line`; no MAD-NG
+  engine here, the ledger says `VIA_XTRACK` for every element.
+
+## Phase 5.2 measurements (LightWin 0.16.5, 2026-09-05)
+
+* **Basis and units.**  A 1 m drift at 2.1 MeV gives `R12 = 1`, `R56 = +0.9955387 = L/γ²` in
+  `(x, x', y, y', z [m], dp/p)`: TraceWin's basis in SI, `z` ahead-positive (`Basis.TRACEWIN`).
+  A 5 T/m, 0.2 m quadrupole focuses `x` for a proton (`R11 = cos(√k L)`, `k = G/Bρ`, 1e-9).
+* **Field-map cavity vs HELIX** (fingerprint deck: 2 cm of constant Ez, `SET_SYNC_PHASE`, φs = −30°):
+  gain 873.6 keV (LightWin, `v_cav = 1.0068 MV`, `phi_s = −30.000°`) vs 872.0 keV (HELIX) vs
+  873.6 keV (lattix `integrate_map`); `R22` 0.83916 vs 0.84058; LightWin carries a transverse RF
+  focusing term (`R21 = −0.0112`) HELIX's map model does not: Equivalent tier, not Exact.
+* **Relative field-map phases: HELIX and TraceWin/LightWin differ.**  A `FIELD_MAP … φ0 … 0`
+  card without `SET_SYNC_PHASE` carries a *relative* phase.  Scanning φ0 on a 2 cm constant map
+  behind a 0.5 m drift (2.1 MeV, 162.5 MHz), HELIX's gain-vs-φ0 curve is the LightWin curve shifted
+  by 20.4°, and on the ADS spoke map behind the same drift (20 MeV, 352.2 MHz) by 40°: exactly
+  `2πf·L/(βc) mod 360°` of the drift, i.e. HELIX adds the running bunch phase at the map entrance
+  to a relative phase; LightWin takes φ0 as the RF phase when the reference particle enters.  On
+  LightWin's vendored ADS deck (`tests/data/public/lightwin/example.dat`, 142 maps, 20 MeV in) the
+  arrival convention reaches **502.24 MeV** (LightWin's own regression value; lattix
+  `integrate_map` with the same convention: 502.22 MeV, every cavity within 2e-4), HELIX's
+  convention 22.55 MeV — the deck accelerates only with the arrival convention, which is therefore
+  what TraceWin (the deck's author) does.  lattix now uses it (`lattix.ir.fieldmap._ADD_RUNNING_PHASE
+  = False`); synchronous-phase decks (PIP-II: `SET_SYNC_PHASE` everywhere) are unaffected.
+  **HELIX bug to fix in HELIX** (`linac_gen` field-map propagation), like the negative-bend one.
+* **The TraceWin trial + LightWin's `generic_project.ini` do not integrate 1-D field maps
+  usefully**: on the same decks the licensed binary reports ≈ 0 keV for the spoke map at every
+  φ0 and half the amplitude on the synthetic map (the effective map length looks halved) — the
+  batch settings in the binary `.ini` are not under our control; the TraceWin oracle is not a
+  field-map reference until a native project file is built (`docs/oracles.md` open item).
+* **What LightWin cannot model** (`tests/oracles/test_lightwin_adapter.py`): GAP cards are skipped
+  outright (LightWin's `Dummy` instruction), EDGE/THIN_STEERING/APERTURE/DIAG_* become drifts of
+  their length (`DriftEnvelope3DParameters`), TITLE/PARTRAN_STEP are ignored commands.  The
+  adapter lists them in `meta["dropped"]` / `meta["substituted"]` / `meta["ignored_commands"]`
+  and the battery makes any such pair report-only.  In the battery LightWin is the fallback engine
+  for TraceWin decks when HELIX is absent (CI), `lattix.crossval.ENGINE_CANDIDATES`.
+* **LightWin has no solenoid model** (`SolenoidEnvelope3DParameters` raises `NotImplementedError`,
+  and geometry-10 static maps are refused outright): the worker writes SOLENOID cards as drifts of
+  the same length (`meta["solenoids_as_drifts"]`, report-only in the battery), so a solenoid-focused
+  linac is compared on its reference energy only.  The TraceWin writer's `static_maps="hard_edge"`
+  option (`FM_SOL_HARDEDGE`/`FM_QUAD_HARDEDGE`) removes the static maps for it.
+* **LightWin's synchronous phase is charge-blind**: run with `q_adim = −1`, the fingerprint cavity
+  *decelerates* an H⁻ by 860 keV while reporting `phi_s = −30°` (HELIX/lattix: +872 keV).  The
+  worker therefore emulates a negative particle as a positive one of the same mass in mirrored
+  fields (QUAD gradients, THIN_STEERING fields and static `kb` negated, relative RF phases +180° —
+  TraceWin's rule in `lattix.ir.rf`): +873.5 keV, quads identical to HELIX (5e-15) for both signs.
+* **PIP-II MEBT+HWR gate** (private deck, `static_maps="hard_edge"`, H⁻ 2.1 MeV): the energy after
+  each of the 12 RF maps (4 bunchers, 8 HWR cavities) agrees between LightWin and HELIX to 1.2e-4 (10.2211 vs 10.2223 MeV at the
+  exit) and, run at the CEA export's own 2.1227 MeV input, with TraceWin's `energy.txt` within 0.5 %
+  (10.262 MeV).
+* **The ADS deck in the battery** (`lightwin/example.dat`, 142 relative-phase 1-D maps): every
+  `FM_TO_CAVITY`/`FM_AS_CAVITY` conversion now carries the integrated `(V_c, φs)` pair (the card
+  phase of a relative-phase map is not its synchronous phase — xtrack and ImpactX used it and
+  decelerated), all 11 conversions round-trip through the IR and are write→read→write fixed points,
+  and the reference energy of the derived cavities through **Elegant, Bmad and ImpactX agrees with
+  LightWin's envelope to 5.9e-5** (502.2232 vs 502.2414 MeV at the exit; IMPACT-Z's `rfdata`
+  Fourier cavities 0.95 %).  The transverse block does not: every code models the RF focusing of a
+  cavity differently (LightWin integrates the map, Elegant/Bmad have end-field models, xtrack's
+  `Cavity` has none), and over 142 cavities at 20–500 MeV the cumulated 4×4 map differs by O(10);
+  such pairs assert the energy and report the map.  Backlog: give derived cavities the thin-gap RF
+  focusing lens thin GAPs already get (`RF_FOCUSING_AS_MATRIX`), engine by engine.
+

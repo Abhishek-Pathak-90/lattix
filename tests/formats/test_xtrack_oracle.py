@@ -451,3 +451,29 @@ def test_beam_spec_is_not_needed_because_lattix_writes_particle_ref(tmp_path):
     line = xt.Line.from_json(str(out))
     assert line.particle_ref is not None
     _ = BeamSpec  # the oracle's escape hatch is not needed here
+
+
+@pytest.mark.oracle_madx
+def test_rbend_option_matches_cpymad_on_a_rectangular_bend(tmp_path):
+    """``rbend=True`` writes ``xt.RBend`` (straight length, face-referenced e1/e2): the xtrack maps
+    must equal cpymad's on the source RBEND (measured 5.1e-10 on the transverse block)."""
+    pytest.importorskip("cpymad")
+    from lattix import read, write
+    from lattix.crossval import _beam
+
+    deck = tmp_path / "rb.madx"
+    deck.write_text("beam, particle=proton, energy=1.738272088;\n"
+                    "rb: rbend, l=0.8, angle=0.08, e1=0.01, e2=0.02, k1=0.1;\n"
+                    "d: drift, l=0.5;\n"
+                    "s: sequence, l=2.0; d, at=0.25; rb, at=1.0; endsequence;\n")
+    lat, _ = read(deck, "madx")
+    assert lat.elements["rb"].bend.rect
+    out = tmp_path / "rb.json"
+    rep = write(lat, out, "xtrack", rbend=True)
+    assert rep.codes()["RBEND_WRITTEN"] == 1
+    assert isinstance(xt.Line.from_json(str(out)).element_dict["rb"], xt.RBend)
+    rm = get_oracle("madx").run(deck, fmt="madx", beam=_beam(lat), workdir=tmp_path / "wd_m")
+    rx = get_oracle("xtrack").run(out, fmt="xtrack", beam=_beam(lat), workdir=tmp_path / "wd_x")
+    pc = compare_pair(rm, rx)
+    assert pc.n_shared >= 3
+    assert pc.blocks["T4x4"] < TOL and pc.blocks["disp"] < TOL

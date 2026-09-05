@@ -355,6 +355,24 @@ class _Builder:
             elif ir.kind == "Foil":
                 row.update({"material": ir.material, "thickness_kg_per_m2": ir.thickness_kg_per_m2,
                             "dE_ref_eV": ir.dE_ref_eV})
+            elif ir.kind in ("RFCavity", "FieldMap") and getattr(ir, "rf", None) is not None:
+                row["phase_rad"] = float(ir.rf.phase_rad)
+                if ir.rf.dE_ref_eV is not None:
+                    row["dE_ref_eV"] = float(ir.rf.dE_ref_eV)
+                if ir.kind == "FieldMap":
+                    # the row describes what the map became (the reader cannot give a map back):
+                    # a cavity at the integrated (V_c, φs) or a drift
+                    summary = (ir.meta or {}).get("map_summary") or {}
+                    if summary.get("kind") == "rf" and summary.get("v_c_V"):
+                        row["kind"] = "RFCavity"
+                        row["phase_rad"] = float(summary.get("phase_sync_rad") or 0.0)
+                        row["dE_ref_eV"] = float(summary.get("dE_ref_eV") or 0.0)
+                    elif type(el).__name__ in ("Drift", "DriftExact"):
+                        row["kind"] = "Drift"
+                        row.pop("phase_rad", None)
+                        row.pop("dE_ref_eV", None)
+                    else:
+                        row["kind"] = "RFCavity"
             if ir.provenance is not None:
                 if ir.provenance.original_name:
                     row["original_name"] = ir.provenance.original_name
@@ -368,7 +386,8 @@ class _Builder:
 
 
 def to_line(lattice: Lattice, *, energy_mode: str = "delta", report: FidelityReport | None = None,
-            name: str | None = None, strict: bool = False, install_apertures: bool = True):
+            name: str | None = None, strict: bool = False, install_apertures: bool = True,
+            bend_model: str | None = None, edge_model: str | None = None, rbend: bool = False):
     """Build an :class:`xtrack.Line` from an IR lattice, in flat order.
 
     Parameters
@@ -384,6 +403,11 @@ def to_line(lattice: Lattice, *, energy_mode: str = "delta", report: FidelityRep
     install_apertures:
         emit ``LimitRect``/``LimitEllipse`` elements for :class:`ApertureP` data
         attached to ordinary elements (a :class:`Collimator` always becomes one).
+    bend_model, edge_model, rbend:
+        xtrack's ``Bend.model`` (``adaptive | full | bend-kick-bend | rot-kick-rot | mat-kick-mat |
+        …``) and ``edge_entry_model``/``edge_exit_model`` (``linear | full | dipole-only |
+        suppressed``) passed through verbatim (``BEND_MODEL_OPTION`` in the ledger); ``rbend``
+        writes rectangular sources as ``xt.RBend`` instead of the default sector ``Bend``.
     """
     allow_jit()
     import xtrack as xt
@@ -396,6 +420,9 @@ def to_line(lattice: Lattice, *, energy_mode: str = "delta", report: FidelityRep
     start_brho = lattice.reference.brho_signed
     probes = probe_momentum_ratio(placed, lattice.reference)
     b = _Builder(rep)
+    b.bend_options = {k: v for k, v in (("model", bend_model), ("edge_entry_model", edge_model),
+                                        ("edge_exit_model", edge_model)) if v}
+    b.rbend = bool(rbend)
 
     for group, (p, probe) in enumerate(zip(placed, probes, strict=True)):
         el = p.element
@@ -409,9 +436,11 @@ def to_line(lattice: Lattice, *, energy_mode: str = "delta", report: FidelityRep
             slip = phase_slip_turns(p.ref_in, p.s_in, el.length, f, lattice.reference)
             if slip_is_zero(slip):
                 slip = 0.0                             # roundoff on a cavity at the start velocity
-        _emit(b, el, brho, ref, lattice, group, rep, install_apertures, ratio=ratio, slip=slip)
+        _emit(b, el, brho, ref, lattice, group, rep, install_apertures, ratio=ratio, slip=slip,
+              bend_options=b.bend_options, rbend=b.rbend)
 
     line = xt.Line(elements=b.elements, element_names=list(b.order))
+    _attach_knobs(line, lattice, b, rep)
     sp = lattice.reference.species
     line.particle_ref = xt.Particles(mass0=sp.mass_eV, q0=sp.charge,
                                      kinetic_energy0=lattice.reference.kinetic_energy_eV)
@@ -438,6 +467,107 @@ def to_line(lattice: Lattice, *, energy_mode: str = "delta", report: FidelityRep
     return line
 
 
+def to_environment(lattice: Lattice, *, energy_mode: str = "delta", report: FidelityReport | None = None,
+                   strict: bool = False, install_apertures: bool = True):
+    """An :class:`xtrack.Environment` whose lines mirror the IR's ``lines`` (nested, with repeats
+    expanded and reversed sub-lines written out), built on the flat :func:`to_line` conversion:
+    every IR definition becomes one xtrack element (its first placement's conversion — a
+    definition used at two reference energies keeps the first, ``MULTI_RIGIDITY_DEFINITION``),
+    and every IR line becomes ``env.new_line``.  Knobs come along."""
+    allow_jit()
+    import xtrack as xt
+
+    rep = report if report is not None else FidelityReport()
+    line = to_line(lattice, energy_mode=energy_mode, report=rep, install_apertures=install_apertures)
+    flat = list(lattice.flatten())
+    # first xtrack element per IR definition (the flat line has one xtrack element per placement)
+    rows = line.metadata[METADATA_KEY]["elements"]
+    main_names = [nm for nm in line.element_names if rows[nm].get("role", "main") == "main"]
+    by_ir: dict[str, str] = {}
+    for placed_el, nm in zip(flat, main_names, strict=False):
+        ir_name = placed_el.element.name
+        if ir_name not in by_ir:
+            by_ir[ir_name] = nm
+        elif line.element_dict[nm].to_dict() != line.element_dict[by_ir[ir_name]].to_dict():
+            rep.equivalent("MULTI_RIGIDITY_DEFINITION",
+                           "one definition is used at two reference energies (or arrival times); the first "
+                           "placement's conversion is the environment's element",
+                           element=ir_name, kind=placed_el.element.kind)
+    keep = {nm: line.element_dict[nm] for nm in set(by_ir.values())}
+    # sibling elements of a placement (apertures, split drifts) are placement-specific: only the
+    # main element is shared, the siblings of the first placement follow it in a private sub-line
+    siblings: dict[str, list[str]] = {}
+    names_all = list(line.element_names)
+    for nm in by_ir.values():
+        i = names_all.index(nm)
+        group = line.metadata[METADATA_KEY]["elements"][nm].get("group")
+        sibs = []
+        for j in (i - 1, i + 1, i + 2):
+            if 0 <= j < len(names_all):
+                r = line.metadata[METADATA_KEY]["elements"][names_all[j]]
+                if r.get("group") == group and r.get("role", "main") != "main":
+                    sibs.append((j, names_all[j]))
+        for _j, s in sibs:
+            keep[s] = line.element_dict[s]
+        siblings[nm] = [s for _j, s in sorted(sibs)]
+    env = xt.Environment(element_dict=keep, particle_ref=line.particle_ref)
+    for n in list(getattr(line, "vars", {}).keys()) if lattice.variables else []:
+        if n in ("t_turn_s", "__vary_default") or n.startswith("__"):
+            continue
+        env.vars[n] = float(line.vars[n]._value)
+    for n, var in lattice.variables.items():
+        if var.expression is not None:
+            try:
+                env.vars[n] = env._xdeps_eval.eval(var.expression.text)
+            except Exception:                            # noqa: BLE001 - already noted by to_line
+                pass
+    # lines in dependency order
+    done: set[str] = set()
+
+    def components_of(ir_line) -> list[str]:
+        comps: list[str] = []
+        for it in ir_line.items:
+            for _ in range(max(1, it.repeat)):
+                if it.ref in lattice.lines:
+                    if it.ref not in done:
+                        emit(it.ref)
+                    comps.append(it.ref if not it.reverse else f"{it.ref}_reversed")
+                    if it.reverse and f"{it.ref}_reversed" not in done:
+                        rev = list(reversed(env.lines[it.ref].element_names))
+                        env.new_line(name=f"{it.ref}_reversed", components=rev)
+                        done.add(f"{it.ref}_reversed")
+                        rep.equivalent("REVERSED_LINE_EXPANDED", "a reversed sub-line is written element by "
+                                       "element in reverse order (asymmetric elements are not flipped)",
+                                       element=None, kind=None, sub_line=it.ref)
+                else:
+                    nm = by_ir.get(it.ref)
+                    if nm is None:
+                        continue
+                    pre = [s for s in siblings.get(nm, []) if names_all.index(s) < names_all.index(nm)]
+                    post = [s for s in siblings.get(nm, []) if names_all.index(s) > names_all.index(nm)]
+                    comps += pre + [nm] + post
+        return comps
+
+    def emit(name: str) -> None:
+        done.add(name)
+        env.new_line(name=name, components=components_of(lattice.lines[name]))
+
+    root = lattice.use or (next(iter(lattice.lines)) if lattice.lines else None)
+    for name in lattice.lines:
+        if name not in done:
+            emit(name)
+    meta = dict(line.metadata)
+    meta[METADATA_KEY] = dict(meta[METADATA_KEY])
+    meta[METADATA_KEY]["use"] = root
+    meta[METADATA_KEY]["document"] = "environment"
+    env.metadata = meta
+    for name in lattice.lines:
+        if name in env.lines:
+            env.lines[name].metadata = {METADATA_KEY: dict(meta[METADATA_KEY], use=name, lattice=lattice.name)}
+    rep.raise_if(strict)
+    return env
+
+
 def _record_energy_mode(placed: list[Placed], energy_mode: str, rep: FidelityReport) -> None:
     for p in placed:
         ref = p.ref_in
@@ -460,7 +590,7 @@ def _record(rep: FidelityReport, el: Element, rule: Rule, **details) -> None:
 
 def _emit(b: _Builder, el: Element, brho: float, ref: ReferenceParticle, lattice: Lattice,
           group: int, rep: FidelityReport, install_apertures: bool, *, ratio: float = 1.0,
-          slip: float = 0.0) -> None:
+          slip: float = 0.0, bend_options: dict | None = None, rbend: bool = False) -> None:
     rule = RULES.get(el.kind)
     if rule is None:                                # pragma: no cover - RULES is total
         raise KeyError(f"xtrack writer has no rule for kind {el.kind!r}")
@@ -476,7 +606,8 @@ def _emit(b: _Builder, el: Element, brho: float, ref: ReferenceParticle, lattice
                             f"superposition child {child_name!r} is not defined",
                             element=el.name, kind="Superposition")
                 continue
-            _emit(b, child, brho, ref, lattice, group, rep, install_apertures, ratio=ratio, slip=slip)
+            _emit(b, child, brho, ref, lattice, group, rep, install_apertures, ratio=ratio, slip=slip,
+                  bend_options=bend_options, rbend=rbend)
         return
 
     if isinstance(el, Patch):
@@ -484,7 +615,7 @@ def _emit(b: _Builder, el: Element, brho: float, ref: ReferenceParticle, lattice
         _record(rep, el, rule)
         return
 
-    made = _build(el, brho, ref, rep, ratio=ratio, slip=slip)
+    made = _build(el, brho, ref, rep, ratio=ratio, slip=slip, bend_options=bend_options, rbend=rbend)
     if made is None:                                # pragma: no cover - _build is total
         raise KeyError(f"xtrack writer produced nothing for {el.kind!r}")
     main, extra = made
@@ -595,12 +726,14 @@ def _make_rotation(cls, angle_rad: float):
     return _new(cls, angle=math.degrees(angle_rad))
 
 
-def _cavity(el, brho, ref, rep, *, voltage: float, length: float, slip: float = 0.0):
+def _cavity(el, brho, ref, rep, *, voltage: float, length: float, slip: float = 0.0,
+            phase_rad: float | None = None):
     allow_jit()
     import xtrack as xt
 
     rf = el.rf
-    kw: dict[str, Any] = {"voltage": voltage, "phase": xtrack_phase_rad(rf.phase_rad) - 2.0 * math.pi * slip}
+    phi = rf.phase_rad if phase_rad is None else phase_rad
+    kw: dict[str, Any] = {"voltage": voltage, "phase": xtrack_phase_rad(phi) - 2.0 * math.pi * slip}
     if not slip_is_zero(slip):
         record_phase_slip(rep, element=el.name, kind=el.kind, slip_turns=slip, engine="xtrack", attribute="phase")
     if rf.frequency_Hz:
@@ -627,7 +760,7 @@ def _cavity(el, brho, ref, rep, *, voltage: float, length: float, slip: float = 
 
 
 def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport, *, ratio: float = 1.0,
-           slip: float = 0.0):
+           slip: float = 0.0, bend_options: dict | None = None, rbend: bool = False):
     """``(main xtrack element, [extra elements])`` for one IR element.  ``ratio`` =
     Bρ_local/Bρ_used (energy mode) rescales the quantities that are not normalized strengths
     (kicks, maps, a bend's k0); ``slip`` [turns] is the constant-velocity clock's phase slip a
@@ -725,6 +858,22 @@ def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport
             # xtrack's reference particle carries the RF gain as delta: a field k0 = h·r bends
             # it by exactly the design angle (h alone would under-bend it by 1/r)
             kw["k0"] = ratio * bd.angle / el.length
+        if bend_options:
+            kw.update(bend_options)
+            rep.equivalent("BEND_MODEL_OPTION", "xtrack bend/edge model options written as requested "
+                           f"({', '.join(f'{k}={v}' for k, v in bend_options.items())})",
+                           element=el.name, kind="Bend")
+        if rbend and bd.rect and el.length and bd.angle:
+            # xt.RBend takes the straight length and its own e1/e2 relative to the rectangular faces
+            half = bd.angle / 2.0
+            kw_r = dict(kw)
+            kw_r.pop("length", None)
+            kw_r["length_straight"] = el.length * math.sin(half) / half
+            kw_r["edge_entry_angle"] = bd.e1 - half
+            kw_r["edge_exit_angle"] = bd.e2 - half
+            rep.equivalent("RBEND_WRITTEN", "a rectangular source bend written as xt.RBend (straight length, "
+                           "face angles relative to the rectangular faces)", element=el.name, kind="Bend")
+            return xt.RBend(**kw_r), []
         return xt.Bend(**kw), []
 
     if isinstance(el, Solenoid):
@@ -745,6 +894,12 @@ def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport
 
     if isinstance(el, FieldMap):
         rf = el.rf
+        summary = (el.meta or {}).get("map_summary") or {}
+        if summary.get("kind") == "rf" and summary.get("v_c_V"):
+            # (V_c, φs) of the integrated map: dE_ref = V_c·cos φs by construction — the card phase
+            # of a relative-phase map is *not* its synchronous phase (lattix.ir.fieldmap._cavity_numbers)
+            return _cavity(el, brho, ref, rep, voltage=float(summary["v_c_V"]), length=el.length, slip=slip,
+                           phase_rad=float(summary.get("phase_sync_rad") or 0.0)), []
         volt = rf.voltage_V
         if not volt and rf.gradient_V_per_m is not None:
             volt = rf.gradient_V_per_m * (rf.L_active_m if rf.L_active_m is not None else el.length)
@@ -792,6 +947,12 @@ def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport
     if isinstance(el, Taylor):
         import numpy as np
 
+        payload = (el.native.get("xtrack") or {}).get("element")
+        if isinstance(payload, dict) and payload.get("__class__") in ("DipoleEdge", "SecondOrderTaylorMap"):
+            rep.equivalent("NATIVE_PASSTHROUGH",
+                           f"the {payload['__class__']} this map was read from is re-emitted verbatim",
+                           element=el.name, kind="Taylor", xtrack_class=payload["__class__"])
+            return _from_element_dict(dict(payload)), []
         matrix, offset = scale_taylor(el.matrix, el.offset, ratio)
         return xt.FirstOrderTaylorMap(length=el.length,
                                       m0=np.asarray(offset, dtype=float),
@@ -832,15 +993,25 @@ def _from_element_dict(d: dict):
 # ---------------------------------------------------------------------------
 # xt.Line -> IR
 # ---------------------------------------------------------------------------
-#: :func:`_convert_element` maps these xtrack classes onto IR kinds; anything else becomes
-#: a Marker with a ``DROPPED:UNSUPPORTED_XTRACK_ELEMENT`` entry and a verbatim ``native``
-#: passthrough that :func:`to_line` re-emits unchanged.
-KNOWN_CLASSES = frozenset({
+#: :func:`_convert_element` maps these xtrack classes onto IR kinds (the core ones here, the rest of
+#: the zoo in :mod:`lattix.formats.xtrack.extra_elements`, slices through :func:`_unslice`); anything
+#: else becomes a Marker with a ``DROPPED:UNSUPPORTED_XTRACK_ELEMENT`` entry and a verbatim
+#: ``native`` passthrough that :func:`to_line` re-emits unchanged.
+CORE_CLASSES = frozenset({
     "Drift", "DriftExact", "Quadrupole", "Sextupole", "Octupole", "Multipole", "Bend",
     "RBend", "UniformSolenoid", "Solenoid", "Cavity", "Marker", "LimitRect", "LimitEllipse",
     "XYShift", "SRotation", "XRotation", "YRotation", "ZetaShift", "FirstOrderTaylorMap",
     "ReferenceEnergyIncrease",
 })
+from lattix.formats.xtrack.extra_elements import HANDLED_HERE as _EXTRA_CLASSES  # noqa: E402
+
+KNOWN_CLASSES = CORE_CLASSES | _EXTRA_CLASSES
+SLICE_PREFIXES = ("DriftSlice", "DriftExactSlice", "ThinSlice", "ThickSlice")
+
+
+def is_known_class(cname: str) -> bool:
+    """Every xtrack ``BeamElement`` class the reader maps, folds, drops by name or merges as a slice."""
+    return cname in KNOWN_CLASSES or cname.startswith(SLICE_PREFIXES)
 
 
 def _particle_ref_reference(line, warn: list[str]) -> ReferenceParticle | None:
@@ -852,9 +1023,17 @@ def _particle_ref_reference(line, warn: list[str]) -> ReferenceParticle | None:
     mass_eV = float(np.atleast_1d(pref.mass0)[0])
     charge = int(round(float(np.atleast_1d(pref.q0)[0])))
     ke = float(np.atleast_1d(pref.kinetic_energy0)[0])
+    meta_ke = ((getattr(line, "metadata", None) or {}).get(METADATA_KEY) or {}).get("kinetic_energy_eV")
+    if meta_ke is not None and abs(float(meta_ke) - ke) <= 1e-9 * max(1.0, abs(ke)):
+        ke = float(meta_ke)                        # the value the writer had, before the p0c round trip
     nm = _species_name(mass_eV, charge)
-    sp = SPECIES[nm] if nm else Species(name=f"q{charge}m{mass_eV:.6g}", mass_eV=mass_eV,
-                                        charge=charge)
+    meta_sp = ((getattr(line, "metadata", None) or {}).get(METADATA_KEY) or {}).get("species")
+    if not nm and isinstance(meta_sp, str) and meta_sp:
+        # a custom species keeps the name the writer had (e.g. FLAME's ``ion_A238_Q33``)
+        sp = Species(name=meta_sp, mass_eV=mass_eV, charge=charge)
+    else:
+        sp = SPECIES[nm] if nm else Species(name=f"q{charge}m{mass_eV:.6g}", mass_eV=mass_eV,
+                                            charge=charge)
     if not nm:
         warn.append(f"particle_ref mass0={mass_eV} eV charge={charge} matches no known "
                     f"species; a custom Species was created")
@@ -927,7 +1106,8 @@ def _lattice_with_shared_definitions(name: str, out: list[Element], ref: Referen
 
 def from_line(line, reference: ReferenceParticle | None = None, *,
               report: FidelityReport | None = None, name: str | None = None,
-              energy_mode: str | None = None) -> Lattice:
+              energy_mode: str | None = None, extra_lines: dict[str, list[str]] | None = None,
+              root_components: list[str] | None = None) -> Lattice:
     """Convert an :class:`xtrack.Line` back to an IR :class:`~lattix.ir.lattice.Lattice`.
 
     ``reference`` wins over the line's ``particle_ref``; without either, a 1 GeV proton
@@ -956,6 +1136,12 @@ def from_line(line, reference: ReferenceParticle | None = None, *,
     scaled: list[tuple[Element, dict]] = []      # (ir element, normalized strengths)
     skip_groups: set[int] = set()
 
+    from lattix.formats.xtrack.extra_elements import fold_edge, misalignment_as_patch, misalignment_shift
+
+    placed_x: list[tuple[str, Element]] = []           # (xtrack name, IR element) for the knob pass
+    out_x: list[str | None] = []                       # xtrack name of each `out` entry (None: synthesized)
+    pending_shift: tuple[str, BodyShiftP] | None = None  # an entry Misalignment waiting for its element
+    pending_edge: tuple[Any, str, str] | None = None     # (raw, class, xname) entry edge waiting for a bend
     for xname in names:
         raw = elements[xname] if isinstance(elements, dict) else elements[names.index(xname)]
         row = rows.get(xname) or {}
@@ -970,6 +1156,39 @@ def from_line(line, reference: ReferenceParticle | None = None, *,
             patch = _patch_group(line, names, rows, group, elements, row)
             rep.exact(patch.name, "Patch")
             out.append(patch)
+            out_x.append(None)
+            continue
+        cname = type(raw).__name__
+        ir_name = row.get("name") or xname
+        if cname == "Misalignment":
+            if not bool(getattr(raw, "is_exit", False)):
+                if pending_shift is not None and pending_shift[0] != "__consumed__":
+                    out.append(misalignment_as_patch(elements[pending_shift[0]], pending_shift[0], rep))
+                    out_x.append(None)
+                pending_shift = (xname, misalignment_shift(raw))
+                continue
+            if pending_shift is None or pending_shift[0] != "__consumed__":
+                out.append(misalignment_as_patch(raw, ir_name, rep))
+                out_x.append(None)
+            pending_shift = None
+            continue
+        if cname in ("DipoleEdge", "MagnetEdge", "DipoleFringe"):
+            side = getattr(raw, "side", None)
+            is_exit = bool(getattr(raw, "is_exit", False)) if cname == "MagnetEdge" else (str(side) == "exit")
+            if cname == "DipoleFringe":
+                is_exit = bool(out) and isinstance(out[-1], Bend)
+            if not is_exit:
+                if pending_edge is not None:
+                    dangling = fold_edge(pending_edge[0], pending_edge[1], None, "entry", pending_edge[2], rep)
+                    if dangling is not None:
+                        out.append(dangling)
+                        out_x.append(None)
+                pending_edge = (raw, cname, ir_name)
+                continue
+            lens = fold_edge(raw, cname, out[-1] if out else None, "exit", ir_name, rep)
+            if lens is not None:
+                out.append(lens)
+                out_x.append(None)
             continue
 
         el, norm = _convert_element(raw, xname, row, rep, warn)
@@ -978,13 +1197,50 @@ def from_line(line, reference: ReferenceParticle | None = None, *,
         el = _restore_kind(el, row)
         # aperture data and a thick collimator's drift live on sibling elements
         _attach_group_extras(el, names, rows, elements, group)
+        if pending_edge is not None:
+            dangling = fold_edge(pending_edge[0], pending_edge[1], el, "entry", pending_edge[2], rep)
+            if dangling is not None:
+                out.append(dangling)
+                out_x.append(None)
+            pending_edge = None
+        if pending_shift is not None and pending_shift[0] != "__consumed__":
+            if el.kind in ("Marker", "Patch", "ReferenceChange", "Freq", "Directive"):
+                out.append(misalignment_as_patch(elements[pending_shift[0]], pending_shift[0], rep))
+                out_x.append(None)
+            else:
+                el.shift = pending_shift[1]
+                rep.equivalent("MISALIGNMENT_FOLDED", "an xt.Misalignment pair became the enclosed element's "
+                               "body shift", element=el.name, kind=el.kind)
+                anchor = float(getattr(elements[pending_shift[0]], "anchor", 0.0) or 0.0)
+                if anchor and abs(anchor - 0.5 * el.length) > 1e-12:
+                    el.native.setdefault("xtrack", {})["misalignment_anchor"] = anchor
+                    rep.equivalent("MISALIGNMENT_ANCHOR", "the misalignment's rotation anchor is not the element "
+                                   "centre; kept as a native passthrough", element=el.name, kind=el.kind,
+                                   anchor=anchor)
+            pending_shift = ("__consumed__", pending_shift[1])
         out.append(el)
+        out_x.append(xname)
+        placed_x.append((xname, el))
         scaled.append((el, norm))
+    if pending_edge is not None:
+        dangling = fold_edge(pending_edge[0], pending_edge[1], None, "entry", pending_edge[2], rep)
+        if dangling is not None:
+            out.append(dangling)
+            out_x.append(None)
+    if pending_shift is not None and pending_shift[0] != "__consumed__":
+        out.append(misalignment_as_patch(elements[pending_shift[0]], pending_shift[0], rep))
+        out_x.append(None)
 
     lat_name = name or meta.get("lattice") or getattr(line, "name", None) or "xtrack_line"
     lat = _lattice_with_shared_definitions(lat_name, out, ref, [rows.get(n) or {} for n in names],
                                            line_name=meta.get("use") or lat_name)
     lat.meta["source_format"] = "xtrack"
+    xname_to_ir = _xname_map(lat, out_x, meta.get("use") or lat_name)
+    _read_knobs(line, lat, xname_to_ir, rep, warn)
+    if extra_lines:
+        _add_extra_lines(lat, extra_lines, xname_to_ir, warn)
+    if root_components and extra_lines:
+        _restructure_root(lat, root_components, xname_to_ir, warn)
     if meta:
         lat.meta["xtrack"] = {k: v for k, v in meta.items() if k != "elements"}
     lat.warnings.extend(warn)
@@ -992,6 +1248,12 @@ def from_line(line, reference: ReferenceParticle | None = None, *,
     # -- second pass: momentum steps become energy jumps, then the writer's energy mode ---
     mode = energy_mode or meta.get("energy_mode") or "local"
     check_mode(mode)
+    mass0 = ref.species.mass_eV
+    for e in lat.elements.values():
+        if e.kind == "ReferenceChange" and e.energy_eV is None and e.dE_ref_eV is None:
+            p0c = (e.native.get("xtrack") or {}).get("p0c")
+            if p0c:
+                e.energy_eV = math.sqrt(float(p0c) ** 2 + mass0 * mass0) - mass0
     if mode == "delta":
         undo_phase_slip(lat, rep, resolve_p0c_steps=True)      # resolves the steps on the way
     else:
@@ -1034,7 +1296,28 @@ def from_line(line, reference: ReferenceParticle | None = None, *,
     for w in warn:
         if w not in lat.warnings:                          # pragma: no cover - defensive
             lat.warnings.append(w)
+    _restore_exact_rf(lat, rows)
     return lat
+
+
+def _restore_exact_rf(lat: Lattice, rows: dict) -> None:
+    """The writer's exact RF numbers back onto the cavities, once the phase slips are undone:
+    φ → φ + π/2 − 2π·slip → back is not bit-exact, and a field map's reference gain is its
+    integral while the cavity's is V_c·cos φs (equal to 1e-12) — every downstream slip depends on
+    both, so a written line is a fixed point only with the exact values restored."""
+    by_ir = {r["name"]: r for r in rows.values()
+             if r.get("name") and r.get("role", "main") == "main" and r.get("phase_rad") is not None}
+    for name, el in lat.elements.items():
+        row = by_ir.get(name)
+        if row is None or el.kind != "RFCavity" or getattr(el, "rf", None) is None:
+            continue
+        exact = float(row["phase_rad"])
+        if abs(exact - float(el.rf.phase_rad)) <= 1e-9:
+            el.rf.phase_rad = exact
+        if row.get("dE_ref_eV") is not None:
+            gain = float(el.rf.voltage_V or 0.0) * math.cos(float(el.rf.phase_rad))
+            if abs(float(row["dE_ref_eV"]) - gain) <= 1e-9 * max(1.0, abs(gain)):
+                el.rf.dE_ref_eV = float(row["dE_ref_eV"])
 
 
 def _apply_rigidity(el: Element, norm: dict, brho: float) -> None:
@@ -1051,6 +1334,261 @@ def _apply_rigidity(el: Element, norm: dict, brho: float) -> None:
         m.BnL[order] = k * brho
     for order, k in norm.get("ksl", {}).items():
         m.BsL[order] = k * brho
+
+
+#: IR expression path <-> xtrack attribute (the IR text is the *normalized* quantity, as in MAD-X)
+_KNOB_ATTRS: dict[str, tuple[str, float]] = {
+    "multipole.Bn[1]": ("k1", 1.0), "multipole.Bs[1]": ("k1s", 1.0), "multipole.Bn[2]": ("k2", 1.0),
+    "multipole.Bs[2]": ("k2s", 1.0), "multipole.Bn[3]": ("k3", 1.0), "multipole.Bs[3]": ("k3s", 1.0),
+    "length": ("length", 1.0), "bend.angle": ("angle", 1.0), "bend.e1": ("edge_entry_angle", 1.0),
+    "bend.e2": ("edge_exit_angle", 1.0), "solenoid.Bsol_T": ("ks", 1.0), "rf.voltage_V": ("voltage", 1.0),
+    "rf.frequency_Hz": ("frequency", 1.0), "multipole.tilt[1]": ("rot_s_rad", 1.0),
+    "hkick": ("knl[0]", -1.0), "vkick": ("ksl[0]", 1.0),
+}
+_PATH_FOR_ATTR: dict[str, tuple[str, float]] = {}
+for _path, (_attr, _sign) in _KNOB_ATTRS.items():
+    _PATH_FOR_ATTR.setdefault(_attr, (_path, _sign))
+for _n in range(0, 12):
+    _KNOB_ATTRS.setdefault(f"multipole.BnL[{_n}]", (f"knl[{_n}]", 1.0))
+    _KNOB_ATTRS.setdefault(f"multipole.BsL[{_n}]", (f"ksl[{_n}]", 1.0))
+    _PATH_FOR_ATTR.setdefault(f"knl[{_n}]", (f"multipole.BnL[{_n}]", 1.0))
+    _PATH_FOR_ATTR.setdefault(f"ksl[{_n}]", (f"multipole.BsL[{_n}]", 1.0))
+_XDEPS_VAR = re.compile(r"vars\['([^']+)'\]")
+_ELEMENT_REF = re.compile(r"element_refs\['([^']+)'\]\.([A-Za-z_][A-Za-z0-9_]*)(?:\[(\d+)\])?")
+_KNOB_TOL = 1e-9
+
+
+def _negate(text: str) -> str:
+    """``-(text)`` without piling up unary minuses: ``-(x)`` / ``(-x)`` / ``-x`` come back as ``x``."""
+    t = text.strip()
+
+    def _wrapped(inner: str) -> bool:          # the whole of *inner* sits inside one pair of parentheses
+        if not (inner.startswith("(") and inner.endswith(")")):
+            return False
+        depth = 0
+        for i, ch in enumerate(inner):
+            depth += (ch == "(") - (ch == ")")
+            if depth == 0 and i < len(inner) - 1:
+                return False
+        return True
+
+    name = r"[A-Za-z_][\w.]*(\[[^\]]*\])*"
+    if t.startswith("-"):
+        rest = t[1:].strip()
+        if _wrapped(rest):
+            return rest[1:-1].strip()
+        if re.fullmatch(name, rest):
+            return rest
+    if _wrapped(t) and t[1:-1].strip().startswith("-"):
+        inner = t[1:-1].strip()[1:].strip()
+        if _wrapped(inner):
+            return inner[1:-1].strip()
+        if re.fullmatch(name, inner):
+            return inner
+    return f"-({t})"
+
+
+def _to_ir_text(xdeps_text: str) -> str:
+    """``((-vars['kq']) * 1.1)`` → ``((-kq) * 1.1)``; ``**`` → ``^`` (the IR's infix dialect)."""
+    return _XDEPS_VAR.sub(r"\1", xdeps_text).replace("**", "^")
+
+
+def _ref_value(line, xname: str, attr: str, index: int | None):
+    obj = line[xname]
+    v = getattr(obj, attr)
+    if index is not None:
+        v = v[index]
+    return float(v)
+
+
+def _read_knobs(line, lat: Lattice, xname_to_ir: dict[str, str], rep: FidelityReport, warn: list[str]) -> None:
+    """xtrack's deferred expressions (``line.vars`` and ``element_refs[...]``) → IR variables and
+    per-attribute :class:`~lattix.ir.expr.Expression`s (the MAD-X ``:=`` round trip)."""
+    from lattix.ir.expr import Expression, evaluate
+    from lattix.ir.lattice import Variable
+
+    try:
+        vars_obj = line.vars
+        names = [n for n in vars_obj.keys() if n not in ("t_turn_s", "__vary_default") and not n.startswith("__")]
+    except Exception:                                    # noqa: BLE001 - a line without var management
+        return
+    if not names:
+        return
+    for n in names:
+        ref = vars_obj[n]
+        expr = ref._expr
+        value = float(ref._value)
+        expression = None
+        if expr is not None:
+            text = _to_ir_text(str(expr))
+            if "element_refs[" in text:
+                warn.append(f"variable {n!r} depends on an element attribute ({text}); the value alone is kept")
+            else:
+                expression = Expression(text=text, deferred=True, dialect="infix")
+        lat.variables[n] = Variable(value=value, expression=expression)
+    values = {k: v.value for k, v in lat.variables.items()}
+    try:
+        pairs = line.to_dict().get("_var_manager") or []
+    except Exception:                                    # noqa: BLE001
+        pairs = []
+    n_attr = 0
+    for target, text in pairs:
+        m = _ELEMENT_REF.match(str(target))
+        if not m:
+            continue
+        xname, attr, idx = m.group(1), m.group(2), m.group(3)
+        key = f"{attr}[{idx}]" if idx is not None else attr
+        ir_name = xname_to_ir.get(xname)
+        if ir_name is None or key not in _PATH_FOR_ATTR:
+            continue
+        path, sign = _PATH_FOR_ATTR[key]
+        ir_text = _to_ir_text(str(text))
+        if "element_refs[" in ir_text:
+            continue
+        if sign < 0:
+            ir_text = _negate(ir_text)
+        try:
+            got = evaluate(ir_text, values)
+        except Exception:                                # noqa: BLE001 - functions the IR does not know
+            continue
+        try:
+            written = sign * _ref_value(line, xname, attr, int(idx) if idx is not None else None)
+        except Exception:                                # noqa: BLE001
+            continue
+        if abs(got - written) > _KNOB_TOL * max(1.0, abs(written)):
+            continue
+        el = lat.elements[ir_name]
+        el.expressions[path] = Expression(text=ir_text, deferred=True, dialect="infix")
+        el.native.setdefault("xtrack", {})[f"{key}_expr"] = str(text)
+        n_attr += 1
+    if n_attr or lat.variables:
+        rep.exact(None, None, code="KNOBS_READ",
+                  message=f"{len(lat.variables)} variable(s) and {n_attr} deferred attribute expression(s) read")
+
+
+def _attach_knobs(line, lattice: Lattice, b, rep: FidelityReport) -> None:
+    """The IR's variables and deferred expressions as xtrack knobs: ``line.vars`` for the
+    variables (dependent ones as xdeps expressions) and ``element_refs`` for every attribute whose
+    IR expression still gives the number that was written (the MAD-X writer's rule)."""
+    from lattix.ir.expr import ExpressionError, evaluate
+
+    variables = lattice.variables
+    has_expr = any(e.expressions for e in lattice.elements.values())
+    if not variables and not has_expr:
+        return
+    values = {k: v.value for k, v in variables.items()}
+    for n, var in variables.items():
+        line.vars[n] = float(var.value)
+    n_expr = 0
+    for n, var in sorted(variables.items()):        # name order: a fixed point through a read-back
+        if var.expression is None or var.expression.dialect != "infix":
+            continue
+        try:
+            line.vars[n] = line._xdeps_eval.eval(var.expression.text)
+            n_expr += 1
+        except Exception as exc:                        # noqa: BLE001 - a function xdeps lacks
+            rep.equivalent("KNOB_EXPRESSION_DROPPED",
+                           f"variable {n!r}: expression {var.expression.text!r} is not an xdeps expression "
+                           f"({type(exc).__name__}); its value is kept", element=None, kind=None)
+    by_ir = {row["name"]: nm for nm, row in b.rows.items() if row.get("role", "main") == "main" and row.get("name")}
+    # placement order (the order of ``line.element_names``), so that the expression table of a
+    # written line is a fixed point through a read-back whatever the IR's definition order was
+    order = {nm: i for i, nm in enumerate(line.element_names)}
+    n_attr = 0
+    for ir_name, el in sorted(lattice.elements.items(), key=lambda kv: order.get(by_ir.get(kv[0], ""), 1 << 30)):
+        if not el.expressions or ir_name not in by_ir:
+            continue
+        xname = by_ir[ir_name]
+        for path, expr in el.expressions.items():
+            if path not in _KNOB_ATTRS or expr.dialect != "infix":
+                continue
+            attr, sign = _KNOB_ATTRS[path]
+            base, idx = (attr.split("[")[0], int(attr[:-1].split("[")[1])) if "[" in attr else (attr, None)
+            try:
+                written = _ref_value(line, xname, base, idx)
+                got = evaluate(expr.text, values)
+            except (ExpressionError, Exception):         # noqa: BLE001
+                continue
+            if abs(sign * got - written) > _KNOB_TOL * max(1.0, abs(written)):
+                continue                                  # e.g. rescaled by the energy mode: number stays
+            try:
+                xexpr = line._xdeps_eval.eval(_negate(expr.text) if sign < 0 else expr.text)
+                if idx is not None:
+                    getattr(line.element_refs[xname], base)[idx] = xexpr
+                else:
+                    setattr(line.element_refs[xname], base, xexpr)
+                n_attr += 1
+            except Exception as exc:                    # noqa: BLE001
+                rep.equivalent("KNOB_EXPRESSION_DROPPED",
+                               f"{ir_name}.{path}: {expr.text!r} is not an xdeps expression ({type(exc).__name__}); "
+                               "the number is kept", element=ir_name, kind=el.kind)
+    if variables or n_attr:
+        rep.exact(None, None, code="KNOBS_WRITTEN",
+                  message=f"{len(variables)} variable(s) ({n_expr} with expressions) and {n_attr} deferred "
+                          "attribute expression(s) written as xtrack knobs")
+
+
+def _xname_map(lat: Lattice, out_x: list[str | None], root: str) -> dict[str, str]:
+    """xtrack element name -> registered IR element name, by position in the root line (the
+    ``i``-th converted element is the ``i``-th item of the line, shared definitions included)."""
+    items = lat.lines[root].items if root in lat.lines else []
+    out: dict[str, str] = {}
+    for xname, item in zip(out_x, items, strict=False):
+        if xname is not None and xname not in out:
+            out[xname] = item.ref
+    return out
+
+
+def _restructure_root(lat: Lattice, components: list[str], xname_to_ir: dict[str, str],
+                      warn: list[str]) -> None:
+    """The root line of an Environment as its composer wrote it (sub-lines and elements), provided
+    that expansion reproduces the flat element order — so nested sources survive a read-back."""
+    root = lat.lines.get(lat.use)
+    if root is None:
+        return
+    items: list[LineItem] = []
+    for c in components:
+        if c in lat.lines and c != lat.use:
+            items.append(LineItem(ref=c))
+        elif c in xname_to_ir:
+            items.append(LineItem(ref=xname_to_ir[c]))
+        else:
+            warn.append(f"root line: component {c!r} is neither an element nor a line; kept flat")
+            return
+
+    def expand(its, depth=0) -> list[str] | None:
+        if depth > 50:
+            return None
+        out: list[str] = []
+        for it in its:
+            if it.ref in lat.lines:
+                sub = expand(lat.lines[it.ref].items, depth + 1)
+                if sub is None:
+                    return None
+                out += sub
+            else:
+                out.append(it.ref)
+        return out
+
+    if expand(items) == [it.ref for it in root.items]:
+        root.items = items
+
+
+def _add_extra_lines(lat: Lattice, extra_lines: dict[str, list[str]], xname_to_ir: dict[str, str],
+                     warn: list[str]) -> None:
+    """The other lines of an xtrack Environment as IR lines (components are element or line names)."""
+    for lname, components in extra_lines.items():
+        if lname in lat.lines:
+            continue
+        items: list[LineItem] = []
+        for c in components:
+            if c in extra_lines or c in lat.lines:
+                items.append(LineItem(ref=c))
+            elif c in xname_to_ir:
+                items.append(LineItem(ref=xname_to_ir[c]))
+            else:
+                warn.append(f"line {lname!r}: component {c!r} is neither an element nor a line; skipped")
+        lat.lines[lname] = Line(name=lname, items=items)
 
 
 def _attach_group_extras(el: Element, names: list[str], rows: dict, elements, group) -> None:
@@ -1227,9 +1765,18 @@ def _convert_element(raw, xname: str, row: dict, rep: FidelityReport,
     if cname in ("Bend", "RBend"):
         length = float(raw.length)
         h = float(raw.h)
+        e1, e2 = float(raw.edge_entry_angle), float(raw.edge_exit_angle)
+        if cname == "RBend":
+            # xt.RBend face angles are relative to the rectangular faces (MAD-X rbend e1/e2); the IR
+            # keeps sector-referenced angles, so add the wedge each face makes with the sector
+            # (θ/2, split unevenly by rbend_angle_diff).  Measured against cpymad: 5.1e-10.
+            angle = h * length
+            diff = float(getattr(raw, "rbend_angle_diff", 0.0) or 0.0)
+            e1 += 0.5 * angle - 0.5 * diff
+            e2 += 0.5 * angle + 0.5 * diff
         el = Bend(name=ir_name, length=length,
                   bend=BendP(angle=h * length,
-                             e1=float(raw.edge_entry_angle), e2=float(raw.edge_exit_angle),
+                             e1=e1, e2=e2,
                              edge_int1=float(raw.edge_entry_fint),
                              edge_int2=float(raw.edge_exit_fint),
                              hgap=float(raw.edge_entry_hgap),
@@ -1332,6 +1879,13 @@ def _convert_element(raw, xname: str, row: dict, rep: FidelityReport,
         el.provenance = prov
         return el, {}
 
+    # -- the rest of the zoo (Phase 5.1) -----------------------------------
+    from lattix.formats.xtrack.extra_elements import convert_extra
+
+    extra = convert_extra(cname, raw, ir_name, rep, norm, warn)
+    if extra is not None:
+        return finish(extra)
+
     # -- anything else -----------------------------------------------------
     el = Marker(name=ir_name)
     el.provenance = prov
@@ -1406,9 +1960,17 @@ def _slice_to_ir(raw, parent, weight: float, slice_kind: str, xname: str, row: d
 def _shift_from(raw) -> BodyShiftP | None:
     if not _has_shift_fields(type(raw)):
         return None
-    sh = BodyShiftP(x_offset=float(raw.shift_x), y_offset=float(raw.shift_y),
-                    z_offset=float(raw.shift_s), tilt=float(raw.rot_s_rad_no_frame),
-                    x_rot=float(raw.rot_x_rad), y_rot=float(raw.rot_y_rad))
+    if type(raw).__name__ in ("Translation", "Rotation"):     # frame patches, not misaligned bodies
+        return None
+
+    def g(attr: str) -> float:
+        try:
+            return float(getattr(raw, attr))
+        except (AttributeError, TypeError, ValueError):
+            return 0.0
+
+    sh = BodyShiftP(x_offset=g("shift_x"), y_offset=g("shift_y"), z_offset=g("shift_s"),
+                    tilt=g("rot_s_rad_no_frame"), x_rot=g("rot_x_rad"), y_rot=g("rot_y_rad"))
     return None if sh.is_zero() else sh
 
 

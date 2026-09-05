@@ -89,6 +89,7 @@ class _Emitter:
         self.warned_dirs: set[str] = set()
         self.charge = lattice.reference.species.charge
         self.header_freq = options.get("frequency_Hz")
+        self.options = dict(options)
         self.placed = propagate(lattice, warnings=[])
 
     # -- helpers ---------------------------------------------------------------------------------
@@ -527,6 +528,18 @@ def _rfcavity(em: _Emitter, p: Placed) -> None:
 
 def _fieldmap(em: _Emitter, p: Placed) -> None:
     e = p.element
+    if em.options.get("static_maps") == "hard_edge" and \
+            ((e.meta or {}).get("map_summary") or {}).get("kind") in ("solenoid", "quad"):
+        # write option ``static_maps="hard_edge"``: a static magnetic map becomes the hard-edge
+        # magnet of lattix.ir.fieldmap.replacement_for (∫B and ∫B² preserved, drift padding), for
+        # engines without static field maps (LightWin's Envelope3D refuses geometry 10)
+        from lattix.ir.fieldmap import replacement_for
+
+        r = replacement_for(e)
+        for part in r.parts:
+            RULES[part.kind](em, p.model_copy(update={"element": part}))
+        em.rep.equivalent(r.code, r.message, element=e.name, kind=e.kind, **r.details)
+        return
     em.ensure_freq(e)
     tok = em.fm_file_token(e)  # FIELD_MAP_PATH (if any) precedes SET_SYNC_PHASE / SUPERPOSE_MAP
     if tok is None:

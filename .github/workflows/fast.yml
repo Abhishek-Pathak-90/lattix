@@ -17,4 +17,4 @@ jobs:
       - if: runner.os == 'Linux'
         run: pip install cpymad
       - run: ruff check lattix tests
-      - run: pytest -m "not corpus and not slow and not crossval and not oracle_madx and not oracle_xtrack and not oracle_bmad and not oracle_elegant and not oracle_impactx and not oracle_impactz and not oracle_flame and not oracle_scibmad and not oracle_helix and not oracle_tracewin" -ra --cov=lattix --cov-fail-under=70
+      - run: pytest -m "not corpus and not slow and not crossval and not oracle_madx and not oracle_xtrack and not oracle_bmad and not oracle_elegant and not oracle_impactx and not oracle_impactz and not oracle_flame and not oracle_scibmad and not oracle_lightwin and not oracle_helix and not oracle_tracewin" -ra --cov=lattix --cov-fail-under=70

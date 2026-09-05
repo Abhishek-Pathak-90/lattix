@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from lattix.oracles import get_oracle
-from lattix.oracles.fingerprint import DECKS, fingerprint
+from lattix.oracles.fingerprint import DECKS, GAIN_RTOL, fingerprint
 
 GOLDEN = Path(__file__).parent / "goldens" / "fingerprints.json"
 # analytic-drift tolerance per engine: file-based engines are limited by their output precision
@@ -44,7 +44,7 @@ def test_fingerprint(engine, tmp_path, request):
         f"{engine}: cavity at φs=-30° must bunch (R65_common<0); "
         f"R65_native={c['R65_native']:.6e} R65_common={c['R65_common']:.6e}")
     if c["follows_p0"]:
-        assert c["gain_eV"] == pytest.approx(c["gain_expected_eV"], rel=1e-6), (
+        assert c["gain_eV"] == pytest.approx(c["gain_expected_eV"], rel=GAIN_RTOL.get(engine, 1e-6)), (
             f"{engine}: reference gain {c['gain_eV']:.6e} eV, expected {c['gain_expected_eV']:.6e}")
     else:
         assert c["gain_eV"] == pytest.approx(0.0, abs=1e-6)

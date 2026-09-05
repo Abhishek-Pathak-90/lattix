@@ -166,6 +166,7 @@
      "group": 6,
      "kind": "RFCavity",
      "name": "CAV",
+     "phase_rad": -0.5235987755982988,
      "role": "main"
     },
     "COLL": {

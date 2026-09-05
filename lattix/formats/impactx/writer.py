@@ -630,14 +630,16 @@ def _rf_voltage(el: Element, rep: FidelityReport) -> float | None:
     return None
 
 
-def _shortrf(el: Element, name: str, voltage_V: float, mass_eV: float, rep: FidelityReport) -> Emit:
+def _shortrf(el: Element, name: str, voltage_V: float, mass_eV: float, rep: FidelityReport,
+             phase_rad: float | None = None) -> Emit:
     rf = el.rf
     freq = float(rf.frequency_Hz or 0.0)
     if not freq:
         rep.lossy("RF_FREQUENCY_UNKNOWN",
                   "ImpactX ShortRF needs an RF frequency; 0 Hz was written",
                   element=el.name, kind=el.kind)
-    params: dict = {"V": voltage_V / mass_eV, "freq": freq, "phase": _deg(rf.phase_rad)}
+    phi = rf.phase_rad if phase_rad is None else phase_rad
+    params: dict = {"V": voltage_V / mass_eV, "freq": freq, "phase": _deg(phi)}
     params.update(_alignment(el, 0.0, rep))
     return Emit(name, "ShortRF", params, 0.0, el.name)
 
@@ -777,9 +779,16 @@ def _emit_element(p: Placed, el: Element, brho: float, mass_eV: float, lattice: 
         return
 
     if isinstance(el, FieldMap):
-        v = _rf_voltage(el, rep)
+        summary = (el.meta or {}).get("map_summary") or {}
+        phase_rad = None
+        if summary.get("kind") == "rf" and summary.get("v_c_V"):
+            # (V_c, φs) of the integrated map reproduce dE_ref exactly; the card phase of a
+            # relative-phase map is not its synchronous phase (lattix.ir.fieldmap._cavity_numbers)
+            v, phase_rad = float(summary["v_c_V"]), float(summary.get("phase_sync_rad") or 0.0)
+        else:
+            v = _rf_voltage(el, rep)
         if v is not None and el.rf.frequency_Hz:
-            thin = [_shortrf(el, names.derive(name, "rf"), v, mass_eV, rep)]
+            thin = [_shortrf(el, names.derive(name, "rf"), v, mass_eV, rep, phase_rad=phase_rad)]
             out.extend(_split_thin(name, el, thin, nslice, names) if el.length > 0 else thin)
             rep.lossy("FM_TO_CAVITY",
                       "field map replaced by drift + thin ShortRF + drift with the map's "

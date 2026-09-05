@@ -85,19 +85,20 @@ Toolchain on this Mac (2026-09-04): cmake 4.3.2, Boost 1.92 (Homebrew), **no gfo
 - [x] Gate: `fodo.madx` → SciBmad vs cpymad T4×4 `8e-11`; `mebt_line.dat`/`dtl_section.dat` → SciBmad vs HELIX
       T4×4 `1.2e-10` / `1.6e-11`; all-kinds round trip and fixed point.
 
-### 5.1 xsuite completion (1 week)
-- [ ] Reader: `RBend`, `Magnet`, `Misalignment` → `BodyShiftP` (and `ds`/`anchor` → Patch when it cannot be absorbed), `DipoleEdge`/`MagnetEdge`/`MultipoleEdge` folded into the adjacent magnet (the MAD-X `dipedge` rule, `DIPEDGE_FOLDED`), `Wedge` → Bend with `k`/`k1`, `LimitPolygon/RectEllipse/Racetrack` → `Collimator` (bounding shape, LOSSY `APERTURE_SHAPE`), `LongitudinalLimitRect` → DROPPED, `RFMultipole` → RFCavity + LOSSY `RF_MULTIPOLE_TERMS_DROPPED`, `CrabCavity/ACDipole/Elens/Wire/Exciter/NonLinearLens/LineSegmentMap` → DROPPED with their own codes, `SecondOrderTaylorMap` → `Taylor` (order 2 when the IR carries `T`, else `TAYLOR_ORDER_TRUNCATED`), `VariableSolenoid` → hard-edge solenoid preserving ∫B and ∫B² (`FM_SOL_HARDEDGE` rule).
-- [ ] Expressions: `_var_management_data` → IR `variables` + `Expr` on element attributes; writer emits `env[name] = value` and attribute expression strings; MAD-X `:=` knobs survive TraceWin → MAD-X → xtrack → MAD-X (gate: `psb.seq` knobs identical after the round trip).
-- [ ] `Environment` JSON with several lines → IR `lines` (root = `env.lines` selected by name); `xt.load` for both shapes.
-- [ ] Writer: `Bend.edge_entry_model`/`model` options exposed as write options; `RBend` for rectangular sources (default stays sector `Bend`).
-- [ ] MAD-NG writer: `lattix convert --to madng` delegating to `xtrack.mad_writer.to_madng_sequence`; ledger `VIA_XTRACK`; reader deferred (needs a Lua parser or MAD-NG itself).
-- [ ] Gate: every class in `xt.__dict__` that is a `BeamElement` appears in the reader table (test), PSB and `fodo.madx` blocks still 0.0 vs `from_madx_sequence`, knob round trip exact.
+### 5.1 xsuite completion (1 week) — done 2026-09-05
+- [x] Reader: `RBend`, `Magnet`, `Misalignment` → `BodyShiftP` (and `ds`/`anchor` → Patch when it cannot be absorbed), `DipoleEdge`/`MagnetEdge`/`MultipoleEdge` folded into the adjacent magnet (the MAD-X `dipedge` rule, `DIPEDGE_FOLDED`), `Wedge` → Bend with `k`/`k1`, `LimitPolygon/RectEllipse/Racetrack` → `Collimator` (bounding shape, LOSSY `APERTURE_SHAPE`), `LongitudinalLimitRect` → DROPPED, `RFMultipole` → RFCavity + LOSSY `RF_MULTIPOLE_TERMS_DROPPED`, `CrabCavity/ACDipole/Elens/Wire/Exciter/NonLinearLens/LineSegmentMap` → DROPPED with their own codes, `SecondOrderTaylorMap` → `Taylor` (order 2 when the IR carries `T`, else `TAYLOR_ORDER_TRUNCATED`), `VariableSolenoid` → hard-edge solenoid preserving ∫B and ∫B² (`FM_SOL_HARDEDGE` rule).
+- [x] Expressions: `_var_management_data` → IR `variables` + `Expr` on element attributes; writer emits `env[name] = value` and attribute expression strings; MAD-X `:=` knobs survive TraceWin → MAD-X → xtrack → MAD-X (gate: `psb.seq` knobs identical after the round trip).
+- [x] `Environment` JSON with several lines → IR `lines` (root = `env.lines` selected by name); `xt.load` for both shapes.
+- [x] Writer: `Bend.edge_entry_model`/`model` options exposed as write options; `RBend` for rectangular sources (default stays sector `Bend`).
+- [x] MAD-NG writer: `lattix convert --to madng` delegating to `xtrack.mad_writer.to_madng_sequence`; ledger `VIA_XTRACK`; reader deferred (needs a Lua parser or MAD-NG itself).
+- [x] Gate: every class in `xt.__dict__` that is a `BeamElement` appears in the reader table (test), PSB and `fodo.madx` blocks still 0.0 vs `from_madx_sequence`, knob round trip exact.
 
-### 5.2 LightWin adapter and oracle (1 week)
-- [ ] Env `lightwin` (conda python 3.12 + `pip install lightwin[cython]`); CI job on ubuntu (macOS if the wheel resolves).
-- [ ] `lattix/oracles/lightwin.py`: run `Envelope3D` (and `Envelope1D` for the longitudinal block) through a `-I` worker; extract per-element transfer matrices from `SimulationOutput`; basis fingerprint (1 m drift, 1-D map cavity at −30°); mark `oracle_lightwin`.
-- [ ] Lockstep test: LightWin's `.dat` parser vs lattix reader on every public deck and, nightly, the 724 private decks (lengths, element counts, quad gradients, field-map phases).
-- [ ] Gate: `mebt+hwr.dat` HWR section, lattix→TraceWin writer output read by LightWin and by lattix agree to 1e-10 structurally; LightWin envelope vs HELIX transverse blocks within the Equivalent tier (2 %) and the reference energy within 0.5 %.
+### 5.2 LightWin adapter and oracle (1 week) — done 2026-09-05 (nightly private-corpus lockstep pending the runner)
+- [x] Env `lightwin` (conda python 3.12 + `pip install lightwin[cython]`); CI job on ubuntu (macOS if the wheel resolves).
+- [x] `lattix/oracles/lightwin.py`: run `Envelope3D` (and `Envelope1D` for the longitudinal block) through a `-I` worker; extract per-element transfer matrices from `SimulationOutput`; basis fingerprint (1 m drift, 1-D map cavity at −30°); mark `oracle_lightwin`.
+- [x] Lockstep test: LightWin's `.dat` parser vs lattix reader on every public deck and, nightly, the 724 private decks (lengths, element counts, quad gradients, field-map phases).
+- [x] Gate: `mebt+hwr.dat` HWR section, lattix→TraceWin writer output read by LightWin and by lattix agree to 1e-10 structurally; LightWin envelope vs HELIX transverse blocks within the Equivalent tier (2 %) and the reference energy within 0.5 %.
+- Findings: HELIX adds the running bunch phase to *relative* field-map phases (TraceWin/LightWin do not; the ADS deck reaches 502.24 MeV only with the arrival convention) — fixed in lattix, to fix in HELIX; the TraceWin trial + LightWin `.ini` integrate 1-D maps at ≈ 0 gain (not a field-map reference); LightWin skips GAP/NCELLS, drift-substitutes EDGE/THIN_STEERING/APERTURE and has no solenoid model at all (audited, report-only); its synchronous phase is charge-blind (H⁻ emulated in mirrored fields). Gate met on the reference energy: MEBT+HWR LightWin vs HELIX 1.2e-4, vs the CEA TraceWin export 0.5 %. The ADS deck joined the battery: 142 relative-phase maps → cavities carry (V_c, φs); Elegant/Bmad/ImpactX energies agree with LightWin to 5.9e-5, transverse RF focusing differs by engine (report only; backlog: the thin-gap RF-focusing lens for derived cavities).
 
 ### 5.3 Cheetah adapter (1 week)
 - [ ] Env `cheetah` (python 3.11, torch CPU, `cheetah-accelerator`); GPL: `lattix/formats/cheetah.py` is an adapter (imported at call time, absent from `FORMATS`, like HELIX).
@@ -163,4 +164,4 @@ Toolchain on this Mac (2026-09-04): cmake 4.3.2, Boost 1.92 (Homebrew), **no gfo
 * Ocelot is electron-only: record it, do not silently scale.
 
 ## 6. Order and effort (~10 weeks)
-5.0 SciBmad (done) → 5.1 xsuite (1) → 5.2 LightWin (1) → 5.3 Cheetah (1) → 5.4 PyORBIT3 (1.5) → 5.5 IMPACT-T (1.5) → 5.6 Bmad bridge (0.6) → 5.7 Ocelot (1) → 5.8 DYNAC (1.5) → 5.9 Synergia2 (1) → 5.10 OPAL-T (1).
+5.0 SciBmad (done) → 5.1 xsuite (done) → 5.2 LightWin (done) → 5.3 Cheetah (1) → 5.4 PyORBIT3 (1.5) → 5.5 IMPACT-T (1.5) → 5.6 Bmad bridge (0.6) → 5.7 Ocelot (1) → 5.8 DYNAC (1.5) → 5.9 Synergia2 (1) → 5.10 OPAL-T (1).
