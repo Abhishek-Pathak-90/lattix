@@ -19,6 +19,26 @@
       "max_abs_err_common": 6.018407994190511e-12
     }
   },
+  "cheetah": {
+    "basis": "cheetah",
+    "cavity": {
+      "R65_common": -4.304575238992242,
+      "R65_native": 0.02280724132627544,
+      "R66_native": 0.8412443022563256,
+      "follows_p0": true,
+      "gain_eV": 866025.4037843943,
+      "gain_expected_eV": 866025.4037844387,
+      "row": "c"
+    },
+    "drift": {
+      "R56_common": 0.9955386711799862,
+      "R56_expected": 0.9955386698310196,
+      "R56_native": -223.1483959878053,
+      "R65_native": 0.0,
+      "length_m": 1.0,
+      "max_abs_err_common": 1.3489666050858773e-09
+    }
+  },
   "elegant": {
     "basis": "elegant",
     "cavity": {

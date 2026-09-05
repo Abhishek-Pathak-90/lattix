@@ -53,7 +53,8 @@ gives 56 engine pairs on 5 decks (~10 min); SciBmad adds one engine on both ends
 (`lightwin/example.dat`, 627 elements, 142 one-dimensional RF maps with relative phases) is the
 public field-map deck of the battery: it exercises every `FM_TO_CAVITY`/`FM_AS_CAVITY` conversion
 against LightWin's envelope.  A writer-only format (MAD-NG)
-has no fixed point and is not a battery pair; its tests live with the xtrack ones.  TraceWin decks
+has no fixed point and is not a battery pair; its tests live with the xtrack ones.  Cheetah's LatticeJSON
+is a battery format with Cheetah as its engine.  TraceWin decks
 are checked with HELIX where it exists and with LightWin's `Envelope3D` otherwise (CI); a pair whose
 LightWin run skipped or drift-substituted elements is report-only.
 

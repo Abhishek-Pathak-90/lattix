@@ -1,0 +1,143 @@
+{
+ "version": "cheetah-0.8",
+ "title": "fodo",
+ "info": "# lattix: reference species=\"proton\" mass_eV=938272088.16 charge=1 kinetic_energy_eV=799999911.84",
+ "root": "fodo",
+ "lattix": {
+  "written_by": "lattix 0.1.0",
+  "source_format": "madx"
+ },
+ "elements": {
+  "qf": [
+   "Quadrupole",
+   {
+    "length": 0.3,
+    "k1": 0.6,
+    "tilt": 0.0,
+    "metadata": {
+     "lattix": {
+      "kind": "Quadrupole",
+      "name": "qf",
+      "original_type": "quadrupole"
+     }
+    }
+   }
+  ],
+  "drift_0": [
+   "Drift",
+   {
+    "length": 0.7,
+    "metadata": {
+     "lattix": {
+      "kind": "Drift",
+      "name": "drift_0",
+      "original_type": "drift"
+     }
+    }
+   }
+  ],
+  "b1": [
+   "Dipole",
+   {
+    "length": 1.0,
+    "angle": 0.1,
+    "k1": 0.0,
+    "dipole_e1": 0.05,
+    "dipole_e2": 0.05,
+    "tilt": 0.0,
+    "gap": 0.0,
+    "gap_exit": 0.0,
+    "fringe_integral": 0.0,
+    "fringe_integral_exit": 0.0,
+    "fringe_at": "both",
+    "fringe_type": "linear_edge",
+    "metadata": {
+     "lattix": {
+      "kind": "Bend",
+      "name": "b1",
+      "original_type": "sbend"
+     }
+    }
+   }
+  ],
+  "drift_1": [
+   "Drift",
+   {
+    "length": 1.0,
+    "metadata": {
+     "lattix": {
+      "kind": "Drift",
+      "name": "drift_1",
+      "original_type": "drift"
+     }
+    }
+   }
+  ],
+  "qd": [
+   "Quadrupole",
+   {
+    "length": 0.3,
+    "k1": -0.6,
+    "tilt": 0.0,
+    "metadata": {
+     "lattix": {
+      "kind": "Quadrupole",
+      "name": "qd",
+      "original_type": "quadrupole"
+     }
+    }
+   }
+  ],
+  "drift_2": [
+   "Drift",
+   {
+    "length": 1.0,
+    "metadata": {
+     "lattix": {
+      "kind": "Drift",
+      "name": "drift_2",
+      "original_type": "drift"
+     }
+    }
+   }
+  ],
+  "drift_3": [
+   "Drift",
+   {
+    "length": 1.2999999999999998,
+    "metadata": {
+     "lattix": {
+      "kind": "Drift",
+      "name": "drift_3",
+      "original_type": "drift"
+     }
+    }
+   }
+  ],
+  "m1": [
+   "Marker",
+   {
+    "metadata": {
+     "lattix": {
+      "kind": "Marker",
+      "name": "m1",
+      "original_type": "marker"
+     }
+    }
+   }
+  ]
+ },
+ "lattices": {
+  "fodo": [
+   "qf",
+   "drift_0",
+   "b1",
+   "drift_1",
+   "qd",
+   "drift_2",
+   "b1",
+   "drift_3",
+   "m1"
+  ]
+ }
+}

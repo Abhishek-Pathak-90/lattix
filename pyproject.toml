@@ -41,6 +41,7 @@ markers = [
   "oracle_flame: needs flame-code",
   "oracle_scibmad: needs julia with SciBmad (Beamlines.jl + BeamTracking.jl)",
   "oracle_lightwin: needs LightWin (python >= 3.12, conda env `lightwin` or LATTIX_LIGHTWIN_PYTHON)",
+  "oracle_cheetah: needs Cheetah + torch (conda env `cheetah` or LATTIX_CHEETAH_PYTHON)",
   "oracle_helix: needs a HELIX checkout (HELIX_ROOT)",
   "oracle_tracewin: needs a licensed TraceWin binary (TRACEWIN_EXE); local only",
   "corpus: needs LATTIX_CORPUS_DIR with the private corpus manifest",

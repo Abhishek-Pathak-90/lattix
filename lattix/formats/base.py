@@ -66,6 +66,8 @@ FORMATS: dict[str, FormatSpec] = {
                           description="SciBmad / Beamlines.jl lattice (Julia)"),
     "madng": FormatSpec("madng", (".madng",), "lattix.formats.madng", reader_attr=None,
                         description="MAD-NG Lua sequence (writer only, via xtrack)"),
+    "cheetah": FormatSpec("cheetah", (".cheetah.json",), "lattix.formats.cheetah",
+                          description="Cheetah LatticeJSON (cheetah.latticejson)"),
     # keep last: a bare .json is xtrack's unless the content says otherwise (sniffed below)
     "xtrack": FormatSpec("xtrack", (".json",), "lattix.formats.xtrack", description="xtrack Line/Environment JSON"),
 }
@@ -113,6 +115,9 @@ def guess_format(path: str | Path) -> str:
             head = {}
         if isinstance(head, dict) and "reference" in head and "elements" in head and "lines" in head:
             return "lattix"
+        if isinstance(head, dict) and "elements" in head and "lattices" in head and \
+                str(head.get("version", "")).startswith("cheetah"):
+            return "cheetah"
     return fmt
 
 
@@ -177,7 +182,8 @@ def note_quad_higher_orders(el, rep, target: str) -> None:
 
 #: targets whose thin cavity has no transverse RF kick but which carry a first-order matrix
 #: element, so TraceWin's thin-gap defocusing travels as an explicit thin lens
-RF_FOCUSING_AS_MATRIX = frozenset({"madx", "elegant", "bmad", "xtrack", "pals", "impactx", "flame", "scibmad"})
+RF_FOCUSING_AS_MATRIX = frozenset({"madx", "elegant", "bmad", "xtrack", "pals", "impactx", "flame", "scibmad",
+                                   "cheetah"})
 #: targets that have neither (the kick is lost and recorded)
 RF_FOCUSING_LOST = frozenset({"mad8", "impactz"})
 _RF_FOCUS_SUFFIX = "_rfdefocus"

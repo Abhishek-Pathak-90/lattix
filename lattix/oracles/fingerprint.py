@@ -25,7 +25,7 @@ FREQ_HZ = 162.5e6
 V_VOLT = 1.0e6         # cavity effective voltage
 PHI_S_DEG = -30.0      # synchronous phase, cos convention, 0 = crest
 FOLLOWS_P0 = {"scibmad": False, "helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True,
-              "impactz": True, "madx": False, "xtrack": False, "lightwin": True}
+              "impactz": True, "madx": False, "xtrack": False, "lightwin": True, "cheetah": True}
 
 _MASS = SPECIES["proton"][0]
 _ETOT_GEV = (_MASS + KE_EV) * 1e-9
@@ -103,6 +103,28 @@ DECKS["lightwin"] = {
                            f"FIELD_MAP 100 {_FP_MAP_L_M * 1e3:.6g} {PHI_S_DEG:.6g} 30 0 1 0 0 fp_map 0\n"
                            "DRIFT 500 30\nEND\n", {"fp_map.edz": _FP_MAP_TEXT}),
 }
+
+def _cheetah_doc(elements: dict, order: list[str]) -> str:
+    import json as _json
+
+    info = (f'# lattix: reference species="proton" mass_eV={_MASS:.12g} charge=1 kinetic_energy_eV={KE_EV:.12g} '
+            f'rf_frequency_Hz={FREQ_HZ:.12g}')
+    return _json.dumps({"version": "cheetah-0.8", "title": "fp", "info": info, "root": "fp",
+                        "elements": elements, "lattices": {"fp": order}}, indent=1)
+
+
+# Cheetah: gain = −voltage·q·cos(phase) → voltage = −V for a proton, and its phase runs the other way
+# (r65 ∝ sin(phase) with τ late-positive: a late particle gains more for phase > 0) → phase = −φs;
+# a zero-length cavity is inf in Cheetah's own matrix (the oracle tracks 1 µm), so the fingerprint
+# cavity is written thin like a GAP
+DECKS["cheetah"] = {
+    "drift": ("cheetah", _cheetah_doc({"d": ["Drift", {"length": 1.0}]}, ["d"])),
+    "cavity": ("cheetah", _cheetah_doc({"d1": ["Drift", {"length": 0.5}],
+                                        "c": ["Cavity", {"length": 0.0, "voltage": -V_VOLT, "phase": -PHI_S_DEG,
+                                                         "frequency": FREQ_HZ, "cavity_type": "standing_wave"}],
+                                        "d2": ["Drift", {"length": 0.5}]}, ["d1", "c", "d2"])),
+}
+_SUFFIX["cheetah"] = ".cheetah.json"
 #: engines whose fingerprint cavity is an integrated field map, not a thin gap of exactly V_VOLT
 GAIN_RTOL = {"lightwin": 0.05}
 

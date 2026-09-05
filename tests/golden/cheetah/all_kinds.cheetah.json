@@ -1,0 +1,527 @@
+{
+ "version": "cheetah-0.8",
+ "title": "all_kinds",
+ "info": "# lattix: reference species=\"proton\" mass_eV=938272088.16 charge=1 kinetic_energy_eV=2100000 rf_frequency_Hz=162500000",
+ "root": "all_kinds",
+ "lattix": {
+  "written_by": "lattix 0.1.0",
+  "source_format": "IR"
+ },
+ "elements": {
+  "d1": [
+   "Drift",
+   {
+    "length": 0.5,
+    "metadata": {
+     "lattix": {
+      "kind": "Drift",
+      "name": "d1"
+     }
+    }
+   }
+  ],
+  "q1": [
+   "Quadrupole",
+   {
+    "length": 0.2,
+    "k1": 5.727565129179556,
+    "tilt": 0.0,
+    "misalignment": [
+     0.001,
+     0.0
+    ],
+    "metadata": {
+     "lattix": {
+      "kind": "Quadrupole",
+      "name": "q1"
+     }
+    }
+   }
+  ],
+  "s1": [
+   "Sextupole",
+   {
+    "length": 0.1,
+    "k2": 14.318912822948892,
+    "tilt": 0.0,
+    "metadata": {
+     "lattix": {
+      "kind": "Sextupole",
+      "name": "s1"
+     }
+    }
+   }
+  ],
+  "o1": [
+   "Drift",
+   {
+    "length": 0.1,
+    "metadata": {
+     "lattix": {
+      "kind": "Drift",
+      "name": "o1",
+      "degraded_from": "Octupole"
+     }
+    }
+   }
+  ],
+  "m1": [
+   "CombinedCorrector",
+   {
+    "length": 0.0,
+    "horizontal_angle": -0.04772970940982964,
+    "vertical_angle": 0.09545941881965928,
+    "metadata": {
+     "lattix": {
+      "kind": "Multipole",
+      "name": "m1"
+     }
+    }
+   }
+  ],
+  "b1": [
+   "Dipole",
+   {
+    "length": 1.0,
+    "angle": 0.1,
+    "k1": 0.0,
+    "dipole_e1": 0.05,
+    "dipole_e2": 0.05,
+    "tilt": 0.0,
+    "gap": 0.06,
+    "gap_exit": 0.06,
+    "fringe_integral": 0.45,
+    "fringe_integral_exit": 0.45,
+    "fringe_at": "both",
+    "fringe_type": "linear_edge",
+    "metadata": {
+     "lattix": {
+      "kind": "Bend",
+      "name": "b1"
+     }
+    }
+   }
+  ],
+  "sol1": [
+   "Solenoid",
+   {
+    "length": 0.3,
+    "k": 1.1932427352457409,
+    "metadata": {
+     "lattix": {
+      "kind": "Solenoid",
+      "name": "sol1"
+     }
+    }
+   }
+  ],
+  "c1": [
+   "Cavity",
+   {
+    "length": 0.0,
+    "voltage": -80000.0,
+    "phase": 85.0,
+    "frequency": 162500000.0,
+    "cavity_type": "standing_wave",
+    "metadata": {
+     "lattix": {
+      "kind": "RFCavity",
+      "name": "c1",
+      "phase_rad": -1.4835298641951802
+     }
+    }
+   }
+  ],
+  "c1_rfdefocus": [
+   "CustomTransferMap",
+   {
+    "length": 0.0,
+    "predefined_transfer_map": [
+     [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.4797520511951478,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      0.4797520511951478,
+      1.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+     ]
+    ],
+    "metadata": {
+     "lattix": {
+      "kind": "Taylor",
+      "name": "c1_rfdefocus",
+      "basis": "cheetah"
+     }
+    }
+   }
+  ],
+  "c2": [
+   "Cavity",
+   {
+    "length": 0.2,
+    "voltage": -1000000.0,
+    "phase": 29.999999999999996,
+    "frequency": 162500000.0,
+    "cavity_type": "traveling_wave",
+    "metadata": {
+     "lattix": {
+      "kind": "RFCavity",
+      "name": "c2",
+      "phase_rad": -0.5235987755982988
+     }
+    }
+   }
+  ],
+  "k1": [
+   "CombinedCorrector",
+   {
+    "length": 0.1,
+    "horizontal_angle": 0.001,
+    "vertical_angle": -0.002,
+    "metadata": {
+     "lattix": {
+      "kind": "Kicker",
+      "name": "k1"
+     }
+    }
+   }
+  ],
+  "col1": [
+   "Aperture",
+   {
+    "x_max": 0.01,
+    "y_max": 0.02,
+    "shape": "rectangular",
+    "is_active": true,
+    "metadata": {
+     "lattix": {
+      "kind": "Collimator",
+      "name": "col1"
+     }
+    }
+   }
+  ],
+  "col1_body": [
+   "Drift",
+   {
+    "length": 0.05,
+    "metadata": {
+     "lattix": {
+      "kind": "Collimator",
+      "name": "col1",
+      "role": "extra"
+     }
+    }
+   }
+  ],
+  "mk1": [
+   "Marker",
+   {
+    "metadata": {
+     "lattix": {
+      "kind": "Marker",
+      "name": "mk1"
+     }
+    }
+   }
+  ],
+  "bpm1": [
+   "BPM",
+   {
+    "is_active": false,
+    "metadata": {
+     "lattix": {
+      "kind": "Instrument",
+      "name": "bpm1",
+      "family": "BPM"
+     }
+    }
+   }
+  ],
+  "scr1": [
+   "Marker",
+   {
+    "metadata": {
+     "lattix": {
+      "kind": "Instrument",
+      "name": "scr1",
+      "family": "SCREEN"
+     }
+    }
+   }
+  ],
+  "f1": [
+   "Marker",
+   {
+    "metadata": {
+     "lattix": {
+      "kind": "Foil",
+      "name": "f1",
+      "material": "C",
+      "thickness_kg_per_m2": 0.001
+     }
+    }
+   }
+  ],
+  "t1": [
+   "CustomTransferMap",
+   {
+    "length": 0.1,
+    "predefined_transfer_map": [
+     [
+      1.0,
+      0.1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+     ]
+    ],
+    "metadata": {
+     "lattix": {
+      "kind": "Taylor",
+      "name": "t1",
+      "basis": "cheetah"
+     }
+    }
+   }
+  ],
+  "p1": [
+   "Marker",
+   {
+    "metadata": {
+     "lattix": {
+      "kind": "Patch",
+      "name": "p1",
+      "x_offset": 0.001
+     }
+    }
+   }
+  ],
+  "rc1": [
+   "Marker",
+   {
+    "metadata": {
+     "lattix": {
+      "kind": "ReferenceChange",
+      "name": "rc1",
+      "dE_ref_eV": 1000.0
+     }
+    }
+   }
+  ],
+  "fq1": [
+   "Marker",
+   {
+    "metadata": {
+     "lattix": {
+      "kind": "Freq",
+      "name": "fq1",
+      "frequency_Hz": 162500000.0
+     }
+    }
+   }
+  ],
+  "dir1": [
+   "Marker",
+   {
+    "metadata": {
+     "lattix": {
+      "kind": "Directive",
+      "name": "dir1",
+      "format": "tracewin",
+      "card": "LATTICE",
+      "args": [
+       "4",
+       "0"
+      ],
+      "ir_role": "period_start"
+     }
+    }
+   }
+  ],
+  "d2_aper_in": [
+   "Aperture",
+   {
+    "x_max": 0.015,
+    "y_max": 0.015,
+    "shape": "elliptical",
+    "is_active": true,
+    "metadata": {
+     "lattix": {
+      "kind": "Drift",
+      "name": "d2",
+      "role": "aperture_entry"
+     }
+    }
+   }
+  ],
+  "d2_aper_out": [
+   "Aperture",
+   {
+    "x_max": 0.015,
+    "y_max": 0.015,
+    "shape": "elliptical",
+    "is_active": true,
+    "metadata": {
+     "lattix": {
+      "kind": "Drift",
+      "name": "d2",
+      "role": "aperture_exit"
+     }
+    }
+   }
+  ],
+  "d2": [
+   "Drift",
+   {
+    "length": 0.2,
+    "metadata": {
+     "lattix": {
+      "kind": "Drift",
+      "name": "d2"
+     }
+    }
+   }
+  ]
+ },
+ "lattices": {
+  "all_kinds": [
+   "d1",
+   "q1",
+   "s1",
+   "o1",
+   "m1",
+   "b1",
+   "sol1",
+   "c1",
+   "c1_rfdefocus",
+   "c2",
+   "k1",
+   "col1",
+   "col1_body",
+   "mk1",
+   "bpm1",
+   "scr1",
+   "f1",
+   "t1",
+   "p1",
+   "rc1",
+   "fq1",
+   "dir1",
+   "d2_aper_in",
+   "d2",
+   "d2_aper_out"
+  ]
+ }
+}

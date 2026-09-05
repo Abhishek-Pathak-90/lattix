@@ -15,6 +15,7 @@ recalled.  Re-run `lattix fingerprint` / `pytest tests/oracles` after any engine
 | elegant | conda env `lattix` (`conda-forge elegant 2026.3.0`, osx-arm64) + `pysdds` 0.6 (text fallback via `sdds2stream`) | 2026.3.0 (2026-07-02) | (x, x′, y, y′, s, δ) with **s = path length**: its matrices carry no velocity-bunching term (drift R56 = 0); the adapter adds −L/γ² per element so maps land in the arrival-time common basis | follows with `change_p0=1` | **RFCA phase convention follows the charge sign relative to the electron**: negative species crest at +90°, positive species (protons) at −90° — `phase = 60` *decelerates* protons, `phase = 240` gives +V·cos30°. Its RFCA *matrix* phase slip is ultra-relativistic (R65 = β·true value; tracking is physical). Constants are CODATA-86 (m_e = 0.51099906 MeV; built-in `proton` = 938.2866 MeV, 1.5e-5 off) → adapter uses `change_particle name=custom, mass_ratio, charge_ratio`. conda-forge build ships no `defns.rpn` (adapter embeds one and passes `-rpnDefns=<abs path>`). |
 | xtrack | base env 0.103.5; env `lattix` 0.112.0 | — | (x, px, y, py, ζ, δ) | constant | Native Lark MAD-X parser rejects some MAD-X (e.g. `sequence, l=…, refer=centre` header in HELIX's fodo.madx) → load through cpymad `Line.from_madx_sequence`. |
 | LightWin | env `lightwin` (python 3.12, LightWin 0.16.5, MIT) | `lattix/oracles/lightwin.py` + `lightwin_worker.py` | (x, x', y, y', z [m], dp/p) — TraceWin's, SI | follows the field maps | Envelope3D only: DRIFT, QUAD, SOLENOID, BEND, FIELD_MAP (1-D); EDGE/THIN_STEERING/APERTURE/DIAG_* propagated as drifts, GAP/NCELLS/DTL_CEL skipped — both audited in `meta` and report-only in the battery. |
+| Cheetah | env `cheetah` (torch 2.14 CPU, cheetah-accelerator 0.8.4, GPL-3) | `lattix/oracles/cheetah.py` + `cheetah_worker.py` | (x, px, y, py, τ = cΔt late-positive [m], ΔE/(p0 c)) | follows the cavities | 7×7 first-order maps per element; cavity phase runs the other way (`phase = −φ`), k1/k charge-blind (signed rigidity in the writer); zero-length cavity is inf (1 µm substituted). |
 | ImpactX / IMPACT-Z | env `lattix` (`impactx` 26.08, `impact-z` 2.7.7, both osx-arm64 builds) | — | Phase 3 | follows | `ImpactZexe` on PATH in the env; `impactx` importable. |
 | SciBmad | `julia` (juliaup 1.10) with `SciBmad` 0.5.2 (Beamlines.jl + BeamTracking.jl) through `lattix/oracles/scibmad_worker.jl`; `LATTIX_JULIA` or PATH | 0.5.2 (2026-09-05) | (x, px, y, py, z, pz), z ahead-positive (drift R56 = +L/γ² measured) | constant (one reference momentum per `Beamline`; nesting and `Patch(dE_ref)` past the first element are refused) | `RFCavity` gain is **−V·cos(phi0)** with `phi0` in radians for protons and electrons alike (writer negates the voltage: `GAIN_SIGN`); a zero-length cavity and `edge1_int/edge2_int` cannot be tracked (worker substitutes 1 µm / 0 and says so); `g_ref` alone is a curved frame — the dipole field is `Kn0`; `LineElement(transport_map=f)` with `f(v, q, p=nothing)` works as a thin lens; `using Beamlines` fails in an environment that only has `SciBmad` (worker strips `using` lines). `Species("#1H-")` is H⁻ (m_p + 2 m_e); `Species("H-")` is the isotope-averaged anion. Startup ~13 s, a run ~8 s. |
 
@@ -353,4 +354,34 @@ MAD-X gate therefore checks loading and reporting, the physics gate runs on Bmad
   `Cavity` has none), and over 142 cavities at 20–500 MeV the cumulated 4×4 map differs by O(10);
   such pairs assert the energy and report the map.  Backlog: give derived cavities the thin-gap RF
   focusing lens thin GAPs already get (`RF_FOCUSING_AS_MATRIX`), engine by engine.
+
+## Phase 5.3 measurements (Cheetah 0.8.4, 2026-09-05)
+
+* **Basis.**  A 1 m drift at 2.1 MeV: `R12 = 1`, `R56 = −223.1485 = −L/(β²γ²)` in
+  `(x, px, y, py, τ, ΔE/(p0 c))`: MAD-X's canonical pair with `τ = c·Δt` *late*-positive
+  (`Basis.CHEETAH`, `_Z_SIGN = −1`; the MAD-X transform alone gave `R56_common = −0.9955`).  With the
+  kinetic energy handed to Cheetah (its proton mass is CODATA 2022, 1.3 eV above lattix's) the
+  fingerprint drift matches the analytic map to 1e-8.
+* **Cavity.**  `ΔE = −voltage·q·cos(phase)`: +866 keV for an electron and −866 keV for a proton at
+  `voltage = 1 MV, phase = −30°`; the slope `r65 = k·sin(phase)·V_eff/(β(E+ΔE))` is negative at
+  `phase = −30°`, i.e. a late particle gains *less* — Cheetah's phase is the negative of the IR's
+  (its own converters: Bmad `phase = −phi0`, Elegant `phase − 90°`).  The writer emits
+  `voltage = −V/q`, `phase = −φ`; the fingerprint then bunches (`R65_common < 0`) and gains
+  `V·cos 30°` to 1e-9 for protons and H⁻ alike.  A zero-length cavity is `inf` (the matrix divides
+  by the length); at 1 µm the cavity's own focusing is ~1e-5/m, so the lattix thin-gap lens carries it.
+* **Magnets.**  `k1 > 0` focuses `x` for proton, electron and H⁻ alike (no charge in the map), the
+  solenoid `k = B/(2Bρ)` rotation ignores the charge, correctors kick `px += angle`: the writer
+  normalizes with the signed rigidity and the H⁻ FODO/solenoid decks agree with HELIX to 5e-15.
+  `Dipole.gap` is the full gap and `fringe_integral` enters the linear edge map (`R43` moves from
+  −0.009983 to −0.009533 with `gap = 0.05, fint = 0.45`); face angles are sector-referenced (RBend adds
+  `angle/2`); the fringe model equals MAD-X's (`fodo.madx` 1.8e-15 on the transverse block, 4e-10 on
+  dispersion and path length, 7e-9 on R56).
+* **Gates.**  `fodo.madx` vs cpymad and vs Bmad exact on every block; `fodo_cell.dat` 3e-14 and
+  `solenoid_channel.dat` 5e-15 vs HELIX; `mebt_line.dat` (H⁻, two thin gaps) 6.5e-3 vs HELIX on the
+  transverse block with the energy exact — Equivalent tier, as the plan expected
+  (`CHEETAH_ZERO_LENGTH_CAVITY`).
+* **Lockstep through a third party.**  The `.bmad` lattix writes for `fodo.madx`, read by Cheetah's
+  own `converters.bmad` (its namelist parser rejects `title, "…"`, which the worker drops), gives the
+  same Cheetah maps as lattix's LatticeJSON of the same lattice (T4×4 and dispersion below 1e-8):
+  two lattix writers checked against each other by someone else's reader.
 

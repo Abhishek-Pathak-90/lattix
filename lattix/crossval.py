@@ -121,11 +121,12 @@ def _cap_tier(tier: str, cap: str | None) -> str:
 ENGINE_FOR_FORMAT: dict[str, str | None] = {
     "madx": "madx", "xtrack": "xtrack", "bmad": "bmad", "elegant": "elegant", "impactx": "impactx",
     "impactz": "impactz", "flame": "flame", "tracewin": "helix", "mad8": None, "pals": None, "lattix": None,
-    "scibmad": "scibmad",
+    "scibmad": "scibmad", "cheetah": "cheetah",
 }
 #: fallback engines per format, tried in order when the primary one is unavailable (CI has no HELIX)
 ENGINE_CANDIDATES: dict[str, tuple[str, ...]] = {"tracewin": ("helix", "lightwin")}
 FOLLOWS_P0 = {"helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True, "lightwin": True,
+              "cheetah": True,
               "impactz": True, "flame": True, "madx": False, "xtrack": False, "scibmad": False}
 
 RTOL = 1e-9
