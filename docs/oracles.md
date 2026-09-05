@@ -16,6 +16,7 @@ recalled.  Re-run `lattix fingerprint` / `pytest tests/oracles` after any engine
 | xtrack | base env 0.103.5; env `lattix` 0.112.0 | — | (x, px, y, py, ζ, δ) | constant | Native Lark MAD-X parser rejects some MAD-X (e.g. `sequence, l=…, refer=centre` header in HELIX's fodo.madx) → load through cpymad `Line.from_madx_sequence`. |
 | LightWin | env `lightwin` (python 3.12, LightWin 0.16.5, MIT) | `lattix/oracles/lightwin.py` + `lightwin_worker.py` | (x, x', y, y', z [m], dp/p) — TraceWin's, SI | follows the field maps | Envelope3D only: DRIFT, QUAD, SOLENOID, BEND, FIELD_MAP (1-D); EDGE/THIN_STEERING/APERTURE/DIAG_* propagated as drifts, GAP/NCELLS/DTL_CEL skipped — both audited in `meta` and report-only in the battery. |
 | Cheetah | env `cheetah` (torch 2.14 CPU, cheetah-accelerator 0.8.4, GPL-3) | `lattix/oracles/cheetah.py` + `cheetah_worker.py` | (x, px, y, py, τ = cΔt late-positive [m], ΔE/(p0 c)) | follows the cavities | 7×7 first-order maps per element; cavity phase runs the other way (`phase = −φ`), k1/k charge-blind (signed rigidity in the writer); zero-length cavity is inf (1 µm substituted). |
+| PyORBIT3 | env `pyorbit` (python 3.10, meson build of PyORBIT3 `22b45fa` 2026-05-14 with `USE_MPI=none`, MIT; `libfftw3` preloaded on macOS) | `lattix/oracles/pyorbit.py` + `pyorbit_worker.py` | (x [m], x′, y [m], y′, z [m] ahead-positive, dE [GeV]) | follows the gaps | `LinacTrMatricesController` maps at every node entrance, cumulated from the first node (per-node map `R[k+1]·R[k]⁻¹`, one extra node at the exit); 13-particle symmetric probes tracked at two amplitudes and Richardson-extrapolated; one `<Cavity>` per gap. |
 | ImpactX / IMPACT-Z | env `lattix` (`impactx` 26.08, `impact-z` 2.7.7, both osx-arm64 builds) | — | Phase 3 | follows | `ImpactZexe` on PATH in the env; `impactx` importable. |
 | SciBmad | `julia` (juliaup 1.10) with `SciBmad` 0.5.2 (Beamlines.jl + BeamTracking.jl) through `lattix/oracles/scibmad_worker.jl`; `LATTIX_JULIA` or PATH | 0.5.2 (2026-09-05) | (x, px, y, py, z, pz), z ahead-positive (drift R56 = +L/γ² measured) | constant (one reference momentum per `Beamline`; nesting and `Patch(dE_ref)` past the first element are refused) | `RFCavity` gain is **−V·cos(phi0)** with `phi0` in radians for protons and electrons alike (writer negates the voltage: `GAIN_SIGN`); a zero-length cavity and `edge1_int/edge2_int` cannot be tracked (worker substitutes 1 µm / 0 and says so); `g_ref` alone is a curved frame — the dipole field is `Kn0`; `LineElement(transport_map=f)` with `f(v, q, p=nothing)` works as a thin lens; `using Beamlines` fails in an environment that only has `SciBmad` (worker strips `using` lines). `Species("#1H-")` is H⁻ (m_p + 2 m_e); `Species("H-")` is the isotope-averaged anion. Startup ~13 s, a run ~8 s. |
 
@@ -385,3 +386,46 @@ MAD-X gate therefore checks loading and reporting, the physics gate runs on Bmad
   same Cheetah maps as lattix's LatticeJSON of the same lattice (T4×4 and dispersion below 1e-8):
   two lattix writers checked against each other by someone else's reader.
 
+## Phase 5.4 measurements (PyORBIT3 meson build of `22b45fa`, 2026-09-05)
+
+* **Basis.**  A 1 m drift at 2.1 MeV: `R56 = +237.30` in `(x [m], x′, y [m], y′, z [m], dE [GeV])`
+  = `L/γ² · 10⁹/(β²γ mc²)`: z is ahead-positive and the energy coordinate is absolute
+  (`Basis.PYORBIT`: `d[4] = +1`, `d[5] = 10⁹/(β²γ mc²)`).  The reference energy follows the gaps
+  (`kinEnergy` of the synchronous particle at each `LinacTrMatrixGenNode`).
+* **Matrix generation.**  `LinacTrMatricesController.addTrMatrixGenNodes` puts a node at the
+  *entrance* of every element holding the least-squares map from the first node to itself; the
+  per-element map is `R[k+1]·R[k]⁻¹`, with one more node at the exit of the last element.  Symmetric
+  probes make the fit clean to second order, but the tracker's third-order terms leave an O(ε²)
+  residue: 5.0e-5 (2e-7 relative) on the 5.3 m chicane at ±1e-5, 4.5e-6 at ±3e-6, 5.1e-7 at ±1e-6.
+  Tracking twice (ε and ε/2) and Richardson-extrapolating brings the chicane to 1.1e-8 against MAD-X
+  and HELIX, independent of ε (the same at 3ε).  An energy probe as large as the transverse one
+  (1e-5 GeV) costs 1e-5 on R56 at 2.1 MeV; ±1e-7 GeV is used.
+* **Gaps.**  `ΔE = q·E0TL·cos(phase)` (E0TL in GeV, phase in degrees): a proton gains 866 025.4 eV
+  at `E0TL = 1e-3, phase = −30`, H⁻ needs `phase + 180°` for the same gain, and the slope bunches at
+  −30° (`R65_common < 0`) — TraceWin's GAP convention.  PyORBIT derives the phase of every later gap
+  of a `<Cavity>` from the time of flight through its first gap: sharing one cavity between the
+  MEBT's gaps lost 2.6 % of the energy, so lattix writes one `<Cavity>` per gap.  `BaseRfGap`
+  carries PyORBIT's own transverse gap focusing: the MEBT's thin gaps are Equivalent tier (4.3e-3 vs
+  HELIX on the transverse block, energy exact), as the plan expected.
+* **Magnets.**  `QUAD field` is the lab gradient with the charge in `bunch.B_Rho()` (`fodo_cell.dat`
+  1.2e-11 vs HELIX; the H⁻ SNS MEBT quads defocus with the signed rigidity); `SOLENOID B` is `B₀/Bρ`
+  in 1/m — TEAPOT's `soln` normalized strength — with the charge applied by the tracker
+  (`solenoid_channel.dat` 9e-13); `BEND theta` has MAD-X's sign with sector-referenced `ea1/ea2`
+  (single sector bends of 1°–45° vs MAD-X: 1e-11 transverse, 9e-10 dispersion; `bend_line.dat`
+  2.9e-11 vs HELIX); `DCH B·effLength` kicks `x′ −= B·L/Bρ_signed`, `DCV` `y′ += B·L/Bρ_signed`.  The
+  SNS MEBT correctors sit *inside* the quads and PyORBIT applies them between the magnet's parts;
+  the reader splits the quad the same way.
+* **File rules.**  `pos` is the element centre; drifts are implicit (`SNS_LinacLatticeFactory` fills
+  the gaps) and its overlap check is strict (`dist = pos₁ − L₁/2 − (pos₀ + L₀/2) < 0`, no
+  tolerance), so the writer keeps lengths on a picometre grid, cumulates positions from the written
+  lengths, and pushes a node 1 pm when PyORBIT's own double arithmetic on the written decimals would
+  see an overlap; the reader parses the decimals exactly and treats gaps below 1 nm as touching.
+  Rounding positions to 12 decimals instead flipped one SIS18 position by 1 pm on the second
+  write (a value 3e-14 from a rounding boundary).  `aperture` is a full diameter.  A fringe
+  integral without a gap (`fint·hgap = 0`) is inert in every engine and is not a loss.
+* **Gates.**  SNS MEBT (the vendored `<MEBT>` sequence of `sns_linac.xml`) and ESS MEBT: PyORBIT on
+  the original and on lattix's read → write agree to 7.7e-10 / 6.6e-11 with identical final energies
+  (thin correctors inside quads, per-gap cavities and the TTF passthrough all survive); both and the
+  solenoid test deck are text fixed points.  `.dat` → XML vs HELIX: `fodo_cell` 1.2e-11,
+  `solenoid_channel` 9e-13, `bend_line` 2.9e-11, `csr_chicane` 1.1e-8 (Exact), `mebt_line` 4.3e-3
+  (Equivalent).

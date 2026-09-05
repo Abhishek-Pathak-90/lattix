@@ -1,0 +1,63 @@
+<?xml version="1.0" ?>
+<!--
+# lattix: reference species="h-" mass_eV=939294086.06 charge=-1 kinetic_energy_eV=2100000 rf_frequency_Hz=352210000
+# lattix 0.1.0 (PyORBIT3 linac XML)
+-->
+<lattix>
+ <mebt_line bpmFrequency="352210000" length="0.88" name="mebt_line">
+  <Cavities>
+   <Cavity ampl="1.0" frequency="352210000" name="CAV_1" pos="0.3"/>
+   <Cavity ampl="1.0" frequency="352210000" name="CAV_2" pos="0.66"/>
+  </Cavities>
+  <accElement length="0.04" name="QUAD_0001" pos="0.05" type="QUAD">
+   <parameters field="12" aperture="0.03" aprt_type="1"/>
+  </accElement>
+  <accElement length="0.04" name="QUAD_0002" pos="0.15" type="QUAD">
+   <parameters field="-10" aperture="0.03" aprt_type="1"/>
+  </accElement>
+  <accElement length="0.04" name="QUAD_0003" pos="0.25" type="QUAD">
+   <parameters field="8" aperture="0.03" aprt_type="1"/>
+  </accElement>
+  <accElement length="0.0" name="DIAG_SIZE_0001" pos="0.3" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="GAP_0001" pos="0.3" type="RFGAP">
+   <parameters E0L="8e-05" E0TL="8e-05" EzFile="" cavity="CAV_1" mode="0" phase="-85" aperture="0.03" aprt_type="1"/>
+   <TTFs beta_max="1.0" beta_min="0.0"><polyT order="0" pcoefs="1.0" /><polyS order="0" pcoefs="0.0" /><polyTP order="0" pcoefs="0.0" /><polySP order="0" pcoefs="0.0" /></TTFs>
+  </accElement>
+  <accElement length="0.04" name="QUAD_0004" pos="0.36" type="QUAD">
+   <parameters field="-9" aperture="0.03" aprt_type="1"/>
+  </accElement>
+  <accElement length="0.04" name="QUAD_0005" pos="0.48" type="QUAD">
+   <parameters field="7" aperture="0.03" aprt_type="1"/>
+  </accElement>
+  <accElement length="0.04" name="QUAD_0006" pos="0.6" type="QUAD">
+   <parameters field="-9" aperture="0.03" aprt_type="1"/>
+  </accElement>
+  <accElement length="0.0" name="DIAG_SIZE_0002" pos="0.66" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="GAP_0002" pos="0.66" type="RFGAP">
+   <parameters E0L="8e-05" E0TL="8e-05" EzFile="" cavity="CAV_2" mode="0" phase="-85" aperture="0.03" aprt_type="1"/>
+   <TTFs beta_max="1.0" beta_min="0.0"><polyT order="0" pcoefs="1.0" /><polyS order="0" pcoefs="0.0" /><polyTP order="0" pcoefs="0.0" /><polySP order="0" pcoefs="0.0" /></TTFs>
+  </accElement>
+  <accElement length="0.04" name="QUAD_0007" pos="0.72" type="QUAD">
+   <parameters field="11" aperture="0.03" aprt_type="1"/>
+  </accElement>
+  <accElement length="0.04" name="QUAD_0008" pos="0.82" type="QUAD">
+   <parameters field="-11" aperture="0.03" aprt_type="1"/>
+  </accElement>
+  <accElement length="0.0" name="THIN_STEERING_0001" pos="0.88" type="DCH">
+   <parameters B="0.0" effLength="0.001"/>
+  </accElement>
+  <accElement length="0.0" name="THIN_STEERING_0001_V" pos="0.88" type="DCV">
+   <parameters B="0.0" effLength="0.001"/>
+  </accElement>
+  <accElement length="0.0" name="APERTURE_0001" pos="0.88" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="DIAG_PHASE_0001" pos="0.88" type="MARKER">
+   <parameters/>
+  </accElement>
+ </mebt_line>
+</lattix>

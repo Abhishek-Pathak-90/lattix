@@ -1,0 +1,69 @@
+<?xml version="1.0" ?>
+<!--
+# lattix: reference species="proton" mass_eV=938272088.16 charge=1 kinetic_energy_eV=2100000 rf_frequency_Hz=162500000
+# lattix 0.1.0 (PyORBIT3 linac XML)
+-->
+<lattix>
+ <all_kinds bpmFrequency="162500000" length="2.85" name="all_kinds">
+  <Cavities>
+   <Cavity ampl="1.0" frequency="162500000" name="CAV_1" pos="2.200000000001"/>
+   <Cavity ampl="1.0" frequency="325000000" name="CAV_2" pos="2.3"/>
+  </Cavities>
+  <accElement length="0.2" name="q1" pos="0.6" type="QUAD">
+   <parameters field="1.2" aperture="0.03" aprt_type="1"/>
+  </accElement>
+  <accElement length="0.0" name="m1" pos="0.9" type="DCH">
+   <parameters B="10" effLength="0.001"/>
+  </accElement>
+  <accElement length="0.0" name="m1_V" pos="0.9" type="DCV">
+   <parameters B="20" effLength="0.001"/>
+  </accElement>
+  <accElement length="1.0" name="b1" pos="1.400000000001" type="BEND">
+   <parameters theta="0.1" ea1="0.05" ea2="0.05" kls="0.0" poles="0" skews="0"/>
+  </accElement>
+  <accElement length="0.3" name="sol1" pos="2.050000000001" type="SOLENOID">
+   <parameters B="2.38648547049148"/>
+  </accElement>
+  <accElement length="0.0" name="c1" pos="2.200000000001" type="RFGAP">
+   <parameters E0L="8e-05" E0TL="8e-05" EzFile="" cavity="CAV_1" mode="0" phase="-85"/>
+   <TTFs beta_max="1.0" beta_min="0.0"><polyT order="0" pcoefs="1.0" /><polyS order="0" pcoefs="0.0" /><polyTP order="0" pcoefs="0.0" /><polySP order="0" pcoefs="0.0" /></TTFs>
+  </accElement>
+  <accElement length="0.0" name="c2_in" pos="2.200000000001" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="c2" pos="2.3" type="RFGAP">
+   <parameters E0L="0.001" E0TL="0.001" EzFile="" cavity="CAV_2" mode="0" phase="-30"/>
+   <TTFs beta_max="1.0" beta_min="0.0"><polyT order="0" pcoefs="1.0" /><polyS order="0" pcoefs="0.0" /><polyTP order="0" pcoefs="0.0" /><polySP order="0" pcoefs="0.0" /></TTFs>
+  </accElement>
+  <accElement length="0.0" name="c2_out" pos="2.4" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="k1_in" pos="2.4" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="k1" pos="2.45" type="DCH">
+   <parameters B="-0.00249344472307972" effLength="0.1"/>
+  </accElement>
+  <accElement length="0.0" name="k1_V" pos="2.45" type="DCV">
+   <parameters B="-0.00498688944615943" effLength="0.1"/>
+  </accElement>
+  <accElement length="0.0" name="k1_out" pos="2.5" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="col1" pos="2.525" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="mk1" pos="2.55" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="bpm1" pos="2.55" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="f1" pos="2.55" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="t1" pos="2.6" type="MARKER">
+   <parameters/>
+  </accElement>
+ </all_kinds>
+</lattix>

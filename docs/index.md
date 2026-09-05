@@ -12,7 +12,7 @@ the real engines.
 | [crossval.md](crossval.md) | The cross-format battery: every format pair on every deck, IR round trip modulo the ledger, fixed point, engines on both ends |
 | [oracles.md](oracles.md) | The engines lattix runs, how each adapter works, and every measured convention with its number |
 | [corpus.md](corpus.md) | The private and public deck corpus, the manifest, the golden dozen |
-| formats/ | One page per format: [TraceWin](formats/tracewin.md), [MAD-X](formats/madx.md), [MAD8](formats/mad8.md), [Elegant](formats/elegant.md), [Bmad](formats/bmad.md), [PALS](formats/pals.md), [ImpactX](formats/impactx.md), [IMPACT-Z](formats/impactz.md), [FLAME](formats/flame.md), [xtrack](formats/xtrack.md), [MAD-NG](formats/madng.md), [SciBmad](formats/scibmad.md), [Cheetah](formats/cheetah.md), [lattix JSON](formats/lattix.md), [HELIX adapter](formats/helix.md) |
+| formats/ | One page per format: [TraceWin](formats/tracewin.md), [MAD-X](formats/madx.md), [MAD8](formats/mad8.md), [Elegant](formats/elegant.md), [Bmad](formats/bmad.md), [PALS](formats/pals.md), [ImpactX](formats/impactx.md), [IMPACT-Z](formats/impactz.md), [FLAME](formats/flame.md), [xtrack](formats/xtrack.md), [MAD-NG](formats/madng.md), [SciBmad](formats/scibmad.md), [Cheetah](formats/cheetah.md), [PyORBIT3](formats/pyorbit.md), [lattix JSON](formats/lattix.md), [HELIX adapter](formats/helix.md) |
 
 The design and phase plan is in [../PLAN.md](../PLAN.md).  `tests/docs/test_docs_consistency.py`
 keeps these pages in step with the source: the fidelity catalogue is regenerated from the

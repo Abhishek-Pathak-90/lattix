@@ -103,6 +103,7 @@ FORMATS: tuple[str, ...] = (
     "flame",
     "impactx",
     "impactz",
+    "pyorbit",
     "tfs",
     "fieldmap",
     "tracewin_output",
@@ -112,7 +113,7 @@ FORMATS: tuple[str, ...] = (
 """Format ids the sniffer can return (lattice formats first, then data files)."""
 
 LATTICE_FORMATS: frozenset[str] = frozenset(
-    {"tracewin", "madx", "mad8", "elegant", "bmad", "pals", "flame", "impactx", "impactz"}
+    {"tracewin", "madx", "mad8", "elegant", "bmad", "pals", "flame", "impactx", "impactz", "pyorbit"}
 )
 
 # --------------------------------------------------------------------------- sniffing
@@ -351,7 +352,9 @@ _SUFFIX_PRIOR: dict[str, tuple[str, ...]] = {
     ".lte": ("elegant",),
     ".bmad": ("bmad",),
     ".dat": ("tracewin",),
+    ".xml": ("pyorbit",),
 }
+_PYORBIT_RE = re.compile(r"<accElement\b")
 
 
 def is_binary(head: bytes) -> bool:
@@ -409,6 +412,8 @@ def sniff_text(text: str, path: str | os.PathLike[str] | None = None) -> str:
         return "fieldmap"
     if lower_name.endswith((".pals.yaml", ".pals.yml", ".pals.json")):
         return "pals"
+    if _PYORBIT_RE.search(text):
+        return "pyorbit"
 
     nonblank = [ln for ln in text.splitlines() if ln.strip()]
     if not nonblank:

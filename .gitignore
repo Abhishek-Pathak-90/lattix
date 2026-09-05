@@ -22,3 +22,4 @@ runs/
 
 # engine scratch written to the cwd by an oracle run
 checkpoint_restart.dat
+*.o

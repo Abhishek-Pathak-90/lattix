@@ -34,7 +34,7 @@ jobs:
       - name: Cross-format battery (every pair on every public deck; engine pairs where engines exist)
         env:
           LATTIX_BMAD_ENV: lattix-bmad
-        run: pytest tests/crossval -m "crossval and not oracle_flame and not oracle_scibmad and not oracle_lightwin and not oracle_cheetah and not oracle_helix and not oracle_tracewin" -ra
+        run: pytest tests/crossval -m "crossval and not oracle_flame and not oracle_scibmad and not oracle_lightwin and not oracle_cheetah and not oracle_pyorbit and not oracle_helix and not oracle_tracewin" -ra
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -70,4 +70,22 @@ jobs:
           python -c "from lattix.oracles import get_oracle; print(get_oracle('cheetah').available())"
       - name: Cheetah-backed tests (fingerprint, FODO gate vs cpymad, conventions)
         run: pytest -m "oracle_cheetah and not oracle_helix" -ra
-
+  pyorbit:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Build PyORBIT3 (pinned commit, no MPI) and install lattix
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libfftw3-dev build-essential pkg-config
+          pip install -U pip meson-python ninja setuptools setuptools-scm numpy scipy
+          git clone -q https://github.com/PyORBIT-Collaboration/PyORBIT3 /tmp/PyORBIT3
+          git -C /tmp/PyORBIT3 checkout -q 22b45fa5674e6184168a5e940487e9d7fb0e5f57
+          pip install --config-settings=setup-args="-DUSE_MPI=none" /tmp/PyORBIT3
+          pip install -e . pytest cpymad
+          python -c "from lattix.oracles import get_oracle; print(get_oracle('pyorbit').available())"
+      - name: PyORBIT3-backed tests (fingerprint, SNS/ESS rewrites, conventions)
+        run: pytest -m "oracle_pyorbit and not oracle_helix" -ra

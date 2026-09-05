@@ -29,6 +29,7 @@ _Z_SIGN: dict[Basis, float] = {
     Basis.FLAME: -1.0,     # φ [rad]: late positive
     Basis.IMPACTZ: -1.0,   # Δφ [rad]
     Basis.CHEETAH: -1.0,   # MEASURED 2026-09-05 (Cheetah 0.8.4 drift R56 = −L/(β²γ²)): τ = c·Δt late-positive
+    Basis.PYORBIT: +1.0,   # MEASURED 2026-09-05 (PyORBIT3 drift R56 = +L/γ² · 1e9/(β²γ mc²)): z ahead-positive
 }
 
 
@@ -57,6 +58,10 @@ def transform_matrix(basis: Basis, kinetic_eV: float, mass_eV: float,
     elif basis is Basis.ELEGANT:
         # (x, x', y, y', s, δ): x' ≈ px/p0 to first order
         d[4] = zs
+    elif basis is Basis.PYORBIT:
+        # (x, x', y, y', z [m], dE [GeV]): δ = ΔE/(β² E_tot) = dE·1e9/(β²γ m c²)
+        d[4] = zs
+        d[5] = 1e9 / (beta * beta * gamma * mass_eV)
     elif basis is Basis.HELIX:
         # (mm, mrad, mm, mrad, deg, MeV)
         if not rf_frequency_Hz:

@@ -68,6 +68,8 @@ FORMATS: dict[str, FormatSpec] = {
                         description="MAD-NG Lua sequence (writer only, via xtrack)"),
     "cheetah": FormatSpec("cheetah", (".cheetah.json",), "lattix.formats.cheetah",
                           description="Cheetah LatticeJSON (cheetah.latticejson)"),
+    "pyorbit": FormatSpec("pyorbit", (".pyorbit.xml", ".xml"), "lattix.formats.pyorbit",
+                          description="PyORBIT3 linac XML (SNS_LinacLatticeFactory)"),
     # keep last: a bare .json is xtrack's unless the content says otherwise (sniffed below)
     "xtrack": FormatSpec("xtrack", (".json",), "lattix.formats.xtrack", description="xtrack Line/Environment JSON"),
 }

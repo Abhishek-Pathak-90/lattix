@@ -41,6 +41,7 @@ The IR is SI plus electron-volts everywhere: m, rad, T, T/m, T·m^(1−n), V, V/
 | IMPACT-Z | m | rad | lab gradient T/m (type 1) | ideal cavity gradient V/m | Hz | deg | eV (`fort.18` reference) |
 | FLAME GLPS | m | deg (`sbend phi`) | normalized `K` 1/m² | cavity `scl_fac` × tabulated TTF | `SampleFreq` Hz | deg | MeV/u (`IonEk`) |
 | xtrack | m | rad | normalized `k1`, `knl/ksl` | `voltage` V | `frequency` Hz | `lag` deg (0.103) / `phase` rad (0.112) | eV |
+| PyORBIT3 linac XML | m | rad | `QUAD field` T/m (lab), `SOLENOID B` = B₀/Bρ 1/m, `DCH/DCV B·effLength` T·m | `RFGAP E0TL` GeV | `<Cavity frequency>` Hz | deg | GeV (`bunch.getSyncParticle().kinEnergy()`) |
 | HELIX (adapter) | mm | deg | T, T/m | MV | MHz | deg | MeV |
 
 ## 3. Reference particle and rigidity
@@ -118,6 +119,7 @@ the reference particle and the charge sign is already folded in.  Invariant I-6 
 | ImpactX `ShortRF.phase` | deg, 0 = crest, no shift | (writer) | ImpactX 26.08: cavity gain 866 025.404 eV at −30° |
 | IMPACT-Z ideal cavity | any type other than 0/1/4 with negative `Param(5)`: gradient V/m, synchronous phase deg, gain `E0·L·cos φs` with no charge factor | (writer) | `BeamBunch.f90:323-437`; gain to 1.2e-16 |
 | FLAME `rfcavity phi` | synchronous when `syncflag ≥ 1`, but the gain is a tabulated TTF polynomial, not V·cos φ | reader records `FLAME_CAVTYPE_VOLTAGE_UNKNOWN` | 3.2 % off V·cos φ at −35° |
+| PyORBIT3 `RFGAP phase` | deg; `ΔE = q·E0TL·cos(phase)`, so a negative species gets `phase + 180°` (the TraceWin rule without `SET_SYNC_PHASE`) | (writer/reader) | PyORBIT3 `22b45fa`: a proton at −30° and H⁻ at 150° both gain +V·cos 30°; the slope bunches |
 
 `energy_gain_eV(voltage_V, phase_rad)` is the one formula the walk uses.  The phase-slope
 sign (a late particle at φs < 0 gains more) is not derivable from these formulas because the
@@ -162,6 +164,7 @@ The IR bend stores arc `length`, `angle`, `e1`, `e2` (with rectangular flags), `
 | ImpactX | `Sbend(ds, rc)` + `DipEdge` on each side | fodo.madx vs cpymad 1.8e-15 |
 | FLAME | `sbend K` is normalized (`Kx = K + 1/ρ²`, `Ky = −K`); `roll` **is** MAD-X `tilt` | 9-digit agreement |
 | xtrack | `rot_s_rad` is MAD-X `tilt`; `Bend.h` cannot be assigned (length + angle are passed) and `k0` reads back as `'from_h'` | xtrack 0.103.5 / 0.112.0 |
+| PyORBIT3 | `BEND theta` with MAD-X's sign, `ea1/ea2` sector-referenced; no fringe integral, no tilt | sector bends of 1°–45° vs MAD-X 1e-11 |
 
 Vertical bends are `tilt_ref = ±π/2`.  The PIP-II TraceWin export writes its two negative-angle
 vertical bends with the edge sign reversed; the MAD8 anchor test pins exactly those two.
@@ -204,6 +207,7 @@ the local `(β, γ, p0)` at every boundary.  The adapters' native pairs and the 
 | ImpactX | `(t, pt = −ΔE/p0c)`, t late-positive; the adapter returns `S·R·S` in MAD-X's `(T, pt)` | +1 after the transform | follows (`ShortRF`) |
 | IMPACT-Z | `(x/Scxl, γβx, y/Scxl, γβy, ω·Δt, γ_ref − γ)`, `Scxl = c/2πf` | −1 | follows |
 | FLAME | `(x mm, x′, y mm, y′, φ rad late-positive w.r.t. SampleFreq, ΔEk MeV/u)` | −1 | follows |
+| PyORBIT3 | `(x m, x′, y m, y′, z m ahead-positive, dE GeV)` | +1 (`d[5] = 10⁹/(β²γ mc²)`) | follows |
 
 Each adapter is fingerprinted before use: a 1 m drift must give R56 = +0.9955387 for a
 2.1 MeV proton and a thin 1 MV cavity at φs = −30° must gain 866 025.4 eV in the

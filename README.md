@@ -2,10 +2,10 @@
 
 Translate a lattice deck from one accelerator code's format to another's
 (TraceWin `.dat`, MAD-X, MAD8 flat, Elegant `.lte`, Bmad, PALS; later ImpactX,
-IMPACT-Z, FLAME, xtrack, SciBmad, Cheetah LatticeJSON, MAD-NG write-only) through a code-neutral intermediate representation, with
+IMPACT-Z, FLAME, xtrack, SciBmad, Cheetah LatticeJSON, PyORBIT3 linac XML, MAD-NG write-only) through a code-neutral intermediate representation, with
 a fidelity report on every conversion and validation against the real engines.
 
-**Status: Phase 5 in progress (0.1.0)** — SciBmad, the xsuite completion (every xtrack element class, knobs, environments, MAD-NG output) LightWin as a second TraceWin-semantics engine and Cheetah (LatticeJSON format + engine) have landed; documentation, CI and a local release build are in place; HELIX GUI/MCP integration is deferred. Phase 3 delivered — readers and writers for TraceWin, MAD-X, MAD8 flat, Elegant, Bmad,
+**Status: Phase 5 in progress (0.1.0)** — SciBmad, the xsuite completion (every xtrack element class, knobs, environments, MAD-NG output) LightWin as a second TraceWin-semantics engine, Cheetah (LatticeJSON format + engine) and PyORBIT3 (linac XML format + engine) have landed; documentation, CI and a local release build are in place; HELIX GUI/MCP integration is deferred. Phase 3 delivered — readers and writers for TraceWin, MAD-X, MAD8 flat, Elegant, Bmad,
 PALS, ImpactX, IMPACT-Z, FLAME, xtrack and SciBmad, TraceWin field maps integrated into equivalent cavities and
 hard-edge magnets, the HELIX adapter, the fidelity report and the CLI — each validated against its real
 engine (see `PLAN.md`, `docs/oracles.md`, `docs/corpus.md`). Still open: the HELIX GUI/MCP integration (deferred), the nightly
@@ -25,10 +25,12 @@ PYTHONPATH=. python3 -m lattix.cli convert mebt+hwr.dat mebt_hwr.bmad --read-opt
     --read-option kinetic_energy_eV=2.1e6      # field maps -> lcavities with HELIX-equivalent gains
 PYTHONPATH=. python3 -m lattix.cli convert fodo.madx ImpactZ.in --to impactz   # -> IMPACT-Z deck
 PYTHONPATH=. python3 -m lattix.cli convert fodo.madx fodo.cheetah.json         # -> Cheetah LatticeJSON
+PYTHONPATH=. python3 -m lattix.cli convert mebt.dat mebt.pyorbit.xml --read-option species=h- \
+    --read-option kinetic_energy_eV=2.1e6      # -> PyORBIT3 linac XML (one <Cavity> per gap)
 PYTHONPATH=. python3 -m lattix.cli convert fodo.madx fodo.madng --to madng     # -> MAD-NG (through xtrack)
 
 # which engines this machine can run (MAD-X via cpymad, xtrack, Bmad/Tao, elegant, ImpactX, IMPACT-Z, FLAME,
-# SciBmad, LightWin, Cheetah, HELIX, TraceWin)
+# SciBmad, LightWin, Cheetah, PyORBIT3, HELIX, TraceWin)
 PYTHONPATH=. python3 -m lattix.cli oracles
 
 # measure each engine's longitudinal conventions (1 m drift, thin cavity at φs = −30°)

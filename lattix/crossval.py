@@ -121,12 +121,12 @@ def _cap_tier(tier: str, cap: str | None) -> str:
 ENGINE_FOR_FORMAT: dict[str, str | None] = {
     "madx": "madx", "xtrack": "xtrack", "bmad": "bmad", "elegant": "elegant", "impactx": "impactx",
     "impactz": "impactz", "flame": "flame", "tracewin": "helix", "mad8": None, "pals": None, "lattix": None,
-    "scibmad": "scibmad", "cheetah": "cheetah",
+    "scibmad": "scibmad", "cheetah": "cheetah", "pyorbit": "pyorbit",
 }
 #: fallback engines per format, tried in order when the primary one is unavailable (CI has no HELIX)
 ENGINE_CANDIDATES: dict[str, tuple[str, ...]] = {"tracewin": ("helix", "lightwin")}
 FOLLOWS_P0 = {"helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True, "lightwin": True,
-              "cheetah": True,
+              "cheetah": True, "pyorbit": True,
               "impactz": True, "flame": True, "madx": False, "xtrack": False, "scibmad": False}
 
 RTOL = 1e-9
@@ -168,6 +168,10 @@ AFFECTS: dict[str, set[str]] = {
     "TAYLOR_OFFSET_DROPPED": set(), "TAYLOR_DROPPED": set(), "TAYLOR_UNSUPPORTED": set(),
     "REFCHANGE_DROPPED": {"energy", "gain"},
     "IMPACTZ_RF_GAIN_UNKNOWN": {"gain", "volt", "energy"},
+    "PYORBIT_MULTIPOLE_AS_CORRECTOR": {"BnL0", "BsL0", "hkick", "vkick"},
+    "PYORBIT_QUAD_TILT_DROPPED": {"BnL1", "BsL1"},
+    "PYORBIT_GAP_NEEDS_FREQUENCY": {"gain", "volt", "energy"},
+    "PYORBIT_NO_MULTIPOLE": {*[f"BnL{k}" for k in range(6)], *[f"BsL{k}" for k in range(6)]},
     "FLAME_NO_ENG_DATA_DIR": set(), "FLAME_PER_NUCLEON": set(), "FLAME_SOURCE_ADDED": set(),
     "DEFINITION_NOT_IN_LINE": set(), "ELEGANT_PHASE_FOR_SPECIES": set(),
     "CONST_P0": set(), "CONST_P0_LOCAL_RIGIDITY": set(), "CONST_P0_START_RIGIDITY": set(),

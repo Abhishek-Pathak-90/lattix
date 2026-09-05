@@ -138,3 +138,15 @@ to the clone root.
 |---|---|---|
 | cheetah | GPL-3.0 (`tier2_modern/cheetah/LICENSE`) — incompatible with this BSD-3 repo | `tier2_modern/cheetah` @ `e78368547cdbda9937fb467278f0b88454cfb493` |
 | bmad-ecosystem | no top-level LICENSE; `bmad/Copyright` states GPL-3.0, so not clearly permissive | `tier3_peers/bmad-ecosystem/regression_tests/write_foreign_test/` (`write_foreign_test.bmad` + `lte.correct`, `mad8.correct`, `madx.correct`, `sad.correct`) @ `8073acbe96e7aa9b29222a69669a8b7d9c4a5fc8` |
+
+## PyORBIT3
+
+- Upstream: <https://github.com/PyORBIT-Collaboration/PyORBIT3> (`tier3_peers/PyORBIT3`)
+- Commit: `22b45fa5674e6184168a5e940487e9d7fb0e5f57` (vendored 2026-09-05)
+- License: MIT, PyOrbit Collaboration (`LICENSES/PyORBIT3.txt`)
+
+| File | Format | Upstream path |
+|---|---|---|
+| `pyorbit3/sns_mebt.xml` | pyorbit | `examples/SNS_Linac/sns_linac_xml/sns_linac.xml`: the `<sns>` root and its `<MEBT>` sequence only (212 lines verbatim; the whole SNS linac is 862 kB) |
+| `pyorbit3/ess_mebt.xml` | pyorbit | `examples/ESS_Linac/ess_linac_xml/ess_linac.xml` |
+| `pyorbit3/solenoid_test.xml` | pyorbit | `examples/ESS_Linac/linac_solenoid_test/test_solenoid_lattice.xml` |

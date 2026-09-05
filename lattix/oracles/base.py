@@ -44,6 +44,7 @@ class Basis(StrEnum):
     IMPACTX = "impactx"    # (x, px, y, py, t, pt)
     IMPACTZ = "impactz"    # (x, px/mc, y, py/mc, dphi, dE/mc^2)
     CHEETAH = "cheetah"    # (x, px, y, py, tau = c·Δt [m] late-positive, ΔE/(p0 c))
+    PYORBIT = "pyorbit"    # (x, x', y, y', z [m] ahead-positive, dE [GeV])
 
 
 @dataclass
@@ -222,7 +223,7 @@ def _load_adapters() -> None:
     import importlib
 
     for mod in ("cpymad", "xtrack", "pytao", "helix", "elegant", "tracewin", "impactx", "impactz", "flame",
-                "scibmad", "lightwin", "cheetah"):
+                "scibmad", "lightwin", "cheetah", "pyorbit"):
         try:
             importlib.import_module(f"lattix.oracles.{mod}")
         except ModuleNotFoundError as e:  # adapter module itself missing (not its engine)

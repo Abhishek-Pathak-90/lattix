@@ -1,0 +1,212 @@
+<?xml version="1.0" ?>
+<sns>
+ <MEBT bpmFrequency="8.05E8" length="3.633" name="MEBT">
+  <accElement name="MEBT_START" length="0.0" pos="0.0" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement name="MEBT_START" length="0.0" pos="0.0" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement name="MEBT_START" length="0.0" pos="0.0" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_START" pos="0.0" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.061" name="MEBT_Mag:QH01" pos="0.128" type="QUAD">
+   <parameters aperture="0.032" aprt_type="1" field="-34.636"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Mag:DCH01" pos="0.128" type="DCH">
+   <parameters B="0.0" effLength="0.061"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Mag:DCV01" pos="0.128" type="DCV">
+   <parameters B="0.0" effLength="0.061"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:BPM01" pos="0.128" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:WS01" pos="0.201" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.061" name="MEBT_Mag:QV02" pos="0.273" type="QUAD">
+   <parameters aperture="0.032" aprt_type="1" field="37.85"/>
+  </accElement>
+  <accElement length="0.061" name="MEBT_Mag:QH03" pos="0.418" type="QUAD">
+   <parameters aperture="0.032" aprt_type="1" field="-28.3266"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_RF:Bnch01:Rg01" pos="0.528" type="RFGAP">
+   <parameters E0L="0.000169424" E0TL="7.5e-05" EzFile="./axis_fields/MEBT1_Rg1.dat" aperture="0.03" aprt_type="1" cavity="MEBT1" mode="0" phase="90.00"/>
+   <TTFs beta_max="0.0797326996297" beta_min="0.0651533180282">
+    <polyT order="4" pcoefs="1.01612778 0.000479710288 -0.000104039969 6.30940875e-07 -1.18628457e-09 "/>
+    <polyS order="0" pcoefs="0 "/>
+    <polyTP order="4" pcoefs="0.00589604495 -0.000392967324 4.25736235e-06 -1.81690079e-08 2.85459386e-11 "/>
+    <polySP order="0" pcoefs="0 "/>
+   </TTFs>
+  </accElement>
+  <accElement length="0.061" name="MEBT_Mag:QV04" pos="0.638" type="QUAD">
+   <parameters aperture="0.032" aprt_type="1" field="17.69"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Mag:DCH04" pos="0.638" type="DCH">
+   <parameters B="0.0" effLength="0.061"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Mag:DCV04" pos="0.638" type="DCV">
+   <parameters B="0.0" effLength="0.061"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:BPM04" pos="0.638" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:WS04a" pos="0.723" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT:ChpPlt:Entr" pos="0.779" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT:ChpPlt:Exit" pos="1.137" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:WS04b" pos="1.193" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:WS04b" pos="1.193" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_RF:Bnch02:Rg01" pos="1.288" type="RFGAP">
+   <parameters E0L="0.000132964" E0TL="4.5e-05" EzFile="./axis_fields/MEBT2_Rg1.dat" aperture="0.036" aprt_type="1" cavity="MEBT2" mode="0" phase="90.00"/>
+   <TTFs beta_max="0.0797326996297" beta_min="0.0651533180282">
+    <polyT order="4" pcoefs="1.15958109 -0.00424694247 -8.43820853e-05 6.97672569e-07 -1.56212479e-09 "/>
+    <polyS order="0" pcoefs="0 "/>
+    <polyTP order="4" pcoefs="0.0111899428 -0.000695855802 8.83442797e-06 -4.45272232e-08 8.14136525e-11 "/>
+    <polySP order="0" pcoefs="0 "/>
+   </TTFs>
+  </accElement>
+  <accElement length="0.066" name="MEBT_Mag:QH05" pos="1.398" type="QUAD">
+   <parameters aperture="0.042" aprt_type="1" field="-17.0"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Mag:DCH05" pos="1.398" type="DCH">
+   <parameters B="0.0" effLength="0.066"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Mag:DCV05" pos="1.398" type="DCV">
+   <parameters B="0.0" effLength="0.066"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:BPM05" pos="1.398" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.066" name="MEBT_Mag:QV06" pos="1.498" type="QUAD">
+   <parameters aperture="0.042" aprt_type="1" field="26.2"/>
+  </accElement>
+  <accElement length="0.066" name="MEBT_Mag:QH07" pos="1.598" type="QUAD">
+   <parameters aperture="0.042" aprt_type="1" field="-11.7"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:WS07" pos="1.673" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:H_SCRP" pos="1.743" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.066" name="MEBT_Mag:QH08" pos="1.938" type="QUAD">
+   <parameters aperture="0.042" aprt_type="1" field="-11.7"/>
+  </accElement>
+  <accElement length="0.066" name="MEBT_Mag:QV09" pos="2.038" type="QUAD">
+   <parameters aperture="0.042" aprt_type="1" field="26.2"/>
+  </accElement>
+  <accElement length="0.066" name="MEBT_Mag:QH10" pos="2.138" type="QUAD">
+   <parameters aperture="0.042" aprt_type="1" field="-17.0"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Mag:DCH10" pos="2.138" type="DCH">
+   <parameters B="0.0" effLength="0.066"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Mag:DCV10" pos="2.138" type="DCV">
+   <parameters B="0.0" effLength="0.066"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:BPM10" pos="2.138" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_RF:Bnch03:Rg01" pos="2.248" type="RFGAP">
+   <parameters E0L="0.000135919" E0TL="4.6e-05" EzFile="./axis_fields/MEBT3_Rg1.dat" aperture="0.036" aprt_type="1" cavity="MEBT3" mode="0" phase="90.00"/>
+   <TTFs beta_max="0.0797326996297" beta_min="0.0651533180282">
+    <polyT order="4" pcoefs="1.15958109 -0.00424694247 -8.43820853e-05 6.97672569e-07 -1.56212479e-09 "/>
+    <polyS order="0" pcoefs="0 "/>
+    <polyTP order="4" pcoefs="0.0111899428 -0.000695855802 8.83442797e-06 -4.45272232e-08 8.14136525e-11 "/>
+    <polySP order="0" pcoefs="0 "/>
+   </TTFs>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:EMT" pos="2.442" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:V_SCRP" pos="2.499" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:LBSM" pos="2.578" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:Harp" pos="2.795" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:Slit2:Y" pos="2.814" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:Slit2:X" pos="2.821" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.061" name="MEBT_Mag:QV11" pos="2.903" type="QUAD">
+   <parameters aperture="0.032" aprt_type="1" field="16.63"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Mag:DCH11" pos="2.903" type="DCH">
+   <parameters B="0.0" effLength="0.061"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Mag:DCV11" pos="2.903" type="DCV">
+   <parameters B="0.0" effLength="0.061"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:BPM11" pos="2.903" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.061" name="MEBT_Mag:QH12" pos="3.053" type="QUAD">
+   <parameters aperture="0.032" aprt_type="1" field="-29.02"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_RF:Bnch04:Rg01" pos="3.158" type="RFGAP">
+   <parameters E0L="0.000212345" E0TL="9.4e-05" EzFile="./axis_fields/MEBT4_Rg1.dat" aperture="0.03" aprt_type="1" cavity="MEBT4" mode="0" phase="90.00"/>
+   <TTFs beta_max="0.0797326996297" beta_min="0.0651533180282">
+    <polyT order="4" pcoefs="1.01612778 0.000479710288 -0.000104039969 6.30940875e-07 -1.18628457e-09 "/>
+    <polyS order="0" pcoefs="0 "/>
+    <polyTP order="4" pcoefs="0.00589604495 -0.000392967324 4.25736235e-06 -1.81690079e-08 2.85459386e-11 "/>
+    <polySP order="0" pcoefs="0 "/>
+   </TTFs>
+  </accElement>
+  <accElement length="0.061" name="MEBT_Mag:QV13" pos="3.263" type="QUAD">
+   <parameters aperture="0.032" aprt_type="1" field="26.1"/>
+  </accElement>
+  <accElement length="0.061" name="MEBT_Mag:QH14" pos="3.408" type="QUAD">
+   <parameters aperture="0.032" aprt_type="1" field="-10.44"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Mag:DCH14" pos="3.408" type="DCH">
+   <parameters B="0.0" effLength="0.061"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Mag:DCV14" pos="3.408" type="DCV">
+   <parameters B="0.0" effLength="0.061"/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:BPM14" pos="3.408" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_Diag:WS14" pos="3.498" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement length="0.0" name="MEBT_END" pos="3.633" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement name="MEBT_END" length="0.0" pos="3.633" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement name="MEBT_END" length="0.0" pos="3.633" type="MARKER">
+   <parameters/>
+  </accElement>
+  <accElement name="MEBT_END" length="0.0" pos="3.633" type="MARKER">
+   <parameters/>
+  </accElement>
+  <Cavities>
+   <Cavity ampl="1.0" frequency="   4.025e+08" name="MEBT1" pos="0.528"/>
+   <Cavity ampl="1.0" frequency="   4.025e+08" name="MEBT2" pos="1.288"/>
+   <Cavity ampl="1.0" frequency="   4.025e+08" name="MEBT3" pos="2.248"/>
+   <Cavity ampl="1.0" frequency="   4.025e+08" name="MEBT4" pos="3.158"/>
+  </Cavities>
+ </MEBT>
+</sns>

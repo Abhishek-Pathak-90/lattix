@@ -25,7 +25,8 @@ FREQ_HZ = 162.5e6
 V_VOLT = 1.0e6         # cavity effective voltage
 PHI_S_DEG = -30.0      # synchronous phase, cos convention, 0 = crest
 FOLLOWS_P0 = {"scibmad": False, "helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True,
-              "impactz": True, "madx": False, "xtrack": False, "lightwin": True, "cheetah": True}
+              "impactz": True, "madx": False, "xtrack": False, "lightwin": True, "cheetah": True,
+              "pyorbit": True}
 
 _MASS = SPECIES["proton"][0]
 _ETOT_GEV = (_MASS + KE_EV) * 1e-9
@@ -125,6 +126,31 @@ DECKS["cheetah"] = {
                                         "d2": ["Drift", {"length": 0.5}]}, ["d1", "c", "d2"])),
 }
 _SUFFIX["cheetah"] = ".cheetah.json"
+
+
+def _pyorbit_xml(body: str, length: float) -> str:
+    tag = (f'# lattix: reference species="proton" mass_eV={_MASS:.12g} charge=1 kinetic_energy_eV={KE_EV:.12g} '
+           f'rf_frequency_Hz={FREQ_HZ:.12g}')
+    return ('<?xml version="1.0" ?>\n<!--\n' + tag + '\n-->\n<lattix>\n'
+            f' <FP bpmFrequency="{FREQ_HZ:.6g}" length="{length:.6g}" name="FP">\n'
+            '  <accElement length="0.0" name="START" pos="0.0" type="MARKER"><parameters/></accElement>\n'
+            + body
+            + f'  <accElement length="0.0" name="END" pos="{length:.6g}" type="MARKER"><parameters/></accElement>\n'
+            ' </FP>\n</lattix>\n')
+
+
+# PyORBIT: a thin RFGAP with E0TL in GeV and the phase in degrees; ΔE = q·E0TL·cos(phase)
+DECKS["pyorbit"] = {
+    "drift": ("pyorbit", _pyorbit_xml("", 1.0)),
+    "cavity": ("pyorbit", _pyorbit_xml(
+        f'  <Cavities><Cavity ampl="1.0" frequency="{FREQ_HZ:.6g}" name="C1" pos="0.5"/></Cavities>\n'
+        f'  <accElement length="0.0" name="C" pos="0.5" type="RFGAP"><parameters E0L="{V_VOLT * 1e-9:.9g}" '
+        f'E0TL="{V_VOLT * 1e-9:.9g}" EzFile="" aperture="0.03" aprt_type="1" cavity="C1" mode="0" '
+        f'phase="{PHI_S_DEG:.6g}"/><TTFs beta_max="1.0" beta_min="0.0"><polyT order="0" pcoefs="1.0"/>'
+        '<polyS order="0" pcoefs="0.0"/><polyTP order="0" pcoefs="0.0"/><polySP order="0" pcoefs="0.0"/>'
+        '</TTFs></accElement>\n', 1.0)),
+}
+_SUFFIX["pyorbit"] = ".pyorbit.xml"
 #: engines whose fingerprint cavity is an integrated field map, not a thin gap of exactly V_VOLT
 GAIN_RTOL = {"lightwin": 0.05}
 
