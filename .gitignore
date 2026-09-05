@@ -19,3 +19,6 @@ runs/
 # cffi/xobjects kernel builds that land in the cwd during xtrack tests
 /*.c
 *.o.tmp
+
+# engine scratch written to the cwd by an oracle run
+checkpoint_restart.dat

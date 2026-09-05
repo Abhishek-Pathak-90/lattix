@@ -118,6 +118,7 @@ def read(path: str | Path, fmt: str | None = None, **options) -> tuple[Lattice, 
     if rd is None:
         raise ValueError(f"format {fmt!r} has no reader")
     lat, rep = rd.read(Path(path), **options)
+    lat.restore_rf_focusing_marks()
     rep.source_format = fmt
     rep.source_file = str(path)
     return lat, rep
@@ -130,8 +131,11 @@ def write(lattice: Lattice, path: str | Path, fmt: str | None = None, *, strict:
     if wr is None:
         raise ValueError(f"format {fmt!r} has no writer")
     existed = Path(path).exists()
+    lattice, focus_entries = with_rf_focusing(lattice, fmt)
     try:
         rep = wr.write(lattice, Path(path), strict=strict, **options)
+        for entry in focus_entries:
+            rep.entries.append(entry)
     except TranslationError:
         if strict and not existed and Path(path).exists():
             Path(path).unlink()          # a strict failure leaves no half-written deck behind
@@ -152,6 +156,94 @@ def translate(src: str | Path, dst: str | Path, *, src_fmt: str | None = None, d
     rep.entries = rep_in.entries + rep_out.entries
     rep.raise_if(strict)
     return rep
+
+
+def note_quad_higher_orders(el, rep, target: str) -> None:
+    """A quadrupole that carries higher-order components (TraceWin ``G3..G6``) loses them in a
+    target whose quadrupole holds only the gradient: say so in the ledger (never silently)."""
+    mp = getattr(el, "multipole", None)
+    if mp is None:
+        return
+    orders = sorted({n for n, v in mp.Bn.items() if n > 1 and v} | {n for n, v in mp.Bs.items() if n > 1 and v})
+    if orders:
+        rep.lossy("QUAD_HIGHER_ORDER_DROPPED",
+                  f"{target} quadrupole holds only the gradient; multipole orders {orders} of "
+                  f"{el.name!r} are dropped", element=el.name, kind=el.kind, orders=orders)
+
+
+#: targets whose thin cavity has no transverse RF kick but which carry a first-order matrix
+#: element, so TraceWin's thin-gap defocusing travels as an explicit thin lens
+RF_FOCUSING_AS_MATRIX = frozenset({"madx", "elegant", "bmad", "xtrack", "pals", "impactx", "flame"})
+#: targets that have neither (the kick is lost and recorded)
+RF_FOCUSING_LOST = frozenset({"mad8", "impactz"})
+_RF_FOCUS_SUFFIX = "_rfdefocus"
+
+
+def with_rf_focusing(lattice: Lattice, fmt: str) -> tuple[Lattice, list]:
+    """A copy of *lattice* in which every thin RF gap is followed by a ``Taylor`` thin lens
+    carrying the TraceWin/HELIX RF defocusing (:func:`lattix.ir.rf.thin_gap_defocusing`), for
+    targets in :data:`RF_FOCUSING_AS_MATRIX`; for :data:`RF_FOCUSING_LOST` targets the kick is
+    only recorded.  A lattice that already carries the lenses (a re-read deck) is left alone,
+    so write → read → write is a fixed point.  Returns the lattice and the ledger entries."""
+    from lattix.fidelity import FidelityClass, FidelityEntry
+    from lattix.ir.elements import Taylor
+    from lattix.ir.lattice import LineItem
+    from lattix.ir.rf import thin_gap_defocusing
+    from lattix.ir.walk import propagate
+
+    if fmt not in RF_FOCUSING_AS_MATRIX and fmt not in RF_FOCUSING_LOST:
+        return lattice, []
+    entries: list = []
+    k_by_name: dict[str, float] = {}
+    try:
+        placed = propagate(lattice)
+    except Exception:  # noqa: BLE001 - an unpropagatable lattice gets no lenses
+        return lattice, []
+    for i, p in enumerate(placed):
+        e = p.element
+        if e.kind != "RFCavity" or p.length != 0.0 or not e.rf.voltage_V or p.ref_out is None:
+            continue
+        nxt = placed[i + 1].element if i + 1 < len(placed) else None
+        if nxt is not None and nxt.kind == "Taylor" and nxt.meta.get("rf_focusing_of") == e.name:
+            continue                                  # already carried (a re-read deck)
+        bg = p.ref_out.beta * p.ref_out.gamma
+        k = thin_gap_defocusing(e.rf.voltage_V, e.rf.phase_rad, e.rf.frequency_Hz or p.ref_out.rf_frequency_Hz,
+                                p.ref_out.species.mass_eV, bg)
+        if k == 0.0:
+            continue
+        if fmt in RF_FOCUSING_LOST:
+            entries.append(FidelityEntry(element=e.name, kind=e.kind, cls=FidelityClass.LOSSY,
+                                         code="THIN_CAVITY_NO_RF_FOCUSING",
+                                         message=f"the target's thin cavity has no transverse RF kick and no "
+                                                 f"matrix element to carry it (k = {k:.6g} 1/m dropped)",
+                                         details={"k_per_m": k}))
+            continue
+        k_by_name.setdefault(e.name, k)
+    if not k_by_name:
+        return lattice, entries
+    new = lattice.model_copy(deep=True)
+    for name, k in k_by_name.items():
+        m = [[1.0 if i == j else 0.0 for j in range(6)] for i in range(6)]
+        m[1][0] = k
+        m[3][2] = k
+        lens = Taylor(name=f"{name}{_RF_FOCUS_SUFFIX}", matrix=m, basis="common",
+                      meta={"rf_focusing_of": name})
+        new.elements[lens.name] = lens
+        entries.append(FidelityEntry(element=name, kind="RFCavity", cls=FidelityClass.EQUIVALENT,
+                                     code="THIN_GAP_RF_FOCUSING_AS_MATRIX",
+                                     message=f"TraceWin thin-gap RF defocusing k = {k:.6g} 1/m written as the "
+                                             f"thin lens '{lens.name}' after the cavity",
+                                     details={"k_per_m": k}))
+    for line in new.lines.values():
+        items = []
+        for it in line.items:
+            items.append(it)
+            if it.ref in k_by_name and not it.reverse:
+                items.append(LineItem(ref=f"{it.ref}{_RF_FOCUS_SUFFIX}"))
+            elif it.ref in k_by_name:
+                items.insert(len(items) - 1, LineItem(ref=f"{it.ref}{_RF_FOCUS_SUFFIX}"))
+        line.items = items
+    return new, entries
 
 
 def check_rules_coverage(writer: Writer) -> set[str]:

@@ -9,6 +9,7 @@ the real engines.
 | [tutorial.md](tutorial.md) | Install, convert a deck, read the fidelity summary, use strict mode, call the Python API |
 | [conventions.md](conventions.md) | Units, rigidity, energy walk, RF phase per format, bends, kickers, coordinate bases, field maps, names |
 | [fidelity.md](fidelity.md) | The ledger: EXACT / EQUIVALENT / LOSSY / DROPPED, strict mode, allow-lists, and the catalogue of every code |
+| [crossval.md](crossval.md) | The cross-format battery: every format pair on every deck, IR round trip modulo the ledger, fixed point, engines on both ends |
 | [oracles.md](oracles.md) | The engines lattix runs, how each adapter works, and every measured convention with its number |
 | [corpus.md](corpus.md) | The private and public deck corpus, the manifest, the golden dozen |
 | formats/ | One page per format: [TraceWin](formats/tracewin.md), [MAD-X](formats/madx.md), [MAD8](formats/mad8.md), [Elegant](formats/elegant.md), [Bmad](formats/bmad.md), [PALS](formats/pals.md), [ImpactX](formats/impactx.md), [IMPACT-Z](formats/impactz.md), [FLAME](formats/flame.md), [xtrack](formats/xtrack.md), [lattix JSON](formats/lattix.md), [HELIX adapter](formats/helix.md) |

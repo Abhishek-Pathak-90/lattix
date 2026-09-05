@@ -64,7 +64,13 @@ def _lat(*elements, ref=PROTON):
 
 def _lines(lat, out_dir=None, **options) -> list[str]:
     text, _ = render(lat, out_dir, **options)
-    return text.splitlines()
+    # the reference-particle tag is a header comment, not a card
+    return [ln for ln in text.splitlines() if not ln.startswith("; lattix: reference")]
+
+
+def _cards(text: str) -> list[str]:
+    """Deck lines without the reference-particle header tag."""
+    return [ln for ln in text.splitlines() if not ln.startswith("; lattix: reference")]
 
 
 def _normalise(text: str) -> str:
@@ -117,7 +123,7 @@ def test_quad_sextupole_and_elision():
         name="s", length=0.1, aperture=ApertureP.circle(0.02), multipole=MagneticMultipoleP(Bn={2: 3.0})
     )
     lines, rep = render(_lat(q, q2, s))
-    assert lines.splitlines()[:-1] == [
+    assert _cards(lines)[:-1] == [
         "q: QUAD 50 5 20 30 1 2 3 4 7",
         "q2: QUAD 50 -5 0",
         "s: QUAD 100 0 20 0 3",
@@ -233,7 +239,7 @@ def test_thick_cavity_becomes_drift_gap_drift():
         rf=RFP(gradient_V_per_m=2e6, phase_rad=0.0, frequency_Hz=162.5e6),
     )
     text, rep = render(_lat(c))
-    assert text.splitlines()[1:-1] == ["DRIFT 150 20", "SET_SYNC_PHASE", "c: GAP 600000 0 20", "DRIFT 150 20"]
+    assert _cards(text)[1:-1] == ["DRIFT 150 20", "SET_SYNC_PHASE", "c: GAP 600000 0 20", "DRIFT 150 20"]
     assert rep.codes() == {"THICK_CAVITY_AS_GAP": 1}
 
 
@@ -286,7 +292,7 @@ def test_markers_instruments_and_foreign_family():
     mon = Instrument(name="mon", family="MONITOR")
     prof = Instrument(name="prof", family="PROFILE")
     text, rep = render(_lat(m, bpm, dp, mon, prof))
-    assert text.splitlines()[:-1] == [
+    assert _cards(text)[:-1] == [
         "m: MARKER",
         "BPM :",
         "D01BPM: DIAG_POSITION 12 1e50 0.5",
@@ -314,7 +320,7 @@ def test_foil_reference_change_freq_and_directives():
         Directive(name="e", card="ERROR_QUAD_NCPL_STAT", args=["1", "2"], role="error"),
     ]
     text, rep = render(_lat(*els))
-    assert text.splitlines() == [
+    assert _cards(text) == [
         "; HELIX_FOIL F1 C 100 landau",
         "SET_BEAM_ENERGY 1 2.5",
         "SET_BEAM_E0_P0 1 -0.1 0 1 0",
@@ -450,7 +456,7 @@ def test_field_map_quoting_and_superposition(tmp_path):
     assert isinstance(lat.flatten()[1].element, Superposition)
     out = tmp_path / "sub" / "o.dat"
     write(lat, out)
-    lines = out.read_text().splitlines()
+    lines = _cards(out.read_text())
     assert lines == [
         "FREQ 352.2",
         'FIELD_MAP_PATH "../my maps"',
@@ -487,7 +493,7 @@ def test_write_creates_parent_and_latin1(tmp_path):
     lat = _lat(Directive(name="t", card="TITLE", args=["café"], role="title"), Drift(name="d", length=0.1))
     out = tmp_path / "deep" / "dir" / "o.dat"
     rep = write(lat, out)
-    assert out.read_bytes().startswith(b"; TITLE caf\xe9\n") and rep.target_file == str(out)
+    assert b"\n; TITLE caf\xe9\nd: DRIFT" in out.read_bytes() and rep.target_file == str(out)
     assert rep.target_format == "tracewin"
 
 
@@ -607,7 +613,7 @@ def test_byte_compare_with_helix_writer_on_mebt(tmp_path):
         lat, rep = read(deck, species="h-")
         write(lat, tmp_path / "lattix.dat")
     a = (tmp_path / "helix.dat").read_text(encoding="latin-1").splitlines()
-    b = (tmp_path / "lattix.dat").read_text(encoding="latin-1").splitlines()
+    b = _cards((tmp_path / "lattix.dat").read_text(encoding="latin-1"))
     # multiset difference (positional diffs misalign identical neighbouring lines)
     only_helix = list((Counter(a) - Counter(b)).elements())
     only_lattix = list((Counter(b) - Counter(a)).elements())

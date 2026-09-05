@@ -88,9 +88,14 @@ def _pod(amr, values):
     return v
 
 
+#: inputs-file keys whose Python-API spelling differs (ParmParse reads ``k_normal``, the
+#: pybind constructor takes ``K_normal``)
+_API_KEYS = {"k_normal": "K_normal", "k_skew": "K_skew"}
+
+
 def _build_element(elements, amr, spec: dict):
     cls = getattr(elements, spec["cls"])
-    params = dict(spec.get("params", {}))
+    params = {_API_KEYS.get(k, k): v for k, v in dict(spec.get("params", {})).items()}
     if "R" in params and isinstance(params["R"], list):
         m = amr.SmallMatrix_6x6_F_SI1_double()
         base = getattr(m, "starting_index", 1)

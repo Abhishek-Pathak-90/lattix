@@ -42,6 +42,7 @@
    "angle": -0.1,
    "edge_entry_angle": -0.05,
    "edge_exit_angle": -0.05,
+   "k0": -0.10007029744408563,
    "knl_rel": [
     0.0
    ],
@@ -71,13 +72,13 @@
   "COR": {
    "__class__": "Multipole",
    "knl": [
-    -0.001
+    -0.0010007029744408561
    ],
    "knl_rel": [
     0.0
    ],
    "ksl": [
-    -0.002
+    -0.0020014059488817123
    ],
    "ksl_rel": [
     0.0
@@ -116,7 +117,7 @@
   },
   "QD": {
    "__class__": "Quadrupole",
-   "k1": -0.5995785116310367,
+   "k1": -0.6,
    "knl_rel": [
     0.0
    ],
@@ -252,7 +253,7 @@
      "role": "main"
     }
    },
-   "energy_mode": "local",
+   "energy_mode": "delta",
    "kinetic_energy_eV": 800000000.0,
    "lattice": "demo",
    "mass_eV": 938272088.16,

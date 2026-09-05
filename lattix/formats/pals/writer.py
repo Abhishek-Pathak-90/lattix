@@ -66,7 +66,7 @@ import yaml
 
 from lattix import __version__
 from lattix.fidelity import FidelityReport
-from lattix.formats.pals.reader import pals_species_name
+from lattix.formats.pals.reader import ir_species, pals_species_name
 from lattix.ir.elements import (
     ApertureP,
     Bend,
@@ -343,6 +343,8 @@ class Writer:
         for key in ("reminders", "extension_labels", "phase_space_coordinates"):
             if self.lat.meta.get(f"pals_{key}") is not None:
                 doc[key] = self.lat.meta[f"pals_{key}"]
+        if getattr(self, "_custom_species", False) and "lattix" not in (doc.get("extension_labels") or []):
+            doc["extension_labels"] = [*(doc.get("extension_labels") or []), "lattix"]
         doc["facility"] = facility
         return {"PALS": doc}
 
@@ -425,6 +427,16 @@ class Writer:
         if ref.time_s:
             node["ReferenceP"]["time_ref"] = _f(ref.time_s)
         node.update(self.lat.meta.get("pals_beginning_groups") or {})
+        if ir_species(node["ReferenceP"]["species_ref"]) is None:
+            # not a species PALS names: keep mass and charge in a namespaced extension block so
+            # the reference particle (and every normalized strength) survives a round trip
+            sp = ref.species
+            node["lattix"] = {"species": {"name": sp.name, "mass_eV": _f(sp.mass_eV), "charge": sp.charge}}
+            self._custom_species = True
+            self.rep.equivalent("PALS_CUSTOM_SPECIES_EXTENSION",
+                                f"species {sp.name!r} is not a PALS species name; mass and charge are "
+                                "written in the 'lattix' extension block of the BeginningEle",
+                                element=None, kind=None)
         return node
 
     # -- variables ----------------------------------------------------------
@@ -603,9 +615,11 @@ class Writer:
         else:
             bend["e1"], bend["e2"] = _f(b.e1), _f(b.e2)
         if b.edge_int1 or b.edge_int2:
-            bend["edge1_int"] = _f(b.edge_int1 * b.hgap)
+            if b.edge_int1 * b.hgap:
+                bend["edge1_int"] = _f(b.edge_int1 * b.hgap)
             fintx = b.edge_int1 if b.edge_int2 is None else b.edge_int2
-            bend["edge2_int"] = _f(fintx * b.hgap)
+            if fintx * b.hgap:
+                bend["edge2_int"] = _f(fintx * b.hgap)
             if b.hgap == 0.0 and (b.edge_int1 or b.edge_int2):
                 self.rep.lossy("PALS_EDGE_INT_NEEDS_HGAP",
                                "PALS stores only the product fint·hgap and this bend has hgap = 0, "

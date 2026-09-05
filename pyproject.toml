@@ -43,6 +43,7 @@ markers = [
   "oracle_tracewin: needs a licensed TraceWin binary (TRACEWIN_EXE); local only",
   "corpus: needs LATTIX_CORPUS_DIR with the private corpus manifest",
   "slow: long-running",
+  "crossval: cross-format battery (tests/crossval)",
 ]
 
 [tool.ruff]

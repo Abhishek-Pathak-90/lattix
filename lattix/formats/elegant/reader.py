@@ -77,6 +77,7 @@ from lattix.ir.expr import Expression, ExpressionError, evaluate, evaluate_rpn
 from lattix.ir.lattice import Lattice, Line, LineItem, Variable
 from lattix.ir.reference import ReferenceParticle, Species
 from lattix.ir.reference import species as get_species
+from lattix.ir.reference_tag import parse_reference_tag
 from lattix.ir.rf import phase_from_elegant_deg
 from lattix.ir.walk import propagate
 
@@ -350,7 +351,7 @@ class Reader:
 
     # ------------------------------------------------------------------
     def read(self, path: Path, *, line: str | None = None, strict: bool = False,
-             species: str | Species = DEFAULT_SPECIES, kinetic_energy_eV: float | None = None,
+             species: str | Species | None = None, kinetic_energy_eV: float | None = None,
              frequency_Hz: float | None = None) -> tuple[Lattice, FidelityReport]:
         path = Path(path)
         text = path.read_text(encoding="utf-8", errors="replace")
@@ -433,11 +434,22 @@ class Reader:
                            element=None, kind=None, count=overrides)
 
         # -- reference particle --------------------------------------------
-        sp = get_species(species)
+        tag = parse_reference_tag(text)
+        tagged = species_tagged = False
+        if species is None and tag is not None:
+            species, tagged, species_tagged = tag.species, True, True
+        if kinetic_energy_eV is None and tag is not None:
+            kinetic_energy_eV, tagged = tag.kinetic_energy_eV, True
+        if frequency_Hz is None and tag is not None and tag.rf_frequency_Hz:
+            frequency_Hz = tag.rf_frequency_Hz
+        sp = get_species(species if species is not None else DEFAULT_SPECIES)
         self.charge = sp.charge
         ke = DEFAULT_KINETIC_ENERGY_eV if kinetic_energy_eV is None else float(kinetic_energy_eV)
         ref = ReferenceParticle(species=sp, kinetic_energy_eV=ke, rf_frequency_Hz=frequency_Hz)
-        if any(d.type in ("RFCA", "RFCW") or d.type in UNSUPPORTED_TYPES for d in defs.values()):
+        if tagged:
+            rep.equivalent("REFERENCE_FROM_TAG", f"reference particle ({sp.name}, {_num(ke)} eV kinetic) taken "
+                           "from the deck's '! lattix: reference' tag", element=None, kind=None)
+        if not species_tagged and any(d.type in ("RFCA", "RFCW") or d.type in UNSUPPORTED_TYPES for d in defs.values()):
             rep.equivalent("SPECIES_ASSUMED",
                            f"an .lte carries no beam: RF phases were read as {sp.name!r} "
                            f"(crest {'+90' if sp.charge < 0 else '-90'} deg); pass species= to "
@@ -670,7 +682,7 @@ class Reader:
         original = tags.get(defn.name.upper(), {})
         el.provenance = Provenance(format="elegant", file=file, line=defn.line,
                                    original_name=original.get("name", defn.name),
-                                   original_type=original.get("type", defn.type))
+                                   original_type=(original.get("type") if original else defn.type))
         el.native["elegant"] = {"type": defn.type, "attrs": dict(defn.attrs),
                                 "consumed": sorted(a.consumed & set(defn.attrs))}
         unknown = sorted(set(defn.attrs) - a.consumed)
@@ -872,10 +884,11 @@ class Reader:
 
     def _el_collimator(self, defn, a, rep, pending) -> Element:
         shape = "ELLIPTICAL" if defn.type == "ECOL" else "RECTANGULAR"
-        el = Collimator(name=defn.name, length=a.num("L"),
-                        aperture=ApertureP(shape=shape,
-                                           x_limits=(-a.num("X_MAX"), a.num("X_MAX")),
-                                           y_limits=(-a.num("Y_MAX"), a.num("Y_MAX"))))
+        # elegant: X_MAX = 0 / Y_MAX = 0 (the defaults) mean "no limit in that plane"
+        xm, ym = a.num("X_MAX"), a.num("Y_MAX")
+        ap = ApertureP(shape=shape, x_limits=(-xm, xm) if xm else None,
+                       y_limits=(-ym, ym) if ym else None) if (xm or ym) else None
+        el = Collimator(name=defn.name, length=a.num("L"), aperture=ap)
         el.shift = self._shift(a)
         rep.exact(defn.name, "Collimator")
         return el

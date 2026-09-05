@@ -40,10 +40,11 @@ rigidity per deck.
 |---|---|---|
 | Drift, Quadrupole, Sextupole, Octupole, Multipole, Solenoid, Kicker, Collimator, Marker, Instrument | the MAD8 element of the same name | EXACT |
 | Bend | `SBEND L ANGLE E1 E2 FINT HGAP K1 TILT` | EXACT; a different exit integral is LOSSY `FINTX_DROPPED` |
-| RFCavity, FieldMap | `RFCAVITY VOLT LAG FREQ` (map → thick cavity) | EQUIVALENT `CONST_P0` + `CONST_P0_START_RIGIDITY`, `FM_TO_CAVITY` |
+| RFCavity, FieldMap | `RFCAVITY VOLT LAG FREQ` (map → thick cavity) | EQUIVALENT `CONST_P0` + `CONST_P0_DELTA_RIGIDITY` (or `…_LOCAL_RIGIDITY` / `…_START_RIGIDITY`), `FM_TO_CAVITY` |
 | NCells, RFQCell | drift | LOSSY `NCELLS_TO_DRIFT`, `RFQ_TO_DRIFT` |
 | Taylor | marker or drift of the same length | LOSSY `TAYLOR_DROPPED` |
-| Foil, Patch, ReferenceChange | marker | LOSSY `FOIL_TO_MARKER`, `PATCH_DROPPED`, `REFCHANGE_DROPPED` |
+| Foil, Patch | marker | LOSSY `FOIL_TO_MARKER`, `PATCH_DROPPED` |
+| ReferenceChange | marker + lattix tag carrying the jump (restored on read) | EQUIVALENT `REFCHANGE_AS_TAG` |
 | Freq | comment | EXACT |
 | Directive | comment | DROPPED `FOREIGN_DIRECTIVE` |
 | Superposition | consecutive elements | LOSSY `SUPERPOSITION_FLATTENED` |

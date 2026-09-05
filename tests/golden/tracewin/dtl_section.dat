@@ -1,3 +1,4 @@
+; lattix: reference species="proton" mass_eV=938272088.16 charge=1 kinetic_energy_eV=2100000 rf_frequency_Hz=352210000
 ; TITLE DTL Section (3-7 MeV)
 FREQ 352.21
 SOLENOID 100 0.3 25

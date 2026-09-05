@@ -93,6 +93,16 @@ class Lattice(BaseModel):
         return nm
 
     # -- expansion ----------------------------------------------------------
+    def restore_rf_focusing_marks(self) -> None:
+        """Re-attach ``meta['rf_focusing_of']`` to thin lenses written by
+        :func:`lattix.formats.base.with_rf_focusing` (name ``<cavity>_rfdefocus``) after a read."""
+        lower = {n.lower(): n for n in self.elements}          # Elegant/Bmad decks change the case
+        for name, e in self.elements.items():
+            if e.kind == "Taylor" and name.lower().endswith("_rfdefocus") and "rf_focusing_of" not in e.meta:
+                cav = lower.get(name[: -len("_rfdefocus")].lower())
+                if cav is not None and self.elements[cav].kind == "RFCavity":
+                    e.meta["rf_focusing_of"] = cav
+
     def flatten(self, use: str | None = None) -> list[Placed]:
         """Expand the root line (repeat/reverse honoured) into placed elements with s."""
         root = use or self.use

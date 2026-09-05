@@ -1,5 +1,5 @@
 ! lattix <version> from madx
-! reference: proton, 799999911.84 eV kinetic
+! lattix: reference species="proton" mass_eV=938272088.16 charge=1 kinetic_energy_eV=799999911.84
 
 ! --- variables
 % 0.3 sto LQUAD

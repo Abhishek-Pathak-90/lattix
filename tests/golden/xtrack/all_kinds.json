@@ -83,7 +83,7 @@
    "__class__": "Cavity",
    "frequency": 325000000.0,
    "length": 0.6,
-   "phase": 1.0471975511965979,
+   "phase": 1.082179240017049,
    "voltage": 1732050.8075688772
   },
   "fq": {
@@ -93,13 +93,13 @@
    "__class__": "Multipole",
    "isthick": true,
    "knl": [
-    -0.001
+    -0.001016862115325533
    ],
    "knl_rel": [
     0.0
    ],
    "ksl": [
-    -0.002
+    -0.002033724230651066
    ],
    "ksl_rel": [
     0.0
@@ -215,7 +215,7 @@
    "m1": [
     [
      1.0,
-     0.5,
+     0.4917087503451071,
      0.0,
      0.0,
      0.0,
@@ -275,6 +275,7 @@
      "role": "main"
     },
     "bp": {
+     "family": "BPM",
      "group": 14,
      "kind": "Instrument",
      "name": "bp",
@@ -305,16 +306,26 @@
      "role": "main"
     },
     "dv": {
+     "args": [
+      "1",
+      "2"
+     ],
+     "card": "ADJUST",
+     "format": "tracewin",
      "group": 20,
+     "ir_role": "matching",
      "kind": "Directive",
      "name": "dv",
      "role": "main"
     },
     "fl": {
+     "dE_ref_eV": null,
      "group": 15,
      "kind": "Foil",
+     "material": "C",
      "name": "fl",
-     "role": "main"
+     "role": "main",
+     "thickness_kg_per_m2": 0.237
     },
     "fm": {
      "group": 8,
@@ -323,6 +334,7 @@
      "role": "main"
     },
     "fq": {
+     "frequency_Hz": 650000000.0,
      "group": 19,
      "kind": "Freq",
      "name": "fq",
@@ -419,7 +431,7 @@
      "role": "main"
     }
    },
-   "energy_mode": "local",
+   "energy_mode": "delta",
    "kinetic_energy_eV": 100000000.0,
    "lattice": "allkinds",
    "mass_eV": 938272088.16,

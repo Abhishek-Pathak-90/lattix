@@ -44,7 +44,13 @@ xtrack keeps ``p0c`` constant through RF (energy goes into ``delta``), exactly l
 MAD-X, so accelerating lattices get an ``EQUIVALENT:CONST_P0`` entry and the same
 ``energy_mode`` switch the MAD-X writer has:
 
-``energy_mode="local"`` (default)
+``energy_mode="delta"`` (default)
+    normalized strengths use the rigidity xtrack's own reference particle has there —
+    the start rigidity across the RF gains the line contains (xtrack puts them into
+    ``delta``), the local rigidity across reference changes it cannot apply; kicks,
+    ``FirstOrderTaylorMap``s and a bend's ``k0`` are rescaled by the same ratio
+    (:mod:`lattix.ir.energy_mode`; ``EQUIVALENT:CONST_P0_DELTA_RIGIDITY``).
+``energy_mode="local"``
     normalized strengths use Bρ at *that element's* entrance
     (``EQUIVALENT:CONST_P0_LOCAL_RIGIDITY``).
 ``energy_mode="constant"``
@@ -69,6 +75,7 @@ from typing import Any
 
 from lattix._version import __version__
 from lattix.fidelity import FidelityReport
+from lattix.formats.base import note_quad_higher_orders
 from lattix.ir.elements import (
     ALL_KINDS,
     RFP,
@@ -102,7 +109,19 @@ from lattix.ir.elements import (
     Superposition,
     Taylor,
 )
-from lattix.ir.lattice import Lattice, Placed
+from lattix.ir.energy_mode import (
+    check_mode,
+    mode_ratio,
+    phase_slip_turns,
+    probe_momentum_ratio,
+    record_phase_slip,
+    record_rigidity_mode,
+    rigidity_for,
+    scale_taylor,
+    slip_is_zero,
+    undo_phase_slip,
+)
+from lattix.ir.lattice import Lattice, Line, LineItem, Placed
 from lattix.ir.reference import SPECIES, ReferenceParticle, Species
 from lattix.ir.units import C_LIGHT
 from lattix.ir.walk import energy_gain_eV, propagate
@@ -325,6 +344,17 @@ class _Builder:
         if ir is not None:
             row["name"] = ir.name
             row["kind"] = ir.kind
+            if ir.kind == "Instrument":
+                row["family"] = ir.family
+                if ir.params:
+                    row["params"] = dict(ir.params)
+            elif ir.kind == "Directive":
+                row.update({"format": ir.format, "card": ir.card, "args": list(ir.args), "ir_role": ir.role})
+            elif ir.kind == "Freq":
+                row["frequency_Hz"] = ir.frequency_Hz
+            elif ir.kind == "Foil":
+                row.update({"material": ir.material, "thickness_kg_per_m2": ir.thickness_kg_per_m2,
+                            "dE_ref_eV": ir.dE_ref_eV})
             if ir.provenance is not None:
                 if ir.provenance.original_name:
                     row["original_name"] = ir.provenance.original_name
@@ -337,16 +367,17 @@ class _Builder:
         return nm
 
 
-def to_line(lattice: Lattice, *, energy_mode: str = "local", report: FidelityReport | None = None,
+def to_line(lattice: Lattice, *, energy_mode: str = "delta", report: FidelityReport | None = None,
             name: str | None = None, strict: bool = False, install_apertures: bool = True):
     """Build an :class:`xtrack.Line` from an IR lattice, in flat order.
 
     Parameters
     ----------
     energy_mode:
-        ``"local"`` (default) normalizes every strength with Bρ at that element's
-        entrance; ``"constant"`` uses the lattice start.  Either way the choice is
-        recorded in the fidelity ledger (xtrack keeps p0c fixed through RF).
+        ``"delta"`` (default) normalizes every strength with the rigidity xtrack's own
+        reference particle has there (see the module docstring); ``"local"`` uses Bρ at
+        that element's entrance, ``"constant"`` the lattice start.  Either way the choice
+        is recorded in the fidelity ledger (xtrack keeps p0c fixed through RF).
     report:
         optional :class:`~lattix.fidelity.FidelityReport` to fill; a fresh one is used
         when omitted (retrieve it through :class:`lattix.formats.xtrack.Writer`).
@@ -357,20 +388,28 @@ def to_line(lattice: Lattice, *, energy_mode: str = "local", report: FidelityRep
     allow_jit()
     import xtrack as xt
 
-    if energy_mode not in ("local", "constant"):
-        raise ValueError(f"energy_mode must be 'local' or 'constant', got {energy_mode!r}")
+    check_mode(energy_mode)
     rep = report if report is not None else FidelityReport()
     rep.target_format = "xtrack"
 
     placed = propagate(lattice)
     start_brho = lattice.reference.brho_signed
+    probes = probe_momentum_ratio(placed, lattice.reference)
     b = _Builder(rep)
 
-    for group, p in enumerate(placed):
+    for group, (p, probe) in enumerate(zip(placed, probes, strict=True)):
         el = p.element
         ref: ReferenceParticle = p.ref_in or lattice.reference
-        brho = ref.brho_signed if energy_mode == "local" else start_brho
-        _emit(b, el, brho, ref, lattice, group, rep, install_apertures)
+        brho = rigidity_for(energy_mode, ref.brho_signed, start_brho, probe)
+        ratio = mode_ratio(energy_mode, ref.brho_signed, start_brho, probe)
+        slip = 0.0
+        if energy_mode == "delta" and el.kind in ("RFCavity", "FieldMap") and p.ref_in is not None:
+            rf = getattr(el, "rf", None)
+            f = (rf.frequency_Hz if rf is not None and rf.frequency_Hz else None) or ref.rf_frequency_Hz
+            slip = phase_slip_turns(p.ref_in, p.s_in, el.length, f, lattice.reference)
+            if slip_is_zero(slip):
+                slip = 0.0                             # roundoff on a cavity at the start velocity
+        _emit(b, el, brho, ref, lattice, group, rep, install_apertures, ratio=ratio, slip=slip)
 
     line = xt.Line(elements=b.elements, element_names=list(b.order))
     sp = lattice.reference.species
@@ -400,10 +439,6 @@ def to_line(lattice: Lattice, *, energy_mode: str = "local", report: FidelityRep
 
 
 def _record_energy_mode(placed: list[Placed], energy_mode: str, rep: FidelityReport) -> None:
-    local = energy_mode == "local"
-    code = "CONST_P0_LOCAL_RIGIDITY" if local else "CONST_P0_START_RIGIDITY"
-    msg = ("normalized strengths use the local rigidity at each element's entrance"
-           if local else "normalized strengths use the rigidity at the start of the lattice")
     for p in placed:
         ref = p.ref_in
         if ref is None:
@@ -411,8 +446,8 @@ def _record_energy_mode(placed: list[Placed], energy_mode: str, rep: FidelityRep
         dE = energy_gain_eV(p.element, ref)
         if abs(dE) <= _ACCEL_TOL_eV:
             continue
-        rep.equivalent(code, msg, element=p.element.name, kind=p.element.kind,
-                       dE_eV=dE, brho=ref.brho_signed)
+        record_rigidity_mode(rep, energy_mode, element=p.element.name, kind=p.element.kind,
+                             dE_eV=dE, brho=ref.brho_signed)
 
 
 def _record(rep: FidelityReport, el: Element, rule: Rule, **details) -> None:
@@ -424,7 +459,8 @@ def _record(rep: FidelityReport, el: Element, rule: Rule, **details) -> None:
 
 
 def _emit(b: _Builder, el: Element, brho: float, ref: ReferenceParticle, lattice: Lattice,
-          group: int, rep: FidelityReport, install_apertures: bool) -> None:
+          group: int, rep: FidelityReport, install_apertures: bool, *, ratio: float = 1.0,
+          slip: float = 0.0) -> None:
     rule = RULES.get(el.kind)
     if rule is None:                                # pragma: no cover - RULES is total
         raise KeyError(f"xtrack writer has no rule for kind {el.kind!r}")
@@ -440,7 +476,7 @@ def _emit(b: _Builder, el: Element, brho: float, ref: ReferenceParticle, lattice
                             f"superposition child {child_name!r} is not defined",
                             element=el.name, kind="Superposition")
                 continue
-            _emit(b, child, brho, ref, lattice, group, rep, install_apertures)
+            _emit(b, child, brho, ref, lattice, group, rep, install_apertures, ratio=ratio, slip=slip)
         return
 
     if isinstance(el, Patch):
@@ -448,7 +484,7 @@ def _emit(b: _Builder, el: Element, brho: float, ref: ReferenceParticle, lattice
         _record(rep, el, rule)
         return
 
-    made = _build(el, brho, ref, rep)
+    made = _build(el, brho, ref, rep, ratio=ratio, slip=slip)
     if made is None:                                # pragma: no cover - _build is total
         raise KeyError(f"xtrack writer produced nothing for {el.kind!r}")
     main, extra = made
@@ -559,12 +595,14 @@ def _make_rotation(cls, angle_rad: float):
     return _new(cls, angle=math.degrees(angle_rad))
 
 
-def _cavity(el, brho, ref, rep, *, voltage: float, length: float):
+def _cavity(el, brho, ref, rep, *, voltage: float, length: float, slip: float = 0.0):
     allow_jit()
     import xtrack as xt
 
     rf = el.rf
-    kw: dict[str, Any] = {"voltage": voltage, "phase": xtrack_phase_rad(rf.phase_rad)}
+    kw: dict[str, Any] = {"voltage": voltage, "phase": xtrack_phase_rad(rf.phase_rad) - 2.0 * math.pi * slip}
+    if not slip_is_zero(slip):
+        record_phase_slip(rep, element=el.name, kind=el.kind, slip_turns=slip, engine="xtrack", attribute="phase")
     if rf.frequency_Hz:
         kw["frequency"] = rf.frequency_Hz
     elif ref.rf_frequency_Hz:
@@ -588,8 +626,12 @@ def _cavity(el, brho, ref, rep, *, voltage: float, length: float):
     return xt.Cavity(**kw)
 
 
-def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport):
-    """``(main xtrack element, [extra elements])`` for one IR element."""
+def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport, *, ratio: float = 1.0,
+           slip: float = 0.0):
+    """``(main xtrack element, [extra elements])`` for one IR element.  ``ratio`` =
+    Bρ_local/Bρ_used (energy mode) rescales the quantities that are not normalized strengths
+    (kicks, maps, a bend's k0); ``slip`` [turns] is the constant-velocity clock's phase slip a
+    cavity is written against."""
     allow_jit()
     import xtrack as xt
 
@@ -606,6 +648,7 @@ def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport
         return xt.Drift(length=el.length), []
 
     if isinstance(el, Quadrupole):
+        note_quad_higher_orders(el, rep, "xtrack")
         m = el.multipole
         kw = {"length": el.length, "k1": m.Bn.get(1, 0.0) / brho}
         if m.Bs.get(1):
@@ -678,6 +721,10 @@ def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport
         k0 = (el.native.get("xtrack") or {}).get("k0")
         if k0 is not None:
             kw["k0"] = float(k0)
+        elif abs(ratio - 1.0) > 1e-15 and el.length:
+            # xtrack's reference particle carries the RF gain as delta: a field k0 = h·r bends
+            # it by exactly the design angle (h alone would under-bend it by 1/r)
+            kw["k0"] = ratio * bd.angle / el.length
         return xt.Bend(**kw), []
 
     if isinstance(el, Solenoid):
@@ -694,7 +741,7 @@ def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport
         volt = rf.voltage_V
         if not volt and rf.gradient_V_per_m is not None:
             volt = rf.gradient_V_per_m * (rf.L_active_m if rf.L_active_m is not None else el.length)
-        return _cavity(el, brho, ref, rep, voltage=volt, length=el.length), []
+        return _cavity(el, brho, ref, rep, voltage=volt, length=el.length, slip=slip), []
 
     if isinstance(el, FieldMap):
         rf = el.rf
@@ -704,7 +751,7 @@ def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport
         if not volt and rf.dE_ref_eV:
             volt = rf.dE_ref_eV / max(math.cos(rf.phase_rad), 1e-12)
         if volt:
-            return _cavity(el, brho, ref, rep, voltage=volt, length=el.length), []
+            return _cavity(el, brho, ref, rep, voltage=volt, length=el.length, slip=slip), []
         rep.lossy("FM_TO_DRIFT",
                   "field map has no effective voltage; replaced by a drift of the same length",
                   element=el.name, kind="FieldMap")
@@ -720,7 +767,7 @@ def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport
                       element=el.name, kind="Kicker")
         # measured: knl[0] = -hkick, ksl[0] = +vkick reproduces px += hkick, py += vkick;
         # a thick kicker needs isthick=True to advance s (what from_madx_sequence does)
-        kw = {"knl": [-el.hkick], "ksl": [el.vkick], "length": el.length}
+        kw = {"knl": [-el.hkick * ratio], "ksl": [el.vkick * ratio], "length": el.length}
         if el.length:
             kw["isthick"] = True
         return xt.Multipole(**kw), []
@@ -745,9 +792,10 @@ def _build(el: Element, brho: float, ref: ReferenceParticle, rep: FidelityReport
     if isinstance(el, Taylor):
         import numpy as np
 
+        matrix, offset = scale_taylor(el.matrix, el.offset, ratio)
         return xt.FirstOrderTaylorMap(length=el.length,
-                                      m0=np.asarray(el.offset, dtype=float),
-                                      m1=np.asarray(el.matrix, dtype=float)), []
+                                      m0=np.asarray(offset, dtype=float),
+                                      m1=np.asarray(matrix, dtype=float)), []
 
     if isinstance(el, ReferenceChange):
         dE = energy_gain_eV(el, ref)
@@ -827,6 +875,56 @@ def _unslice(el) -> tuple[Any, float, str]:
     return parent, weight, "thin"
 
 
+def _restore_kind(el: Element, row: dict) -> Element:
+    """A marker/drift that the writer's metadata says was an Instrument or a Directive."""
+    kind = row.get("kind")
+    common = {"name": el.name, "length": el.length, "aperture": el.aperture, "shift": el.shift,
+              "provenance": el.provenance, "meta": el.meta}
+    if kind == "Instrument" and el.kind in ("Marker", "Drift"):
+        return Instrument(family=row.get("family", "MONITOR"), params=dict(row.get("params") or {}), **common)
+    if kind == "Directive" and el.kind == "Marker":
+        return Directive(format=row.get("format", "tracewin"), card=row.get("card", ""),
+                         args=list(row.get("args") or []), role=row.get("ir_role", "other"), **common)
+    if kind == "Freq" and el.kind == "Marker" and row.get("frequency_Hz") is not None:
+        return Freq(frequency_Hz=float(row["frequency_Hz"]), **common)
+    if kind == "Collimator" and el.kind in ("Marker", "Drift") and el.aperture is None:
+        return Collimator(**common)                   # a collimator without limits was written as a marker/drift
+    if kind == "Foil" and el.kind == "Marker":
+        return Foil(material=row.get("material", "C"), thickness_kg_per_m2=float(row.get("thickness_kg_per_m2") or 0.0),
+                    dE_ref_eV=row.get("dE_ref_eV"), **common)
+    return el
+
+
+def _lattice_with_shared_definitions(name: str, out: list[Element], ref: ReferenceParticle,
+                                     rows: list[dict], line_name: str | None = None) -> Lattice:
+    """Like ``Lattice.from_sequence`` but two placements that the metadata traces to the same IR
+    definition (same IR name, identical parameters) share one definition again, so
+    write → read → write is a fixed point for lines that reuse an element."""
+    lat = Lattice(name=name, reference=ref)
+    line = Line(name=line_name or name)
+    seen: dict[str, tuple[str, dict]] = {}
+    by_ir = {}
+    for el in out:
+        ir_name = None
+        for r in rows:
+            if r.get("name") and r.get("role", "main") == "main" and r.get("kind") == el.kind and \
+                    id(r) not in by_ir and (r.get("name") == el.name or el.name.startswith(r["name"])):
+                ir_name = r["name"]
+                by_ir[id(r)] = True
+                break
+        key = ir_name or el.name
+        dump = el.model_dump(exclude={"name", "provenance"})
+        if key in seen and seen[key][1] == dump:
+            line.items.append(LineItem(ref=seen[key][0]))
+            continue
+        registered = lat.add_element(el)
+        seen.setdefault(key, (registered, dump))
+        line.items.append(LineItem(ref=registered))
+    lat.lines[line.name] = line
+    lat.use = line.name
+    return lat
+
+
 def from_line(line, reference: ReferenceParticle | None = None, *,
               report: FidelityReport | None = None, name: str | None = None,
               energy_mode: str | None = None) -> Lattice:
@@ -877,29 +975,62 @@ def from_line(line, reference: ReferenceParticle | None = None, *,
         el, norm = _convert_element(raw, xname, row, rep, warn)
         if el is None:
             continue
+        el = _restore_kind(el, row)
         # aperture data and a thick collimator's drift live on sibling elements
         _attach_group_extras(el, names, rows, elements, group)
         out.append(el)
         scaled.append((el, norm))
 
     lat_name = name or meta.get("lattice") or getattr(line, "name", None) or "xtrack_line"
-    lat = Lattice.from_sequence(lat_name, out, ref)
+    lat = _lattice_with_shared_definitions(lat_name, out, ref, [rows.get(n) or {} for n in names],
+                                           line_name=meta.get("use") or lat_name)
     lat.meta["source_format"] = "xtrack"
     if meta:
         lat.meta["xtrack"] = {k: v for k, v in meta.items() if k != "elements"}
     lat.warnings.extend(warn)
 
-    # -- second pass: local rigidity ---------------------------------------
+    # -- second pass: momentum steps become energy jumps, then the writer's energy mode ---
     mode = energy_mode or meta.get("energy_mode") or "local"
+    check_mode(mode)
+    if mode == "delta":
+        undo_phase_slip(lat, rep, resolve_p0c_steps=True)      # resolves the steps on the way
+    else:
+        for p in propagate(lat):
+            e = p.element
+            if e.kind == "ReferenceChange" and e.dE_ref_eV is None and e.energy_eV is None and p.ref_in is not None:
+                dp = (e.native.get("xtrack") or {}).get("Delta_p0c")
+                if dp:
+                    pc = p.ref_in.pc_eV + float(dp)
+                    mass = p.ref_in.species.mass_eV
+                    e.dE_ref_eV = math.sqrt(pc * pc + mass * mass) - mass - p.ref_in.kinetic_energy_eV
     placed = propagate(lat)
     start_brho = ref.brho_signed
+    probes = probe_momentum_ratio(placed, ref)
     by_id = {id(e): n for e, n in scaled}
-    for p in placed:
-        norm = by_id.get(id(p.element))
-        if not norm:
+    done: set[int] = set()
+    for p, probe in zip(placed, probes, strict=True):
+        e = p.element
+        if id(e) in done:
             continue
-        brho = (p.ref_in or ref).brho_signed if mode == "local" else start_brho
-        _apply_rigidity(p.element, norm, brho)
+        done.add(id(e))
+        brho_local = (p.ref_in or ref).brho_signed
+        norm = by_id.get(id(e))
+        if norm:
+            _apply_rigidity(e, norm, rigidity_for(mode, brho_local, start_brho, probe))
+        r = mode_ratio(mode, brho_local, start_brho, probe)
+        if abs(r - 1.0) <= 1e-15:
+            continue
+        if e.kind == "Taylor":
+            e.matrix, e.offset = scale_taylor(e.matrix, e.offset, r, inverse=True)
+        elif e.kind == "Kicker":
+            e.hkick, e.vkick = e.hkick / r, e.vkick / r
+        elif e.kind == "Bend" and e.length:
+            nat = e.native.get("xtrack") or {}
+            k0 = nat.get("k0")
+            g = e.bend.g_ref(e.length)
+            if k0 is not None and abs(k0 - g * r) <= 1e-9 * max(1.0, abs(g * r)):
+                del nat["k0"]              # the energy mode's doing, not a field/geometry split
+                rep.entries = [x for x in rep.entries if not (x.element == e.name and x.code == "BEND_K0_NE_H")]
     for w in warn:
         if w not in lat.warnings:                          # pragma: no cover - defensive
             lat.warnings.append(w)
@@ -1006,7 +1137,7 @@ def _convert_element(raw, xname: str, row: dict, rep: FidelityReport,
     cname = type(raw).__name__
     ir_name = row.get("name") or xname
     ir_kind = row.get("kind")
-    prov = Provenance(format="xtrack", original_name=row.get("original_name") or xname,
+    prov = Provenance(format="xtrack", original_name=row.get("original_name") if row else xname,
                       original_type=row.get("original_type") or cname)
     norm: dict = {}
     n_entries = len(rep.entries)

@@ -153,7 +153,7 @@ def test_local_energy_mode_gives_the_right_optics_per_section(tmp_path):
     rep_con = Writer().write(lat, con, energy_mode="constant")
     assert "CONST_P0_LOCAL_RIGIDITY" in rep_loc.codes()
     assert "CONST_P0_START_RIGIDITY" in rep_con.codes()
-    assert "REFCHANGE_DROPPED" in rep_loc.codes()
+    assert "REFCHANGE_AS_TAG" in rep_loc.codes()
 
     check = tmp_path / "check.madx"
     check.write_text(f"""

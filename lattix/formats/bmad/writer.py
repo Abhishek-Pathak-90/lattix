@@ -30,8 +30,10 @@ Conventions measured with Tao 20260828.0 (2026-09-03), never recalled:
   HELIX/TraceWin on a 2.1 MeV proton linac: every entry of the 6×6 agrees to
   ~1e-12 *except* ``R21 = R43``, the thin gap's radial (pondermotive) RF
   defocusing, which a zero-length ``lcavity`` simply does not have (HELIX gives
-  0.7617 / 0.6511 / 0.5649 for three 300 kV gaps at −30°).  Recorded as
-  ``LOSSY:THIN_CAVITY_NO_RF_FOCUSING`` whenever ``V·sin(phase) ≠ 0``.
+  0.7617 / 0.6511 / 0.5649 for three 300 kV gaps at −30°).  The kick is written
+  as a ``taylor`` lens right after the cavity (:func:`lattix.formats.base.with_rf_focusing`)
+  and the cavity records ``EQUIVALENT:THIN_CAVITY_NO_RF_FOCUSING`` whenever
+  ``V·sin(phase) ≠ 0``.
 * **``phi0`` is in turns with ``ΔE = V·cos(2π·phi0)``** and is species
   independent — :func:`lattix.ir.rf.bmad_phi0` (measured: 1 MV at
   ``phi0 = −1/12`` gives ΔE = 866 025.40 eV).
@@ -70,6 +72,7 @@ from pathlib import Path
 
 from lattix import __version__
 from lattix.fidelity import FidelityReport
+from lattix.formats.base import note_quad_higher_orders
 from lattix.formats.bmad.naming import NameMap, is_valid, name_tag
 from lattix.ir.elements import (
     ALL_KINDS,
@@ -80,7 +83,7 @@ from lattix.ir.elements import (
     Freq,
     Superposition,
 )
-from lattix.ir.expr import ExpressionError, evaluate
+from lattix.ir.expr import ExpressionError, evaluate, identifiers
 from lattix.ir.fieldmap import replacement_for
 from lattix.ir.lattice import Lattice, Placed
 from lattix.ir.reference import ReferenceParticle
@@ -137,6 +140,18 @@ class _Item:
 def _num(x: float) -> str:
     s = f"{float(x):.15g}"
     return "0" if s in ("-0", "-0.0") else s
+
+
+#: Bmad built-in constants (``bmad/doc/expressions``): a deck variable with one of these names is
+#: shadowed, so such variables are folded into numbers.
+RESERVED_NAMES = frozenset({"pi", "twopi", "fourpi", "e_log", "sqrt_2", "degrees", "degrad", "raddeg",
+                            "m_electron", "m_proton", "m_muon", "m_neutron", "m_deuteron", "m_pion_0",
+                            "m_pion_charged", "c_light", "r_e", "r_p", "e_charge", "h_planck",
+                            "h_bar_planck", "true", "false", "e_mass", "p_mass"})
+
+
+def _reserved_user_names(lattice: Lattice) -> set[str]:
+    return {n.lower() for n in lattice.variables if n.lower() in RESERVED_NAMES}
 
 
 class Writer:
@@ -352,18 +367,24 @@ class Writer:
             return []
         keep = {}
         for name, var in lattice.variables.items():
-            if is_valid(name):
+            if name.lower() in RESERVED_NAMES:
+                rep.equivalent("VARIABLE_DROPPED",
+                               f"variable {name!r} collides with a Bmad built-in constant; its value "
+                               "is folded into the numbers", element=None, kind=None, variable=name)
+            elif is_valid(name):
                 keep[name] = var
             else:
                 rep.equivalent("VARIABLE_DROPPED",
                                f"variable {name!r} is not a writable Bmad identifier; its value "
                                "is folded into the numbers",
                                element=None, kind=None, variable=name)
+        reserved = _reserved_user_names(lattice)
         lines = []
         for name in self._topo(keep):
             var = keep[name]
             expr = var.expression
-            if expr is not None and expr.text.strip() and self._expr_ok(expr.text, keep):
+            if expr is not None and expr.text.strip() and self._expr_ok(expr.text, keep) \
+                    and not (identifiers(expr.text) & reserved):
                 lines.append(f"{name} = {expr.text.strip()}")
             else:
                 lines.append(f"{name} = {_num(var.value)}")
@@ -482,6 +503,8 @@ class Writer:
             expr = el.expressions.get(ir_path)
             if text is None and expr is not None:
                 text = expr.text
+            if text and not isinstance(text, (list, tuple)) and identifiers(text) & _reserved_user_names(lattice):
+                text = None          # a user variable named like a Bmad constant: write the number
             if text and not isinstance(text, (list, tuple)):
                 variables = {k: v.value for k, v in lattice.variables.items()}
                 try:
@@ -503,6 +526,7 @@ class Writer:
         return "drift", [self._attr(el, "l", "length", el.length, lat, ux, rep)]
 
     def _def_quadrupole(self, el, brho, lat, ux, rep):
+        note_quad_higher_orders(el, rep, "Bmad")
         attrs = [self._attr(el, "l", "length", el.length, lat, ux, rep),
                  self._attr(el, "k1", "multipole.Bn[1]",
                             el.multipole.Bn.get(1, 0.0) / brho, lat, ux, rep)]
@@ -638,12 +662,12 @@ class Writer:
                 # measured against the HELIX/TraceWin thin-gap model on a 2.1 MeV proton
                 # linac: every entry of the 6x6 agrees to ~1e-15 EXCEPT R21 = R43, the thin
                 # gap's radial RF defocusing, which a zero-length Bmad lcavity does not have.
-                rep.lossy("THIN_CAVITY_NO_RF_FOCUSING",
-                          "a zero-length Bmad lcavity applies no transverse RF (pondermotive) "
-                          "kick; an off-crest thin gap in TraceWin/HELIX does, so R21 = R43 "
-                          "differ by pi*q*V*sin(phase)/(m c^2 beta^2 gamma^2 lambda)",
-                          element=el.name, kind=el.kind, voltage_V=volt,
-                          phase_rad=rf.phase_rad)
+                rep.equivalent("THIN_CAVITY_NO_RF_FOCUSING",
+                               "a zero-length Bmad lcavity applies no transverse RF (pondermotive) "
+                               "kick of its own; the TraceWin thin-gap defocusing R21 = R43 is carried "
+                               "by the 'taylor' lens written after the cavity",
+                               element=el.name, kind=el.kind, voltage_V=volt,
+                               phase_rad=rf.phase_rad)
         else:
             if rf.cavity_type == "TRAVELING_WAVE":
                 attrs.append("cavity_type = traveling_wave")

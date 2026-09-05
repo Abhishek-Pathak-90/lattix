@@ -52,6 +52,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -263,6 +264,12 @@ class FlameOracle:
         wd.mkdir(parents=True, exist_ok=True)
 
         extra = _beam_globals(beam)
+        if extra:
+            # FLAME rejects a second definition of a global ("Name 'IonEs' already defined"):
+            # a deck that already carries its beam keeps it; only the missing ones are appended
+            defined = set(re.findall(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=", deck.read_text(errors="replace"), re.M))
+            kept = [ln for ln in extra.splitlines() if ln.split("=", 1)[0].strip() not in defined]
+            extra = "\n".join(kept) + "\n" if kept else None
         if inprocess:
             data = _run_inprocess(str(deck), extra)
         else:

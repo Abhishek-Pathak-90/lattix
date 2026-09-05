@@ -159,6 +159,23 @@ def cmd_inspect(a) -> int:
     return 0
 
 
+def cmd_crossval(a) -> int:
+    from lattix import crossval
+
+    fmts = a.formats.split(",") if a.formats else None
+    decks = [d for d in crossval.DECKS if not a.decks or any(x in d[0] for x in a.decks.split(","))]
+    results = crossval.run_matrix(decks, fmts, workdir=Path(a.workdir or tempfile.mkdtemp(prefix="lattix_crossval_")),
+                                  engines=a.engines, only_src=a.src, only_dst=a.dst, derived=a.derived)
+    print(crossval.to_markdown(results))
+    print(crossval.summary(results), file=sys.stderr)
+    if a.json:
+        Path(a.json).write_text(crossval.to_json(results))
+    if a.markdown:
+        Path(a.markdown).write_text(crossval.to_markdown(results) + "\n\n" + crossval.summary(results) + "\n")
+    bad = [r for r in results if r.error or r.ir_ok is False or r.fixed_ok is False or r.engine_ok is False]
+    return 1 if bad else 0
+
+
 def cmd_report(a) -> int:
     from lattix.formats import read, write
 
@@ -229,6 +246,17 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--read-option", action="append")
     s.set_defaults(func=cmd_inspect)
 
+    s = sub.add_parser("crossval", help="cross-format battery: every format pair on every public deck")
+    s.add_argument("--formats", default=None, help="comma list of formats (default: all)")
+    s.add_argument("--decks", default=None, help="comma list of deck-name fragments (default: all)")
+    s.add_argument("--src", default=None)
+    s.add_argument("--dst", default=None)
+    s.add_argument("--engines", action="store_true", help="also run the engine pair comparison")
+    s.add_argument("--derived", action="store_true", help="also use decks written by lattix itself as sources")
+    s.add_argument("--workdir", default=None)
+    s.add_argument("--json", default=None)
+    s.add_argument("--markdown", default=None)
+    s.set_defaults(func=cmd_crossval)
     s = sub.add_parser("report", help="fidelity report of a conversion without keeping the output")
     s.add_argument("src")
     s.add_argument("--from", dest="from_fmt", default=None)

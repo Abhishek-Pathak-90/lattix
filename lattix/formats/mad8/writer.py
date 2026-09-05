@@ -24,11 +24,15 @@ which is also what this package's reader resolves the rigidity from.  Writing ``
 is reserved for the four names MAD8 accepts.
 
 Reference energy: MAD8's ``RFCAVITY`` leaves ``p0`` alone exactly as MAD-X's does, so an
-accelerating line cannot be exact.  ``energy_mode="constant"`` (the default here — MAD8 has
-no MAD-X ``TWISS`` orbit-``pt`` bookkeeping to compose with) normalises every strength with
-the rigidity at the start of the lattice; ``energy_mode="local"`` uses the rigidity at each
-element's entrance so each section's optics is right.  Either way the choice is in the
-ledger (``EQUIVALENT:CONST_P0_START_RIGIDITY`` / ``…_LOCAL_RIGIDITY``), never silent.
+accelerating line cannot be exact.  ``energy_mode="delta"`` (the default, shared with the
+MAD-X writer — :mod:`lattix.ir.energy_mode`) normalises every strength with the rigidity the
+engine's own reference orbit has there: the start rigidity across the RF gains the deck
+contains, the local rigidity across reference changes it cannot apply; kicks are rescaled by
+the same ratio (MAD8 has no ``K0``, so a bend after an RF gain deflects that orbit by
+``angle/r`` — ``EQUIVALENT:CONST_P0_BEND_FIELD``).  ``"constant"`` uses the start rigidity
+everywhere, ``"local"`` the rigidity at each element's entrance.  The mode is tagged
+(``! lattix: energy_mode=…``) so the reader restores the lab fields, and it is always in the
+ledger (``EQUIVALENT:CONST_P0_*_RIGIDITY``), never silent.
 
 Numbers are ``%.15g``; names are sanitized to upper case, capped at 16 characters and made
 unique, with a ``! lattix: name="…" type="…"`` comment line above the definition that
@@ -43,6 +47,7 @@ from pathlib import Path
 
 from lattix import __version__
 from lattix.fidelity import FidelityReport
+from lattix.formats.base import note_quad_higher_orders
 from lattix.ir.elements import (
     ALL_KINDS,
     ApertureP,
@@ -52,7 +57,17 @@ from lattix.ir.elements import (
     Freq,
     Superposition,
 )
-from lattix.ir.expr import ExpressionError, evaluate
+from lattix.ir.energy_mode import (
+    check_mode,
+    mode_ratio,
+    phase_slip_turns,
+    probe_momentum_ratio,
+    record_phase_slip,
+    record_rigidity_mode,
+    rigidity_for,
+    slip_is_zero,
+)
+from lattix.ir.expr import ExpressionError, evaluate, identifiers
 from lattix.ir.fieldmap import replacement_for
 from lattix.ir.lattice import Lattice, Placed
 from lattix.ir.reference import ReferenceParticle
@@ -170,6 +185,10 @@ def name_tag(original: str, original_type: str | None = None) -> str:
     return f"! lattix: {body}"
 
 
+#: MAD8 built-in constants: a deck parameter with one of these names is shadowed.
+RESERVED_NAMES = frozenset({"pi", "twopi", "degrad", "raddeg", "e", "emass", "pmass", "clight", "true", "false"})
+
+
 def _expr_text(text: str) -> str:
     """MAD8 is case insensitive and its decks are upper case; an expression imported from
     a lower-case dialect (MAD-X) is upper-cased so the deck reads consistently."""
@@ -223,6 +242,8 @@ class _Item:
     s_out: float
     brho: float
     dE: float
+    probe: float = 1.0          # p_probe / p_start: the momentum MAD8's own reference orbit has here
+    ref_in: ReferenceParticle | None = None   # design reference at the entrance (time, velocity)
 
 
 @dataclass
@@ -276,8 +297,10 @@ class Writer:
                        "(or a drift of the same length)"),
         "Patch": Rule("MARKER", "LOSSY", "PATCH_DROPPED",
                       "MAD8 has no patch element; written as a marker"),
-        "ReferenceChange": Rule("MARKER", "LOSSY", "REFCHANGE_DROPPED",
-                                "MAD8 cannot change the reference energy; written as a marker"),
+        "ReferenceChange": Rule("MARKER", "EQUIVALENT", "REFCHANGE_AS_TAG",
+                                "MAD8 cannot change the reference energy: written as a marker whose "
+                                "lattix tag carries the jump (the reader restores it; downstream "
+                                "strengths are normalized for it by the energy mode)"),
         "Freq": Rule("(nothing)", "EXACT", "OK",
                      "the RF clock lives on each MAD8 cavity's FREQ attribute"),
         "Directive": Rule("comment", "DROPPED", "FOREIGN_DIRECTIVE",
@@ -291,10 +314,9 @@ class Writer:
 
     # ------------------------------------------------------------------
     def write(self, lattice: Lattice, path: Path, *, strict: bool = False,
-              energy_mode: str = "constant", use_expressions: bool = True,
+              energy_mode: str = "delta", use_expressions: bool = True,
               line_name: str | None = None) -> FidelityReport:
-        if energy_mode not in ("local", "constant"):
-            raise ValueError(f"energy_mode must be 'local' or 'constant', got {energy_mode!r}")
+        check_mode(energy_mode)
 
         rep = FidelityReport(target_format="mad8", target_file=str(path))
         placed = propagate(lattice)
@@ -314,22 +336,40 @@ class Writer:
 
         start_brho = lattice.reference.brho_signed
         defs: dict[int, tuple[str, Element, float]] = {}
+        ratios: dict[int, float] = {}                  # id(element) -> Bρ_local / Bρ_used
+        slips: dict[int, float] = {}                   # id(element) -> phase slip [turns]
         order: list[int] = []
         for it in items:
             key = id(it.element)
+            used = rigidity_for(energy_mode, it.brho, start_brho, it.probe)
+            slip = 0.0
+            if energy_mode == "delta" and it.element.kind == "RFCavity" and it.ref_in is not None:
+                slip = phase_slip_turns(it.ref_in, it.s_in, it.element.length,
+                                        it.element.rf.frequency_Hz or it.ref_in.rf_frequency_Hz,
+                                        lattice.reference)
+                if slip_is_zero(slip):
+                    slip = 0.0                         # roundoff on a cavity at the start velocity
             if key in defs:
+                if not slip_is_zero(slip - slips.get(key, 0.0)):
+                    rep.equivalent("MULTI_PHASE_SLIP_DEFINITION",
+                                   "one cavity definition is used at two arrival times; the first "
+                                   "occurrence's phase slip is written",
+                                   element=it.element.name, kind=it.element.kind,
+                                   slip_first_turns=slips.get(key, 0.0), slip_here_turns=slip)
                 brho0 = defs[key][2]
-                local = it.brho if energy_mode == "local" else start_brho
-                if abs(local - brho0) > 1e-12 * max(1.0, abs(brho0)):
+                if abs(used - brho0) > 1e-12 * max(1.0, abs(brho0)):
                     rep.equivalent("MULTI_RIGIDITY_DEFINITION",
                                    "one definition is used at two reference energies; the first "
                                    "occurrence's rigidity is used for its normalized strengths",
                                    element=it.element.name, kind=it.element.kind,
-                                   brho_first=brho0, brho_here=local)
+                                   brho_first=brho0, brho_here=used)
                 continue
-            defs[key] = (names.assign(it.element.name, it.element), it.element,
-                         it.brho if energy_mode == "local" else start_brho)
+            defs[key] = (names.assign(it.element.name, it.element), it.element, used)
+            ratios[key] = mode_ratio(energy_mode, it.brho, start_brho, it.probe)
+            slips[key] = slip
             order.append(key)
+        self._ratios = ratios
+        self._slips = slips
 
         # pass 1: every definition's MAD8 attributes (one call per element, so the
         # per-kind builders record their ledger entries exactly once)
@@ -341,7 +381,8 @@ class Writer:
             built[key] = (base, attrs)
             ctx.attrs[name] = {a.key: a.value for a in attrs if a.value is not None}
 
-        body: list[str] = [f"! lattix {__version__} from {lattice.meta.get('source_format', 'IR')}"]
+        body: list[str] = [f"! lattix {__version__} from {lattice.meta.get('source_format', 'IR')}",
+                           f"! lattix: energy_mode={energy_mode}"]
         title = (lattice.meta.get("mad8_title") or lattice.meta.get("madx_title")
                  or lattice.meta.get("title"))
         if title:
@@ -375,7 +416,8 @@ class Writer:
     # -- flattening ---------------------------------------------------------
     def _items(self, lattice: Lattice, placed: list[Placed], rep: FidelityReport) -> list[_Item]:
         out: list[_Item] = []
-        for p in placed:
+        probes = probe_momentum_ratio(placed, lattice.reference)
+        for p, probe in zip(placed, probes, strict=True):
             el = p.element
             ref: ReferenceParticle = p.ref_in or lattice.reference
             if isinstance(el, Superposition):
@@ -391,19 +433,19 @@ class Writer:
                         continue
                     s0 = p.s_in + offset
                     if isinstance(child, FieldMap):     # the ladder applies inside a cluster too
-                        out.extend(self._fieldmap_items(child, s0, ref, rep))
+                        out.extend(self._fieldmap_items(child, s0, ref, rep, probe))
                         continue
-                    out.append(_Item(child, s0, s0 + child.length, ref.brho_signed, 0.0))
+                    out.append(_Item(child, s0, s0 + child.length, ref.brho_signed, 0.0, probe))
                 continue
             if isinstance(el, FieldMap):
-                out.extend(self._fieldmap_items(el, p.s_in, ref, rep))
+                out.extend(self._fieldmap_items(el, p.s_in, ref, rep, probe))
                 continue
-            out.append(_Item(el, p.s_in, p.s_out, ref.brho_signed, energy_gain_eV(el, ref)))
+            out.append(_Item(el, p.s_in, p.s_out, ref.brho_signed, energy_gain_eV(el, ref), probe, ref))
         return out
 
     @staticmethod
     def _fieldmap_items(el: FieldMap, s_in: float, ref: ReferenceParticle,
-                        rep: FidelityReport) -> list[_Item]:
+                        rep: FidelityReport, probe: float = 1.0) -> list[_Item]:
         """The field map's degradation ladder (PLAN §4.3): an RF map becomes a full-length
         ``RFCAVITY`` (MAD8 kicks at the centre between two L/2 drifts), a static
         solenoid/quadrupole map a hard edge centred in the map, anything unknown a drift."""
@@ -413,16 +455,16 @@ class Writer:
             rep.add(cls, code, message, element=el.name, kind="FieldMap")
         out, s = [], s_in
         for part in r.parts:
-            out.append(_Item(part, s, s + part.length, ref.brho_signed, energy_gain_eV(part, ref)))
+            dE = energy_gain_eV(part, ref)
+            out.append(_Item(part, s, s + part.length, ref.brho_signed, dE, probe, ref))
+            if dE:                                     # the engine's orbit gains inside the map too
+                probe *= ref.advanced(dE_eV=dE).pc_eV / ref.pc_eV
+            ref = ref.advanced(dE_eV=dE, ds_m=part.length)
             s += part.length
         return out
 
     @staticmethod
     def _record_energy_mode(items: list[_Item], energy_mode: str, rep: FidelityReport) -> None:
-        local = energy_mode == "local"
-        code = "CONST_P0_LOCAL_RIGIDITY" if local else "CONST_P0_START_RIGIDITY"
-        msg = ("normalized strengths use the local rigidity at each element's entrance"
-               if local else "normalized strengths use the rigidity at the start of the lattice")
         for it in items:
             if abs(it.dE) <= _ACCEL_TOL_eV:
                 continue
@@ -430,8 +472,8 @@ class Writer:
                            "MAD8 keeps p0 constant across RF: the reference energy does not "
                            "follow this element's gain",
                            element=it.element.name, kind=it.element.kind, dE_eV=it.dE)
-            rep.equivalent(code, msg, element=it.element.name, kind=it.element.kind,
-                           dE_eV=it.dE, brho=it.brho)
+            record_rigidity_mode(rep, energy_mode, element=it.element.name, kind=it.element.kind,
+                                 dE_eV=it.dE, brho=it.brho)
 
     # -- header ---------------------------------------------------------------
     @staticmethod
@@ -476,6 +518,11 @@ class Writer:
         if use_expressions:
             for name, var in lattice.variables.items():
                 upper = name.upper()
+                if upper.lower() in RESERVED_NAMES:
+                    rep.equivalent("VARIABLE_DROPPED",
+                                   f"variable {name!r} collides with a MAD8 built-in constant; its "
+                                   "value is folded into the numbers", element=None, kind=None, variable=name)
+                    continue
                 if not is_valid(upper) and upper != "BRHO":
                     rep.equivalent("VARIABLE_DROPPED",
                                    f"variable {name!r} is not a writable MAD8 identifier; its "
@@ -556,8 +603,14 @@ class Writer:
         out: list[str] = []
         original = (el.provenance.original_name if el.provenance else None) or el.name
         # MAD8 is case insensitive, so upper-casing is not a rename worth tagging.
-        if name != original.upper():
-            out.append(name_tag(original, el.provenance.original_type if el.provenance else None))
+        if name != original.upper() or el.kind == "ReferenceChange":
+            tag = name_tag(original, el.provenance.original_type if el.provenance else None)
+            if el.kind == "ReferenceChange":
+                # the jump itself travels in the tag (MAD8 ignores it, the reader restores it)
+                tag += ' kind="ReferenceChange"' + "".join(
+                    f' {f}="{getattr(el, f):.17g}"' for f in ("dE_ref_eV", "energy_eV", "dtime_s", "dphase_rad")
+                    if getattr(el, f) is not None)
+            out.append(tag)
         out.extend(wrap(f"{name}: {base}" + (f", {joined}" if joined else "")))
         return out
 
@@ -612,6 +665,8 @@ class Writer:
             expr = el.expressions.get(a.path) if a.path else None
             if text is None and expr is not None:
                 text = expr.text
+            if text and identifiers(text) & {n.lower() for n in ctx.variables if n.lower() in RESERVED_NAMES}:
+                text = None          # a user variable named like a MAD8 constant: write the number
             if text:
                 try:
                     got = evaluate(str(text), ctx.variables, ctx.resolve)
@@ -631,6 +686,13 @@ class Writer:
     def _build(self, el: Element, brho: float, rep: FidelityReport) -> tuple[str, list[_Attr]]:
         if isinstance(el, (Freq, Directive)):
             return "", []
+        self._ratio = getattr(self, "_ratios", {}).get(id(el), 1.0)   # Bρ_local / Bρ_used
+        self._slip = getattr(self, "_slips", {}).get(id(el), 0.0)     # f·Δt [turns] at a cavity
+        if el.kind == "Bend" and el.length and el.bend.angle and abs(self._ratio - 1.0) > 1e-15:
+            rep.equivalent("CONST_P0_BEND_FIELD",
+                           "MAD8 has no K0: the bend's field follows angle/l, so the engine's "
+                           f"delta-carrying reference orbit is deflected by angle/{self._ratio:.6g}",
+                           element=el.name, kind="Bend", ratio=self._ratio)
         return getattr(self, f"_def_{el.kind.lower()}")(el, brho, rep)
 
     @staticmethod
@@ -642,6 +704,7 @@ class Writer:
         return "DRIFT", [_Attr("l", el.length, "length")]
 
     def _def_quadrupole(self, el, brho, rep):
+        note_quad_higher_orders(el, rep, "MAD8")
         attrs = [_Attr("l", el.length, "length"),
                  _Attr("k1", el.multipole.Bn.get(1, 0.0) / brho, "multipole.Bn[1]")]
         if el.multipole.tilt.get(1):
@@ -729,9 +792,12 @@ class Writer:
         volt = rf.voltage_V
         if not volt and rf.gradient_V_per_m is not None:
             volt = rf.gradient_V_per_m * (rf.L_active_m if rf.L_active_m is not None else el.length)
+        slip = getattr(self, "_slip", 0.0)
         attrs = [_Attr("l", el.length, "length"),
                  _Attr("volt", volt * 1e-6, "rf.voltage_V"),
-                 _Attr("lag", madx_lag(rf.phase_rad), "rf.phase_rad")]
+                 _Attr("lag", madx_lag(rf.phase_rad) - slip, "rf.phase_rad" if slip_is_zero(slip) else None)]
+        if not slip_is_zero(slip):
+            record_phase_slip(rep, element=el.name, kind=el.kind, slip_turns=slip, engine="MAD8", attribute="LAG")
         if rf.frequency_Hz:
             attrs.append(_Attr("freq", rf.frequency_Hz * 1e-6, "rf.frequency_Hz"))
         harmon = el.native.get("mad8", {}).get("harmon")
@@ -748,6 +814,7 @@ class Writer:
     _def_rfqcell = _def_ncells
 
     def _def_kicker(self, el, brho, rep):
+        ratio = getattr(self, "_ratio", 1.0)       # px kick for an orbit at p_probe = r·p_start
         if el.electric:
             rep.lossy("EKICK_AS_MAGNETIC",
                       "electric steerer written as a magnetic MAD8 kicker",
@@ -757,20 +824,20 @@ class Writer:
                                  "VKICKER" if (el.vkick and not el.hkick) else "KICKER")
         attrs = [_Attr("l", el.length, "length")]
         if base == "HKICKER":
-            attrs.append(_Attr("kick", el.hkick, "hkick"))
+            attrs.append(_Attr("kick", el.hkick * ratio, "hkick"))
             if el.vkick:
                 rep.lossy("KICK_COMPONENT_DROPPED",
                           "an HKICKER cannot carry a vertical kick", element=el.name,
                           kind="Kicker", vkick=el.vkick)
         elif base == "VKICKER":
-            attrs.append(_Attr("kick", el.vkick, "vkick"))
+            attrs.append(_Attr("kick", el.vkick * ratio, "vkick"))
             if el.hkick:
                 rep.lossy("KICK_COMPONENT_DROPPED",
                           "a VKICKER cannot carry a horizontal kick", element=el.name,
                           kind="Kicker", hkick=el.hkick)
         else:
-            attrs.append(_Attr("hkick", el.hkick, "hkick"))
-            attrs.append(_Attr("vkick", el.vkick, "vkick"))
+            attrs.append(_Attr("hkick", el.hkick * ratio, "hkick"))
+            attrs.append(_Attr("vkick", el.vkick * ratio, "vkick"))
         return base, attrs
 
     def _def_collimator(self, el, brho, rep):

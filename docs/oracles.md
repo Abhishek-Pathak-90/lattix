@@ -189,3 +189,80 @@ solenoid/quad maps degrade to hard-edge elements preserving ∫B and ∫B² (`L_
 `B_eff = ∫B²/∫B`).  With the HWR cavities as real `rfcavity`s, MAD-X's own `twiss` fails on the open
 accelerating line ("error with deltap") — the constant-p0 limit of PLAN §8, now reachable; the
 MAD-X gate therefore checks loading and reporting, the physics gate runs on Bmad/elegant.
+
+## Cross-format battery findings (2026-09-04)
+
+* **Fringe-integral model, MAD-X vs Bmad.** With `fint·hgap ≠ 0` the two engines disagree on a
+  bend's transverse map at O(ψ²) of the fringe correction: the ELENA main bend (60°, e1 = e2 =
+  0.287 rad, fint 0.424, hgap 0.038 m) gives `max|ΔR̂|` = 8.6e-4 between cpymad and Tao, the same
+  bend with `hgap = 0` agrees to 2e-15, and the PSB bends (fint 0.5, hgap 0.035, e = 0.098) add
+  1.5e-6 each.  The parameters translate exactly; the engines model the correction differently,
+  so the battery rates lattices with fringe-integral bends as Equivalent tier between engines.
+* **ImpactX inputs keys are case sensitive**: the inputs file reads `k_normal`/`k_skew`
+  (`InitElement.cpp`) while the Python API takes `K_normal`/`K_skew`; the writer emits the
+  lower-case keys and the oracle maps them when it rebuilds elements through the API.
+* **FLAME rejects a second definition of a global** (`IonEs already defined`): the adapter
+  appends beam globals only when the deck does not define them.
+* Custom ion species (FLAME `ion_A238_Q33`) are not yet expressible in `BeamSpec`, so the engine
+  comparison skips such decks (the IR round trip still runs); Phase 5 backlog.
+* **HELIX bend maps have no path-length coupling**: on the FODO's `b1` HELIX gives
+  `R51 = R52 = 0` and `R56 = 0.29135` where MAD-X gives `−0.10008, −0.04996, 0.28969`; the
+  transverse and dispersion blocks agree to 5e-15.  The battery excludes the `path` and `R56`
+  blocks from HELIX comparisons of lattices with bends.
+* **Thin-gap RF defocusing** (TraceWin/HELIX) is absent from every other code's thin cavity
+  (T4x4 differed by 4.2 on the MEBT line): see conventions §5.1 for the lens lattix now writes;
+  after it Bmad 2.2e-13, ImpactX 2.4e-13, Elegant 1.3e-10, MAD-X 1.6e-2 and xtrack 1.5e-2
+  (constant p0: no damping) against HELIX on `mebt_line.dat`.
+* **Elegant `EMATRIX` defaults every `R_ij` to 0** (a lens written with `R21` alone zeroes x and y):
+  the writer emits the full first-order matrix.  **FLAME `tmatrix` is in (mm, rad)**: a map in
+  metres is rescaled (`R21/1000`, `1000·R12`).
+* **Elegant `KQUAD` rejects `K2`**; a quadrupole with higher-order components loses them in every
+  target but TraceWin and PALS (LOSSY `QUAD_HIGHER_ORDER_DROPPED`).
+* **IMPACT-Z**: type-5 multipoles under the linear-map integrator give NaN maps; the writer now
+  selects the Lorentz integrator (`flagmap = 2`) whenever a sextupole or octupole is written.
+
+### Second round (2026-09-04): constant-p0 engines, TraceWin's bend sign, derived sources
+
+* **Constant-p0 engines carry the RF gain in their orbit.**  Measured with a 1 MV on-crest gap at
+  2 MeV followed by a quad written with `k1 = 5 /m²` at the start rigidity: MAD-X `twiss`
+  (`sectormap`) and a tracked xtrack particle both see `k_eff = 5.00` — the chromatic factor
+  `1/(1+δ)` of the orbit's own `δ` — while a deck written with the *local* rigidity
+  (`k1 = 4.08`) reads back as `3.33`: the old `energy_mode=local` default corrected the energy
+  twice.  The new default `delta` (conventions §3, Bmad's `bmad_to_mad` convention) normalizes
+  with the engine's own orbit momentum and rescales kicks, maps and a bend's `k0` alike.
+* **… and they keep their clock at the start velocity.**  xtrack: `ΔE = V sin(lag − 2π ζ/(β0 λ))`,
+  MAD-X: `ΔE = V sin(2π lag − 2π f t/c)` (both measured; both kick at the centre of a thick
+  cavity), so a particle arriving `Δt` after the `s/(β0 c)` clock sees its phase advanced by
+  `2π f Δt`.  After the first gap of `dtl_section.dat` the reference is already tens of degrees
+  early at the next one.  `delta` mode therefore writes every downstream cavity at
+  `φ − 2π f Δt_design` (`CONST_P0_PHASE_SLIP`) and the reader walks the design back in.
+  Result on the DTL (66 % kinetic-energy gain over 20 elements), HELIX vs xtrack on the
+  transverse block: `T4x4 = 3.5e-10` (it was 11 before either fix, 0.45 with the rigidity fix
+  alone).  MAD-X stays at 3.7 on the same deck: its `twiss` maps are second-order expansions
+  about the orbit and `δ` reaches 0.3 there — an engine limit, not a translation one
+  (`mebt_line.dat`, δ ≈ 0.03, is at 1e-3).
+* **The xtrack oracle now measures maps around the tracked reference orbit** (it seeded every
+  element's finite differences at `δ = 0` before, which is a different particle after a cavity).
+* **A `ReferenceChange` travels through MAD-X/MAD8 as a tag** on its marker
+  (`REFCHANGE_AS_TAG`, restored by the reader): the energy jump the engine cannot apply no
+  longer disappears from the round trip; xtrack's `ReferenceEnergyIncrease` step is resolved
+  into the jump on read.
+* **TraceWin's bend sign, measured with the licensed binary**: `BEND −11.25 ρ>0` gives the
+  positive bend's transverse block (`R12 = +1.607`, `R21 = −0.0237`) with `R16`, `R26` flipped,
+  and an `EDGE` angle acts on its own sign (`EDGE −5.625` on that bend focuses, `+5.625`
+  cancels the body as an rbend should) — so the writer's `β = sign(θ)·e` rule is right and
+  the real BTL/fnalscl decks (`BEND −1.494 69052.8 …`) follow the same convention.
+  **HELIX's `Dipole._body_matrix` evaluates the sector map at the signed angle with ρ > 0**,
+  giving `R12 = −1.607`, `R21 = +0.0237` and `R26` alone flipped for the same card (the y block
+  and the edges are right).  The battery rates HELIX pairs on decks with negative-angle bends
+  report-only (`psb.seq` was 2.6e4 off for this reason alone); the fix belongs in HELIX.
+* **FLAME's `tmatrix` is read into SI now** (the reader used to keep millimetres with a
+  `basis="flame"` flag every other writer ignored: an RF-defocusing lens read from FLAME came
+  out 1000× too weak in Elegant/Bmad/xtrack, 4.2 on the MEBT line).
+* **Derived sources keep the tier of the write that made them**: the MEBT line written to FLAME
+  has no cavity model (`RFCAVITY_NEEDS_CAVTYPE`), to IMPACT-Z a 1 mm short cavity whose own
+  field integration gives a different transverse kick than TraceWin's thin-gap formula
+  (2.7e-2 vs Bmad, 4.3 vs HELIX through a TraceWin `GAP`), so cases starting from those decks
+  are report-only rather than false failures.  ImpactX's `drift + ShortRF + drift` triple is
+  read back as the thick cavity it was (`THICK_CAVITY_RESTORED`), so it no longer gains a
+  thin-gap lens on the second write.

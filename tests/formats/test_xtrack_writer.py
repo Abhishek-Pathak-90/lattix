@@ -373,13 +373,13 @@ _ALL_KINDS_AFTER_ROUND_TRIP = [
     "Kicker",
     "Collimator",
     "Marker",
-    "Drift",             # Instrument  -> EQUIVALENT MONITOR_AS_DRIFT
-    "Marker",            # Foil        -> LOSSY FOIL_TO_MARKER
+    "Instrument",        # Instrument  -> EQUIVALENT MONITOR_AS_DRIFT, restored from the metadata
+    "Foil",              # Foil        -> LOSSY FOIL_TO_MARKER in xtrack, restored from the metadata
     "Taylor",
     "Patch",
     "ReferenceChange",
-    "Marker",            # Freq        -> the clock lives on each cavity
-    "Marker",            # Directive   -> DROPPED FOREIGN_DIRECTIVE
+    "Freq",              # Freq        -> a marker in xtrack, restored from the metadata
+    "Directive",         # Directive   -> DROPPED FOREIGN_DIRECTIVE, restored from the metadata
     "Drift",             # Superposition child
 ]
 

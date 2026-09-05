@@ -1,5 +1,5 @@
 ! lattix <version> from IR
-! reference: proton, 800000000 eV kinetic
+! lattix: reference species="proton" mass_eV=938272088.16 charge=1 kinetic_energy_eV=800000000
 
 ! --- elements
 QF: KQUAD, L=0.3, K1=0.6
@@ -22,7 +22,7 @@ OC: KOCT, L=0.2, K3=2.99789255815518
 MP: MULT, L=0, ORDER=1, KNL=0.00999297519385061
 MP__2: MULT, L=0, ORDER=2, KNL=0.0199859503877012   ! lattix: name="MP"
 BPM1: MONI, L=0
-MAT: EMATRIX, L=0.1, ORDER=1
+MAT: EMATRIX, L=0.1, ORDER=1, R11=1, R22=1, R33=1, R44=1, R55=1, R66=1
 END: MARK
 
 ! --- beam lines

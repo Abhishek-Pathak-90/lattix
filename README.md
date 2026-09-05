@@ -68,6 +68,7 @@ Markers: `oracle_madx`, `oracle_xtrack`, `oracle_bmad`, `oracle_elegant`, `oracl
 * [docs/tutorial.md](docs/tutorial.md) — install, convert, read the fidelity summary, strict mode, Python API
 * [docs/conventions.md](docs/conventions.md) — units, rigidity, energy walk, RF phase per format, bends, bases
 * [docs/fidelity.md](docs/fidelity.md) — the ledger and the catalogue of every fidelity code
+* [docs/crossval.md](docs/crossval.md) — the cross-format battery (every pair, both ways, engines on both ends)
 * [docs/oracles.md](docs/oracles.md) — engines, adapters and every measured convention
 * [docs/formats/](docs/formats/) — one page per format
 * [CITATION.cff](CITATION.cff) — how to cite

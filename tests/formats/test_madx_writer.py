@@ -38,7 +38,6 @@ from lattix.ir.elements import (
     Octupole,
     Patch,
     Quadrupole,
-    ReferenceChange,
     RFCavity,
     RFQCell,
     Sextupole,
@@ -158,7 +157,7 @@ def test_golden_demo_lattice(tmp_path):
     out = tmp_path / "demo.madx"
     rep = Writer().write(demo_lattice(), out)
     assert rep.ok                                   # only EQUIVALENT entries
-    assert set(rep.codes()) == {"CONST_P0", "CONST_P0_LOCAL_RIGIDITY"}
+    assert set(rep.codes()) == {"CONST_P0", "CONST_P0_DELTA_RIGIDITY"}
     assert_golden("demo_fodo.madx", out.read_text())
 
 
@@ -456,7 +455,6 @@ _LOSSY_CASES = [
     ("RFQ_TO_DRIFT", lambda: one_element(RFQCell(name="rq", length=0.4))),
     ("FOIL_TO_MARKER", lambda: one_element(Foil(name="fo"))),
     ("PATCH_DROPPED", lambda: one_element(Patch(name="pa", x_offset=1e-3))),
-    ("REFCHANGE_DROPPED", lambda: one_element(ReferenceChange(name="rc", dE_ref_eV=0.0))),
     ("FOREIGN_DIRECTIVE",
      lambda: one_element(Directive(name="dv", card="SET_ADV", args=["1"], role="matching"))),
     ("EKICK_AS_MAGNETIC",
@@ -578,7 +576,9 @@ def test_written_deck_reproduces_the_ir(tmp_path):
     assert back.elements["b2"].bend.rect is True
     assert back.elements["b2"].length == pytest.approx(lat.elements["B2"].length, rel=1e-14)
     assert back.elements["coll"].aperture.shape == "RECTANGULAR"
-    assert (back.elements["cor"].hkick, back.elements["cor"].vkick) == (1e-3, -2e-3)
+    # the kicker sits after the cavity: written as kick·r and read back as kick/r (roundoff only)
+    assert back.elements["cor"].hkick == pytest.approx(1e-3, rel=1e-12)
+    assert back.elements["cor"].vkick == pytest.approx(-2e-3, rel=1e-12)
 
 
 @needs("madx")

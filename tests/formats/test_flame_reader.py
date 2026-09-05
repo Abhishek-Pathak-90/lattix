@@ -300,7 +300,8 @@ def test_tmatrix_splits_the_7x7_into_map_and_offset():
     el, _ = one(body)
     assert isinstance(el, Taylor)
     assert el.matrix[2][2] == 1.0
-    assert el.offset == [0.0, 0.0, 3.0, 0.0, 0.0, 0.0]     # the 7th column is the kick
+    assert el.offset == [0.0, 0.0, 3.0e-3, 0.0, 0.0, 0.0]  # the 7th column is the kick; FLAME's y is in mm
+    assert el.basis == "common"                              # transverse block in the IR's SI units
     assert el.meta["flame_matrix_row6"][6] == 1.0
 
 
@@ -392,7 +393,8 @@ def test_tmtest_has_the_only_tmatrix():
     lat, _ = Reader().read(DATA / "TMtest.lat")
     tm = [e for e in lat.elements.values() if isinstance(e, Taylor)]
     assert len(tm) == 1
-    assert tm[0].offset[0] == 1.0 and tm[0].offset[2] == 3.0 and tm[0].offset[4] == 5.0
+    # x, y (mm in FLAME) come back in metres; the phase offset stays in FLAME's rad
+    assert tm[0].offset[0] == 1.0e-3 and tm[0].offset[2] == 3.0e-3 and tm[0].offset[4] == 5.0
 
 
 def test_globals_are_kept_in_meta():

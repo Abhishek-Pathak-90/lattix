@@ -171,9 +171,9 @@ def test_golden_demo_lattice(tmp_path):
     out = tmp_path / "demo.lat"
     rep = Writer().write(demo_lattice(), out)
     assert_golden("demo.lat", out.read_text())
-    assert set(rep.codes()) == {"CONST_P0", "CONST_P0_START_RIGIDITY", "FM_TO_DRIFT",
+    assert set(rep.codes()) == {"CONST_P0", "CONST_P0_DELTA_RIGIDITY", "CONST_P0_BEND_FIELD", "FM_TO_DRIFT",
                                 "NCELLS_TO_DRIFT", "RFQ_TO_DRIFT", "FOIL_TO_MARKER",
-                                "TAYLOR_DROPPED", "PATCH_DROPPED", "REFCHANGE_DROPPED"}
+                                "TAYLOR_DROPPED", "PATCH_DROPPED", "REFCHANGE_AS_TAG"}
 
 
 def test_golden_hminus_line_structure(tmp_path):
@@ -333,7 +333,7 @@ def test_upper_casing_alone_is_not_a_rename(tmp_path):
     lat = one_element(Drift(name="qf", length=1.0))
     out = tmp_path / "u.lat"
     Writer().write(lat, out)
-    assert "! lattix:" not in out.read_text()          # MAD8 is case insensitive
+    assert "! lattix: name=" not in out.read_text()    # MAD8 is case insensitive
 
 
 def test_reserved_names_are_renamed(tmp_path):
@@ -454,7 +454,6 @@ DUAL_CASES = {
     "FOIL_TO_MARKER": lambda: one_element(Foil(name="FO")),
     "TAYLOR_DROPPED": lambda: one_element(Taylor(name="TA")),
     "PATCH_DROPPED": lambda: one_element(Patch(name="PA")),
-    "REFCHANGE_DROPPED": lambda: one_element(ReferenceChange(name="RC", dE_ref_eV=0.0)),
     "FOREIGN_DIRECTIVE": lambda: one_element(
         Directive(name="ERR", format="tracewin", card="ERROR_QUAD_NCPL_STAT", role="error")),
     "SUPERPOSITION_FLATTENED": _superposed,

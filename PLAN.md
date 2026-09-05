@@ -281,6 +281,12 @@ pytest tests/oracles -m "not oracle_tracewin"                                   
 - **Private data**: PIP-II decks, `Fields/`, `Tracewin_code/`, `TraceWIn_Tools/` never enter the repo or CI (manifest + `require_data`).
 - HELIX side note: `tests/io/test_madx_conventions.py` leaves a `sectormap` file at HELIX's repo root (cpymad writes to cwd) — gitignore or `m.chdir()` in HELIX.
 
+## Phase 4 hardening — cross-format battery (2026-09-04)
+
+`lattix crossval` / `tests/crossval` run every ordered format pair on every public deck: IR round
+trip modulo the ledger, write→read→write fixed point, and engine-on-both-ends map comparison.
+See [docs/crossval.md](docs/crossval.md) for the checks and the defects it found and fixed.
+
 ## Phase 5
 
 The remaining codes (Cheetah, xsuite completion, Ocelot, LightWin, IMPACT-T, PyORBIT3, DYNAC, Synergia2, OPAL-X, the Bmad bridge) are surveyed and planned in [PLAN_PHASE5.md](PLAN_PHASE5.md) (2026-09-04).

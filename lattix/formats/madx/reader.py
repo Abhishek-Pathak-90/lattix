@@ -69,6 +69,7 @@ from lattix.ir.elements import (
     Solenoid,
     Taylor,
 )
+from lattix.ir.energy_mode import ENERGY_MODES, restore_energy_mode, undo_phase_slip
 from lattix.ir.expr import Expression
 from lattix.ir.lattice import Lattice, Line, LineItem, Variable
 from lattix.ir.reference import SPECIES, ReferenceParticle, Species
@@ -108,6 +109,37 @@ def _arr(v: Any) -> list[float]:
         return [float(x) for x in v]
     except TypeError:
         return []
+
+
+_BEAM_STMT = re.compile(r"^\s*beam\b", re.I | re.M)
+_ENERGY_MODE = re.compile(r"^!\s*lattix:\s*energy_mode=(\w+)", re.M)
+
+
+def _energy_mode_tag(text: str) -> str | None:
+    m = _ENERGY_MODE.search(text)
+    return m.group(1).lower() if m else None
+
+
+def _reference_change_from_tag(name: str, tag: dict[str, str], rep: FidelityReport):
+    """The writer's ``kind="ReferenceChange" dE_ref_eV="…"`` tag on a marker."""
+    from lattix.ir.elements import ReferenceChange
+
+    fields = {f: float(tag[f]) for f in ("dE_ref_eV", "energy_eV", "dtime_s", "dphase_rad") if f in tag}
+    el = ReferenceChange(name=name, **fields)
+    rep.entries = [e for e in rep.entries if e.element != name]
+    rep.equivalent("REFCHANGE_FROM_TAG",
+                   "reference change restored from the marker's lattix tag (MAD-X itself ignores it)",
+                   element=name, kind="ReferenceChange", **fields)
+    return el
+
+
+def _has_beam(seq) -> bool:
+    """cpymad raises when a sequence has no beam attached (USE would abort MAD-X)."""
+    try:
+        seq.beam  # noqa: B018 - attribute access is the probe
+    except Exception:  # noqa: BLE001
+        return False
+    return True
 
 
 def _sandbox(deck: Path) -> tuple[Path, Path]:
@@ -198,6 +230,17 @@ class Reader:
             madx.call(str(entry))
             seq_name = self._pick_sequence(madx, sequence, warnings)
             seq = madx.sequence[seq_name]
+            if not _has_beam(seq) and not _BEAM_STMT.search(text):
+                # MAD-X aborts on USE without a BEAM: define one from the reader options
+                sp = species if isinstance(species, Species) else (species_by_name(species) if species else None)
+                if sp is None or kinetic_energy_eV is None:
+                    raise ValueError(f"MAD-X sequence {seq_name!r} has no BEAM statement: pass "
+                                     "species=<name> and kinetic_energy_eV=<eV> to read(...)")
+                particle = sp.name if sp.name in ("proton", "electron", "positron", "antiproton") else "ion"
+                madx.input(f"beam, sequence={seq_name}, particle={particle}, mass={sp.mass_eV * 1e-9:.15g}, "
+                           f"charge={sp.charge}, energy={(sp.mass_eV + kinetic_energy_eV) * 1e-9:.15g};")
+                rep.equivalent("BEAM_FROM_OPTIONS", f"deck defines no BEAM for {seq_name!r}; the reference particle "
+                               f"({sp.name}, {kinetic_energy_eV * 1e-6:.6g} MeV) comes from the reader options")
             if not seq.is_expanded:
                 madx.use(sequence=seq_name)
                 seq = madx.sequence[seq_name]
@@ -217,9 +260,11 @@ class Reader:
         for row in rows:
             el = self._convert(row, brho, rep, keep_expressions)
             tag = tags.get(row.name.lower(), {})
+            if tag.get("kind") == "ReferenceChange" and el.kind == "Marker":
+                el = _reference_change_from_tag(row.name, tag, rep)
             el.provenance = Provenance(format="madx", file=str(path),
                                        original_name=tag.get("name", row.name),
-                                       original_type=tag.get("type", row.base))
+                                       original_type=(tag.get("type") if tag else row.base))
             self._apply_aperture(el, row, rep)
             self._apply_errors(el, row, rep)
             elements.append(el)
@@ -234,6 +279,12 @@ class Reader:
         lat.use = seq_name
         lat.meta["source_format"] = "madx"
         lat.meta["madx_sequence"] = seq_name
+        mode = _energy_mode_tag(text)
+        if mode in ENERGY_MODES:
+            # written by lattix: undo its normalization with the same energy walk
+            if mode == "delta":
+                undo_phase_slip(lat, rep)
+            restore_energy_mode(lat, rep, mode)
         lat.meta["madx_expanded_rows"] = n_rows
         if title is not None:
             lat.meta["madx_title"] = title

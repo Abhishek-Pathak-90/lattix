@@ -91,7 +91,7 @@ class Reader:
         if note:
             rep.equivalent("MULTI_LINE_ENVIRONMENT", note)
         ref = _reference_override(xline, species, kinetic_energy_eV)
-        lat = from_line(xline, ref, report=rep, name=name or Path(path).stem,
+        lat = from_line(xline, ref, report=rep, name=name,           # metadata keeps the lattice name
                         energy_mode=energy_mode)
         for el in lat.elements.values():
             if el.provenance is not None:
@@ -107,7 +107,7 @@ class Writer:
     RULES: dict[str, Rule] = RULES
 
     def write(self, lattice: Lattice, path: Path, *, strict: bool = False,
-              energy_mode: str = "local", install_apertures: bool = True,
+              energy_mode: str = "delta", install_apertures: bool = True,
               indent: int = 1, name: str | None = None) -> FidelityReport:
         rep = FidelityReport(target_format="xtrack", target_file=str(path))
         line = to_line(lattice, energy_mode=energy_mode, report=rep,

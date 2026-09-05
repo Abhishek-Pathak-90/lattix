@@ -48,6 +48,7 @@ from pathlib import Path
 
 from lattix import __version__
 from lattix.fidelity import FidelityReport
+from lattix.formats.base import note_quad_higher_orders
 from lattix.formats.flame.reader import SAMPLE_FREQ_DEFAULT, AMU_eV
 from lattix.ir.elements import ALL_KINDS, Element, RFCavity
 from lattix.ir.lattice import Lattice, Placed
@@ -580,6 +581,7 @@ class Writer:
         return "marker", [], set()
 
     def _emit_quadrupole(self, el, p, lat, rep, rule):
+        note_quad_higher_orders(el, rep, "FLAME")
         attrs = [("L", fmt(el.length)), ("B2", fmt(el.multipole.Bn.get(1, 0.0)))]
         owned = {"L", "B2"}
         if el.multipole.Bs.get(1):
@@ -681,9 +683,25 @@ class Writer:
 
     def _emit_taylor(self, el, p, lat, rep, rule):
         row6 = el.meta.get("flame_matrix_row6") or [0.0] * 6 + [1.0]
+        matrix = [list(map(float, r[:6])) for r in el.matrix]
+        offset = [float(v) for v in el.offset]
+        if el.basis != "flame":
+            # FLAME's state is (x mm, x' rad, y mm, y' rad, ...): a matrix in metres gets its
+            # transverse rows/columns rescaled (R21 -> R21/1000, R12 -> 1000 R12, ...); this is
+            # the exact inverse of what the reader does, so a FLAME map round-trips verbatim
+            scale = [1e3, 1.0, 1e3, 1.0, 1.0, 1.0]
+            matrix = [[matrix[i][j] * scale[i] / scale[j] for j in range(6)] for i in range(6)]
+            offset = [offset[i] * scale[i] for i in range(6)]
+            coupled = any(matrix[i][j] for i in range(4) for j in (4, 5)) or \
+                any(matrix[i][j] for i in (4, 5) for j in range(4))
+            if coupled and "flame_matrix_row6" not in el.meta:
+                rep.lossy("TAYLOR_BASIS_FLAME",
+                          "the map couples transverse and longitudinal coordinates; FLAME's phase/energy "
+                          "units (rad, MeV/u) were not converted for those terms",
+                          element=el.name, kind=el.kind)
         flat: list[float] = []
         for i in range(6):
-            flat += [float(v) for v in el.matrix[i][:6]] + [float(el.offset[i])]
+            flat += matrix[i] + [offset[i]]
         flat += [float(v) for v in list(row6)[:7]]
         body = ", ".join(fmt(v) for v in flat)
         return "tmatrix", [("matrix", f"[{body}]")], {"matrix"}

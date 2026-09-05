@@ -853,9 +853,14 @@ class Reader:
         return el
 
     def _tmatrix(self, common, params, consumed, rep, name, line) -> Taylor:
+        """FLAME's state is ``(x mm, x' rad, y mm, y' rad, phi rad, dEk MeV/u)``; the IR map is
+        SI, so the transverse rows/columns are rescaled to metres here (``R21 → R21·1e3``,
+        ``R12 → R12/1e3``: the writer does the exact inverse).  The longitudinal pair has no
+        SI equivalent without the reference particle, so terms coupling to it stay in FLAME's
+        units and are flagged (``EQUIVALENT:TAYLOR_BASIS_FLAME``)."""
         consumed.add("matrix")
         raw = params.get("matrix")
-        el = Taylor(**common)
+        el = Taylor(basis="common", **common)
         if not isinstance(raw, list) or len(raw) != 49:
             rep.lossy("FLAME_TMATRIX_SHAPE",
                       f"tmatrix 'matrix' must hold 49 numbers, got "
@@ -863,9 +868,18 @@ class Reader:
                       element=name, kind="Taylor", line=line)
             return el
         m = [[float(raw[7 * i + j]) for j in range(7)] for i in range(7)]
-        el.matrix = [row[:6] for row in m[:6]]
-        el.offset = [m[i][6] for i in range(6)]     # the 7th column is the constant kick
+        scale = [1e-3, 1.0, 1e-3, 1.0, 1.0, 1.0]          # mm -> m on x and y
+        el.matrix = [[m[i][j] * scale[i] / scale[j] for j in range(6)] for i in range(6)]
+        el.offset = [m[i][6] * scale[i] for i in range(6)]     # the 7th column is the constant kick
         el.meta["flame_matrix_row6"] = m[6]
+        coupled = any(m[i][j] for i in range(4) for j in (4, 5)) or \
+            any(m[i][j] for i in (4, 5) for j in range(4)) or any(m[i][6] for i in (4, 5))
+        longitudinal = any(m[i][j] != (1.0 if i == j else 0.0) for i in (4, 5) for j in (4, 5))
+        if coupled or longitudinal:
+            rep.equivalent("TAYLOR_BASIS_FLAME",
+                           "the tmatrix's longitudinal terms (phi rad, dEk MeV/u) were kept in "
+                           "FLAME's units; only the transverse block is in the IR's SI basis",
+                           element=name, kind="Taylor", line=line)
         return el
 
     # -- helpers ----------------------------------------------------------

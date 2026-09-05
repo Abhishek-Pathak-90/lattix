@@ -67,11 +67,28 @@ magnet.  HELIX's importers were inconsistent here (signed for MAD-X, unsigned fo
 IR has one rule and the invariant tests pin it with cpymad and Bmad running a `charge = −1`
 beam.
 
-Constant-p0 codes (MAD-X, xtrack, ImpactX-from-MAD-X) know one rigidity per deck.  Writing an
-accelerating lattice to them either normalizes each element with its **local** entrance
-rigidity (`energy_mode=local`, default: correct optics per section, recorded as
-`EQUIVALENT CONST_P0_LOCAL_RIGIDITY`) or with the start rigidity (`energy_mode=constant`,
-`CONST_P0_START_RIGIDITY`).  Either way the ledger says so.
+Constant-p0 codes (MAD-X, MAD8, xtrack) know one rigidity per deck.  Their reference particle
+keeps `p0` but *does* pick up the RF gains the deck contains as `δ = Δp/p0` (measured: MAD-X
+`twiss` carries the gain in the orbit's `pt`, xtrack in `delta`), while an explicit reference
+change (TraceWin `SET_BEAM_ENERGY`, a `ReferenceChange`) cannot reach it at all.  Writing an
+accelerating lattice to them therefore has three `energy_mode`s (`lattix.ir.energy_mode`),
+all tagged in the deck (`! lattix: energy_mode=…`) so the reader undoes them, all in the ledger:
+
+* `delta` (default): `Bρ_used = Bρ_start · p_local/p_probe` with `p_probe` the momentum after
+  the RF gains only — the start rigidity across pure RF acceleration (Bmad's own MAD-X
+  converter renormalizes `k1·p0c/p0c_start` the same way), the local rigidity across reference
+  changes.  Kicks, `Taylor` maps and a bend's `k0` are rescaled by the same ratio
+  `r = Bρ_local/Bρ_used` (`CONST_P0_DELTA_RIGIDITY`).  Measured: with the local rigidity instead,
+  a `k1 = 4.08` quad after a 1 MV on-crest gap at 2 MeV reads back as `k_eff = 3.33` in both
+  MAD-X and xtrack — the chromatic weakening `k1/(1+δ)` corrected it a second time.
+* `local`: `Bρ_used = Bρ_local` at each element's entrance, the section-wise deck one writes by
+  hand (`CONST_P0_LOCAL_RIGIDITY`); right only when the engine's particle does not gain energy.
+* `constant`: `Bρ_used = Bρ_start` everywhere (`CONST_P0_START_RIGIDITY`).
+
+The reference change itself travels as a lattix tag on the marker that replaces it
+(`REFCHANGE_AS_TAG`, restored on read); MAD-X's `twiss` linearises about the accelerated orbit
+to second order only, so at large `δ` (a DTL: `Δp/p ≈ 0.3`) its maps are several percent off
+whatever the mode — compare such lines against Elegant, Bmad, ImpactX or TraceWin.
 
 ## 4. Energy walk
 
@@ -106,6 +123,29 @@ the reference particle and the charge sign is already folded in.  Invariant I-6 
 sign (a late particle at φs < 0 gains more) is not derivable from these formulas because the
 time coordinate sign differs per engine; every writer is pinned by the cavity fingerprint in
 §8 instead.
+
+### 5.1 Thin-gap RF defocusing
+
+TraceWin's `GAP` (and HELIX's `RFGap`) applies, after the energy kick and the adiabatic damping,
+a round thin lens `Δx' = k·x`, `Δy' = k·y` with
+
+```
+k = −π · V_eff · sin φ / (m c² · (βγ)_out³ · λ)        [1/m]
+```
+
+(`thin_gap_defocusing` in `lattix.ir.rf`), φ the IR synchronous phase, `(βγ)_out` the reference
+particle after the gap and λ the gap's RF wavelength (HELIX `rf_gap.py::kick_matrix`, lockstep with TraceWin to 1e-6).  No other code's thin
+cavity has this term: a zero-length Bmad `lcavity`, an Elegant `RFCA`, MAD-X/xtrack cavities, ImpactX
+`ShortRF`, IMPACT-Z's ideal cavity and FLAME all gave `R21 = R43 = 0` where HELIX gives 1.04 for an
+80 kV gap at −85° on a 2.1 MeV proton (measured 2026-09-04).  Writers for targets with a
+first-order matrix element (MAD-X `matrix`, Elegant `EMATRIX`, Bmad `taylor`, xtrack
+`FirstOrderTaylorMap`, ImpactX `linear_map`, FLAME `tmatrix`, PALS `Taylor`) therefore follow every
+thin cavity with a `Taylor` lens named `<cavity>_rfdefocus` carrying `k` on R21 and R43
+(EQUIVALENT `THIN_GAP_RF_FOCUSING_AS_MATRIX`); with it Bmad, ImpactX and Elegant reproduce HELIX's
+MEBT transverse maps to 1e-10 or better, and constant-p0 MAD-X/xtrack to 2e-2 (they lack the
+damping).  MAD8 and IMPACT-Z have no matrix element: the kick is dropped and recorded as LOSSY
+`THIN_CAVITY_NO_RF_FOCUSING`.  A re-read deck keeps its lenses (they are recognised by name), so
+the round trip is a fixed point.  Thick cavities are left to each engine's own model.
 
 ## 6. Bends and pole faces
 

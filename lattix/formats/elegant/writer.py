@@ -41,6 +41,7 @@ from pathlib import Path
 
 from lattix import __version__
 from lattix.fidelity import FidelityReport
+from lattix.formats.base import note_quad_higher_orders
 from lattix.formats.elegant.naming import NameMap, is_valid, name_tag
 from lattix.formats.elegant.reader import DEFAULT_FINT, evaluate_value
 from lattix.ir.elements import (
@@ -150,6 +151,15 @@ class _Item:
     dE: float
 
 
+def _reference_tag(ref) -> str:
+    """``! lattix: reference …`` — an .lte carries no beam, so the reference particle travels in a
+    comment the reader understands (species by mass and charge, so custom ions survive)."""
+    f = ref.rf_frequency_Hz
+    return (f'! lattix: reference species="{ref.species.name}" mass_eV={ref.species.mass_eV:.12g} '
+            f'charge={ref.species.charge} kinetic_energy_eV={ref.kinetic_energy_eV:.12g}'
+            + (f" rf_frequency_Hz={f:.12g}" if f else ""))
+
+
 class Writer:
     """``Writer().write(lattice, path)`` -> :class:`FidelityReport`."""
 
@@ -247,8 +257,7 @@ class Writer:
                            element=None, kind=None, elements=[e.name for e in unused])
 
         body: list[str] = [f"! lattix {__version__} from {lattice.meta.get('source_format', 'IR')}",
-                           f"! reference: {lattice.reference.species.name}, "
-                           f"{_num(lattice.reference.kinetic_energy_eV)} eV kinetic"]
+                           _reference_tag(lattice.reference)]
         variables = self._variable_lines(lattice, rep)
         if variables:
             body.append("")
@@ -475,8 +484,7 @@ class Writer:
         etype = self._pick(el, "Quadrupole", "KQUAD")
         attrs = [self._attr(el, "L", el.length, rep),
                  self._attr(el, "K1", el.multipole.Bn.get(1, 0.0) / brho, rep)]
-        if el.multipole.Bn.get(2):
-            attrs.append(self._attr(el, "K2", el.multipole.Bn[2] / brho, rep))
+        note_quad_higher_orders(el, rep, "elegant KQUAD")     # elegant's KQUAD has no K2 (it rejects it)
         if el.multipole.tilt.get(1):
             attrs.append(self._attr(el, "TILT", el.multipole.tilt[1], rep))
         attrs += self._shift_attrs(el, etype, rep)
@@ -672,7 +680,7 @@ class Writer:
             return [("MAXAMP", attrs + self._shift_attrs(el, "MAXAMP", rep))]
         etype = "ECOL" if (ap is not None and ap.shape == "ELLIPTICAL") else "RCOL"
         attrs = [self._attr(el, "L", el.length, rep)]
-        if ap is not None:
+        if ap is not None and (ap.half_x or ap.half_y):
             hx = ap.half_x if ap.half_x is not None else ap.half_y
             hy = ap.half_y if ap.half_y is not None else ap.half_x
             attrs.append(self._attr(el, "X_MAX", hx or 0.0, rep))
@@ -715,10 +723,12 @@ class Writer:
 
     def _def_taylor(self, el, brho, rep):
         attrs = [self._attr(el, "L", el.length, rep), "ORDER=1"]
+        # elegant's EMATRIX defaults *every* R_ij to 0 (measured: a lens written with R21 alone
+        # zeroes x and y), so the diagonal is written explicitly
         for i in range(6):
             for j in range(6):
                 v = el.matrix[i][j]
-                if v != (1.0 if i == j else 0.0):
+                if v != 0.0:
                     attrs.append(f"R{i + 1}{j + 1}={_num(v)}")
         attrs += [f"C{i + 1}={_num(v)}" for i, v in enumerate(el.offset) if v]
         attrs += self._shift_attrs(el, "EMATRIX", rep)

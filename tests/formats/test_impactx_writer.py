@@ -321,7 +321,7 @@ def test_multipole_uses_madx_knl_convention():
     assert [e.cls for e in emits] == ["Drift", "Multipole", "Drift"]
     m = emits[1]
     assert m.params["multipole"] == 3          # m = 3 is a sextupole in ImpactX
-    assert m.params["K_normal"] == pytest.approx(1.5 * 0.2)   # k2 * L, no factorial
+    assert m.params["k_normal"] == pytest.approx(1.5 * 0.2)   # k2 * L, no factorial
     assert any(e.code == "THICK_TO_THIN_MULTIPOLE" for e in rep.entries)
 
 

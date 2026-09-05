@@ -57,6 +57,7 @@ from pathlib import Path
 
 from lattix import __version__
 from lattix.fidelity import FidelityReport
+from lattix.formats.base import note_quad_higher_orders
 from lattix.ir.elements import (
     ALL_KINDS,
     Bend,
@@ -602,7 +603,7 @@ def _multipole_emits(el: Element, base: str, brho: float, orders: dict[int, floa
         if not kn and not ks:
             continue
         nm = base if len(set(orders) | set(skew)) == 1 else names.derive(base, f"m{n + 1}")
-        params: dict = {"multipole": n + 1, "K_normal": kn, "K_skew": ks}
+        params: dict = {"multipole": n + 1, "k_normal": kn, "k_skew": ks}
         params.update(_alignment(el, tilt.get(n, 0.0), rep))
         out.append(Emit(nm, "Multipole", params, 0.0, el.name))
     return out
@@ -668,6 +669,7 @@ def _emit_element(p: Placed, el: Element, brho: float, mass_eV: float, lattice: 
         return
 
     if isinstance(el, Quadrupole):
+        note_quad_higher_orders(el, rep, "ImpactX")
         g = el.multipole.Bn.get(1, 0.0)
         if el.length > 0.0:
             params = _thick({"k": g / brho, **_alignment(el, el.skew_rad, rep), **ap_thick},
@@ -700,7 +702,7 @@ def _emit_element(p: Placed, el: Element, brho: float, mass_eV: float, lattice: 
         if el.length > 0.0:
             out.extend(_split_thin(name, el, thin, nslice, names))
             rep.lossy(rule.code, rule.message, element=el.name, kind=el.kind, length=el.length,
-                      integrated_K=[e.params["K_normal"] for e in thin])
+                      integrated_K=[e.params["k_normal"] for e in thin])
         else:
             out.extend(thin)
             rep.exact(el.name, el.kind)
@@ -821,10 +823,14 @@ def _emit_element(p: Placed, el: Element, brho: float, mass_eV: float, lattice: 
         hx = None if ap is None else ap.half_x
         hy = None if ap is None else ap.half_y
         if hx is None or hy is None:
-            out.append(_marker(name, el, flavor))
+            if el.length > 0:
+                out.append(Emit(name, "Drift", _thick({}, el.length, _nslice_of(el, nslice)), el.length, el.name))
+            else:
+                out.append(_marker(name, el, flavor))
             rep.lossy("APERTURE_UNSET",
-                      "collimator without both half-apertures; written as a marker so nothing "
-                      "is absorbed", element=el.name, kind=el.kind)
+                      "collimator without both half-apertures; written as a "
+                      + ("drift of the same length" if el.length > 0 else "marker") + " so nothing is absorbed",
+                      element=el.name, kind=el.kind)
             return
         cx = 0.5 * (ap.x_limits[0] + ap.x_limits[1])
         cy = 0.5 * (ap.y_limits[0] + ap.y_limits[1])
@@ -862,6 +868,9 @@ def _emit_element(p: Placed, el: Element, brho: float, mass_eV: float, lattice: 
             out.append(_marker(name, el, flavor))
             rep.equivalent("INSTRUMENT_AS_MARKER", Writer.RULES["Instrument"].message,
                            element=el.name, kind=el.kind, family=el.family)
+        if el.length > 0:                       # the instrument's body keeps its length
+            out.append(Emit(names.derive(name, "body"), "Drift", _thick({}, el.length, _nslice_of(el, nslice)),
+                            el.length, el.name))
         return
 
     if isinstance(el, Foil):
@@ -960,7 +969,7 @@ def _emit_bend(el: Bend, name: str, brho: float, names: NameMap, rep: FidelityRe
     if el.length <= 0.0 or b.angle == 0.0:
         if b.angle:
             out.append(Emit(name, "Multipole",
-                            {"multipole": 1, "K_normal": b.angle, "K_skew": 0.0, **align, **rot},
+                            {"multipole": 1, "k_normal": b.angle, "k_skew": 0.0, **align, **rot},
                             0.0, el.name))
             rep.lossy("THIN_BEND_KICK",
                       "a zero-length bend became a thin dipole kick (no edge focusing, no "

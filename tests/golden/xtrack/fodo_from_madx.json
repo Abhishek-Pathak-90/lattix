@@ -169,7 +169,7 @@
      "source_format": "madx"
     }
    },
-   "energy_mode": "local",
+   "energy_mode": "delta",
    "kinetic_energy_eV": 799999911.84,
    "lattice": "fodo",
    "mass_eV": 938272088.16,

@@ -1,4 +1,5 @@
 ! lattix <version> from madx
+! lattix: energy_mode=delta
 title, "HELIX MAD-X demo - mixed transport line";
 
 beam, particle=proton, mass=0.93827208816, charge=1, energy=1.738272;

@@ -83,6 +83,7 @@ from lattix.ir.lattice import Lattice, Line, LineItem, Variable
 from lattix.ir.normalize import gradient_from_k1, k1_from_field_index
 from lattix.ir.reference import ReferenceParticle, Species
 from lattix.ir.reference import species as _species
+from lattix.ir.reference_tag import parse_reference_tag
 from lattix.ir.rf import phase_from_tracewin_deg
 from lattix.ir.units import C_LIGHT, DEG, MEV, MHZ, MM
 from lattix.ir.walk import propagate
@@ -261,6 +262,7 @@ class _Parser:
         self.counters: dict[str, int] = {}
         self.pending_name: str | None = None
         self.pending_edge: tuple[dict, list[str], int, str | None] | None = None
+        self.pending_owner = None    # bare BEND that may own a pending EDGE as its exit
         self.last_bend: Bend | None = None
         self.open_cluster: list[tuple[float, FieldMap]] = []
         self.pending_superpose: list[tuple[float, list[str], int]] = []
@@ -869,6 +871,7 @@ class _Parser:
         if self.pending_edge is not None:
             ekw, eparams, eline, elabel = self.pending_edge
             self.pending_edge = None
+            self.pending_owner = None
             self._attach_edge(b, ekw, entry=True)
         self._add(b)
         if kw["field_index"]:
@@ -877,14 +880,27 @@ class _Parser:
 
     def _on_edge(self, params: list[str], label: str | None) -> None:
         kw = self._pos("EDGE", params)
-        if self.last_bend is not None and not self.last_bend.native["tracewin"].get("edge_out"):
-            self._attach_edge(self.last_bend, kw, entry=False)
+        prev = self.last_bend
+        if prev is not None and not prev.native["tracewin"].get("edge_out"):
+            if prev.native["tracewin"].get("edge_in"):
+                # the pair that started before this bend closes here
+                self._attach_edge(prev, kw, entry=False)
+                self.last_bend = None
+                return
+            # a bare BEND followed by an EDGE: TraceWin's pairs put the EDGE *before* the next
+            # BEND, so decide when the next card arrives (exit of the bare bend only if no BEND
+            # follows) — the writer emits pairs, and this keeps read→write→read a fixed point
+            if self.pending_edge is not None:
+                self._flush_pending_edge()
+            self.pending_edge = (kw, list(params), self.line_no, label)
+            self.pending_owner = prev
             self.last_bend = None
             return
         self.last_bend = None
         if self.pending_edge is not None:
             self._flush_pending_edge()
         self.pending_edge = (kw, list(params), self.line_no, label)
+        self.pending_owner = None
 
     def _attach_edge(self, b: Bend, kw: dict, *, entry: bool) -> None:
         nat = b.native["tracewin"]
@@ -910,6 +926,11 @@ class _Parser:
             return
         kw, params, line_no, label = self.pending_edge
         self.pending_edge = None
+        owner = getattr(self, "pending_owner", None)
+        self.pending_owner = None
+        if owner is not None and not owner.native["tracewin"].get("edge_out"):
+            self._attach_edge(owner, kw, entry=False)        # no BEND followed: it was an exit edge
+            return
         d = Directive(
             name=self._auto_name("EDGE"),
             format="tracewin",
@@ -1236,7 +1257,7 @@ class Reader:
         *,
         strict: bool = False,
         species: str | Species | None = None,
-        kinetic_energy_eV: float = 2.1e6,
+        kinetic_energy_eV: float | None = None,
         frequency_Hz: float | None = None,
         base_dir: str | Path | None = None,
         name: str | None = None,
@@ -1254,6 +1275,14 @@ class Reader:
         cards but leaves ``dE_ref_eV`` unknown.  In strict mode the first LOSSY/DROPPED entry
         raises :class:`~lattix.fidelity.TranslationError`.
         """
+        tag = parse_reference_tag(Path(path).read_text(encoding="latin-1", errors="replace"))
+        tagged = False
+        if species is None and tag is not None:
+            species, tagged = tag.species, True
+        if kinetic_energy_eV is None and tag is not None:
+            kinetic_energy_eV, tagged = tag.kinetic_energy_eV, True
+        if frequency_Hz in (None, "") and tag is not None and tag.rf_frequency_Hz:
+            frequency_Hz = tag.rf_frequency_Hz
         p = _Parser(
             Path(path),
             species=species,
@@ -1264,6 +1293,10 @@ class Reader:
             field_maps=field_maps if isinstance(field_maps, bool) else _coerce_option(str(field_maps)),
         )
         lat, rep = p.parse()
+        if tagged:
+            rep.equivalent("REFERENCE_FROM_TAG", f"reference particle ({lat.reference.species.name}, "
+                           f"{lat.reference.kinetic_energy_eV:.6g} eV kinetic) taken from the deck's "
+                           "'; lattix: reference' tag", element=None, kind=None)
         rep.raise_if(strict)
         return lat, rep
 

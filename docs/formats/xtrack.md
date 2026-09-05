@@ -27,7 +27,7 @@ species and energy; a line without one records `RF_FREQUENCY_MISSING` on cavitie
 | Drift, Quadrupole, Sextupole, Octupole, Solenoid | the xtrack class of the same name; `tilt` → `rot_s_rad`, explicit skew `Bs[n]` → `k1s`/`k2s`/`k3s` | EXACT |
 | Multipole | `Multipole(knl, ksl)` | EXACT |
 | Bend | sector `Bend(length, angle, edge_entry_angle, edge_exit_angle)`; a rectangular source already has θ/2 in e1/e2 | EXACT |
-| RFCavity | `Cavity(voltage, frequency, lag = φ° + 90)` | EQUIVALENT `CONST_P0` + `CONST_P0_LOCAL_RIGIDITY` |
+| RFCavity | `Cavity(voltage, frequency, lag = φ° + 90)` | EQUIVALENT `CONST_P0` + `CONST_P0_DELTA_RIGIDITY` (or `…_LOCAL_RIGIDITY` / `…_START_RIGIDITY`) |
 | FieldMap | thick `Cavity` with the map's voltage (a drift when none is known) | EQUIVALENT `FM_AS_CAVITY` |
 | NCells, RFQCell | `Drift` | LOSSY `NCELLS_TO_DRIFT`, `RFQ_TO_DRIFT` |
 | Kicker | `Multipole(knl=[−hkick], ksl=[+vkick])`, `isthick=True` for a body length | EXACT |

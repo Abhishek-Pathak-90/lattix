@@ -169,7 +169,7 @@ def test_metadata_carries_lattix_provenance():
     meta = line.metadata[METADATA_KEY]
     assert meta["source_format"] == "madx"
     assert meta["lattice"] == "demo"
-    assert meta["energy_mode"] == "local"
+    assert meta["energy_mode"] == "delta"
     assert meta["species"] == "proton"
     assert meta["elements"]["d"] == {"role": "main", "name": "d", "kind": "Drift", "group": 0}
 
@@ -572,7 +572,7 @@ def test_energy_mode_local_vs_constant():
 def test_energy_mode_is_recorded():
     from lattix.fidelity import FidelityReport
 
-    for mode, code in (("local", "CONST_P0_LOCAL_RIGIDITY"),
+    for mode, code in (("delta", "CONST_P0_DELTA_RIGIDITY"), ("local", "CONST_P0_LOCAL_RIGIDITY"),
                        ("constant", "CONST_P0_START_RIGIDITY")):
         rep = FidelityReport()
         to_line(_linac(), energy_mode=mode, report=rep)
@@ -777,17 +777,19 @@ def test_every_element_gets_exactly_one_ledger_entry_in_each_direction():
     # the accelerating elements additionally carry the rigidity note (as in MAD-X); the
     # field map carries its FM_AS_CAVITY rule row *and* CONST_P0, since its rule row is
     # about the map, not about p0
-    rigidity = {"CONST_P0_LOCAL_RIGIDITY", "CONST_P0_START_RIGIDITY"}
+    rigidity = {"CONST_P0_DELTA_RIGIDITY", "CONST_P0_LOCAL_RIGIDITY", "CONST_P0_START_RIGIDITY",
+                "CONST_P0_PHASE_SLIP"}
     for name in seen:
         codes = [e.code for e in rep.entries if e.element == name and e.code not in rigidity]
         assert len(codes) == (2 if name == "fm" else 1), f"{name}: {codes}"
     assert sorted(e.code for e in rep.entries if e.element == "fm") == \
-        ["CONST_P0", "CONST_P0_LOCAL_RIGIDITY", "FM_AS_CAVITY"]
+        ["CONST_P0", "CONST_P0_DELTA_RIGIDITY", "CONST_P0_PHASE_SLIP", "FM_AS_CAVITY"]
 
     rep_back = FidelityReport()
     back = from_line(line, report=rep_back)
     back_names = [p.element.name for p in back.flatten()]
-    back_seen = Counter(e.element for e in rep_back.entries)
+    # lattice-level notes (PHASE_SLIP_RESTORED, ENERGY_MODE_RESTORED) carry no element
+    back_seen = Counter(e.element for e in rep_back.entries if e.element is not None)
     assert set(back_names) == set(back_seen)
     for name, n in back_seen.items():
         assert n == 1, f"{name} got {n} entries"

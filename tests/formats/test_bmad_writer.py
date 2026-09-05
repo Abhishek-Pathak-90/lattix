@@ -263,6 +263,8 @@ def test_h_minus_flips_the_sign_of_every_normalized_strength():
 
 
 def test_thin_cavity_is_a_zero_length_traveling_wave_gap():
+    from lattix import write as write_deck
+
     lat = linac_lattice()
     rep = Writer().write(lat, _written(lat))
     text = _written(lat).read_text()
@@ -272,10 +274,19 @@ def test_thin_cavity_is_a_zero_length_traveling_wave_gap():
     codes = rep.codes()
     assert "THIN_CAVITY_TRAVELING_WAVE" in codes
     # measured: a zero-length Bmad lcavity has no radial RF kick, an off-crest
-    # TraceWin/HELIX gap does -> that is a LOSSY difference, not a silent one
+    # TraceWin/HELIX gap does -> the note is EQUIVALENT because the registry-level
+    # lattix.write() pre-pass (base.with_rf_focusing) writes the kick as a 'taylor'
+    # lens right after the cavity
     assert "THIN_CAVITY_NO_RF_FOCUSING" in codes
-    with pytest.raises(TranslationError):
-        Writer().write(lat, _written(lat), strict=True)
+    import tempfile
+
+    out = Path(tempfile.mkdtemp(prefix="lattix_bmad_test_")) / "linac.bmad"
+    rep2 = write_deck(lat, out, "bmad", strict=True)                # strict passes: nothing is lost
+    text2 = out.read_text()
+    assert "THIN_GAP_RF_FOCUSING_AS_MATRIX" in rep2.codes()
+    # HELIX gives 0.7617 / 0.6511 / 0.5649 for the three gaps (module docstring): the lenses carry them
+    assert "cav1_rfdefocus: taylor, l = 0, {2: 0.761657298976769|1}, {4: 0.761657298976769|3}" in text2
+    assert "cav3_rfdefocus: taylor, l = 0, {2: 0.56485399073776|1}" in text2
 
 
 def test_on_crest_thin_cavity_has_no_rf_focusing_entry():

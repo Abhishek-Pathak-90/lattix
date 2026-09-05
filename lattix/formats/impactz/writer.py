@@ -190,7 +190,7 @@ class Writer:
     # ------------------------------------------------------------------
     def write(self, lattice: Lattice, path: Path, *, strict: bool = False,
               n_particles: int = 1000, grid: tuple[int, int, int] = (64, 64, 64),
-              steps_per_m: float = 10.0, map_steps: int = 20, integrator: str = "map",
+              steps_per_m: float = 10.0, map_steps: int = 20, integrator: str = "auto",
               current_A: float = 0.0, distribution: int = 3,
               radius_m: float = 0.014, perdlen_m: float = 0.1, flagbc: int = 1,
               flagdiag: int = 1, twiss: dict | None = None, errors: bool | None = None,
@@ -202,15 +202,20 @@ class Writer:
         ``steps_per_m`` sets each element's ``bnseg`` (space-charge / diagnostic
         steps, at least 1), ``map_steps`` its ``bmpstp`` (map integration steps;
         20 reproduces the analytic thick-quad map to 4e-14).  ``integrator`` is
-        ``"map"`` (``flagmap = 1``) or ``"lorentz"`` (``flagmap = 2``).
+        ``"map"`` (``flagmap = 1``), ``"lorentz"`` (``flagmap = 2``) or ``"auto"`` (the default:
+        Lorentz when a sextupole/octupole is written, map otherwise).
         ``distribution`` is the header ``flagdist`` (3 = waterbag, 2 = Gaussian,
         19 = read ``particle.in``).  ``rf_model`` is ``"ideal"`` (IMPACT-Z's built-in
         ideal cavity, exact for the IR's ``dE = V·cos φ_s``) or ``"rfdata"`` (a
         generated on-axis profile).  Generated ``rfdataN.in`` files are written next
         to *path* unless ``write_rfdata=False``.
         """
+        if integrator == "auto":
+            # the linear-map integrator misreads type-5 multipoles (NaN): switch when one is written
+            has_poles = any(e.kind in ("Sextupole", "Octupole") for e in lattice.elements.values())
+            integrator = "lorentz" if has_poles else "map"
         if integrator not in ("map", "lorentz"):
-            raise ValueError(f"integrator must be 'map' or 'lorentz', got {integrator!r}")
+            raise ValueError(f"integrator must be 'map', 'lorentz' or 'auto', got {integrator!r}")
         if rf_model not in ("ideal", "rfdata"):
             raise ValueError(f"rf_model must be 'ideal' or 'rfdata', got {rf_model!r}")
         if map_steps < 1 or steps_per_m <= 0:

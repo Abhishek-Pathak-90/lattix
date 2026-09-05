@@ -179,3 +179,17 @@ class LazyResolver:
             self._resolving.discard(key)
         self._cache[key] = v
         return v
+
+
+def identifiers(text: str) -> set[str]:
+    """Lower-cased names an infix expression refers to (functions excluded)."""
+    import re
+
+    out: set[str] = set()
+    for m in re.finditer(r"[A-Za-z_][A-Za-z0-9_.]*", str(text)):
+        end = m.end()
+        rest = str(text)[end:].lstrip()
+        if rest.startswith("("):
+            continue                          # a function call
+        out.add(m.group(0).lower())
+    return out

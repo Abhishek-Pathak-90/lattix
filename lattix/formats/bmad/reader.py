@@ -286,6 +286,14 @@ class BmadSyntaxError(ValueError):
 
 
 # ---------------------------------------------------------------------------
+def _is_literal(text: str) -> bool:
+    try:
+        float(text.strip())
+    except ValueError:
+        return False
+    return True
+
+
 class Reader:
     """``Reader().read(path)`` → ``(Lattice, FidelityReport)``."""
 
@@ -560,7 +568,7 @@ class Reader:
         for name in self._var_order:
             txt = self._vars[name]
             value = self._num(txt, resolver)
-            expr = Expression(text=txt, deferred=True, dialect="infix") if self._keep else None
+            expr = Expression(text=txt, deferred=not _is_literal(txt), dialect="infix") if self._keep else None
             out[name] = Variable(value=value, expression=expr)
         return out
 
@@ -652,7 +660,7 @@ class Reader:
             tag = self._tags.get(name, {})
             el.provenance = Provenance(format="bmad", file=file, line=d.line,
                                        original_name=tag.get("name", d.src_name),
-                                       original_type=tag.get("type", d.type))
+                                       original_type=(tag.get("type") if tag else d.type))
             self._apply_common(el, d, resolver)
             lat.elements[name] = el
             if "superimpose" in d.flags or self._truthy(d.attrs.get("superimpose")):

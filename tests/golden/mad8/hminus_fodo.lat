@@ -1,4 +1,5 @@
 ! lattix <version> from IR
+! lattix: energy_mode=delta
 
 BEAM, MASS=0.93929408606, CHARGE=-1, ENERGY=1.73881631804175
 

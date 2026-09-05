@@ -240,8 +240,14 @@ def test_sextupole_and_octupole_use_type_5(tmp_path):
     a, b = cards_of(out)[:2]
     assert (a.itype, a.v(1), a.v(2)) == (5, 2.0, 120.0)
     assert (b.itype, b.v(1), b.v(2)) == (5, 3.0, 90.0)
-    # IMPACT-Z's linear map reads Param(2) — the order id — as the gradient
+    # integrator="auto" (the default) switches to the Lorentz integrator (flagmap = 2)
+    # as soon as a type-5 is written: the linear map returns NaN for it (measured)
+    assert "IMPACTZ_MULTIPOLE_LINEAR_MAP" not in rep.codes()
+    assert parse_deck(out.read_text())[0].flagmap == 2
+    # the linear-map integrator reads Param(2) — the order id — as the gradient
+    out, rep = write(lat, tmp_path, integrator="map")
     assert rep.codes()["IMPACTZ_MULTIPOLE_LINEAR_MAP"] == 2
+    assert parse_deck(out.read_text())[0].flagmap == 1
 
 
 def test_thin_multipole_uses_the_minus_55_kick(tmp_path):

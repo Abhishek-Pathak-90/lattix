@@ -1065,6 +1065,10 @@ class Reader:
         if self.reference is not None or not g:
             return True
         sp = ir_species(g.get("species_ref") or "") if g.get("species_ref") else None
+        ext = (node.get("lattix") or {}).get("species") if isinstance(node.get("lattix"), dict) else None
+        if sp is None and isinstance(ext, dict) and "mass_eV" in ext:
+            sp = Species(name=str(ext.get("name") or g.get("species_ref") or "ion"),
+                         mass_eV=float(ext["mass_eV"]), charge=int(ext.get("charge", 1)))
         if g.get("species_ref") and sp is None:
             self.rep.lossy("PALS_SPECIES_UNKNOWN",
                            f"species_ref {g['species_ref']!r} is not a species lattix knows; "

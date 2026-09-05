@@ -1,4 +1,5 @@
 ! lattix <version> from IR
+! lattix: energy_mode=delta
 
 beam, particle=proton, mass=0.93827208816, charge=1, energy=1.73827208816;
 
@@ -7,10 +8,10 @@ qf: quadrupole, l=0.3, k1=0.6;   ! lattix: name="QF"
 b1: sbend, l=1, angle=0.1, e1=0.05, e2=0.05, fint=0.5, hgap=0.02;   ! lattix: name="B1"
 sol: solenoid, l=0.4, ks=0.3;   ! lattix: name="SOL"
 cav: rfcavity, l=0, volt=1, lag=0.166666666666667, freq=325;   ! lattix: name="CAV"
-cor: kicker, l=0, hkick=0.001, vkick=-0.002;   ! lattix: name="COR"
+cor: kicker, l=0, hkick=0.00100070297444086, vkick=-0.00200140594888171;   ! lattix: name="COR"
 coll: rcollimator, l=0.1, xsize=0.02, ysize=0.03;   ! lattix: name="COLL"
-b2: rbend, l=0.999583385413567, angle=-0.1;   ! lattix: name="B2"
-qd: quadrupole, l=0.3, k1=-0.599578511631037;   ! lattix: name="QD"
+b2: rbend, l=0.999583385413567, angle=-0.1, k0=-0.100070297444086;   ! lattix: name="B2"
+qd: quadrupole, l=0.3, k1=-0.6;   ! lattix: name="QD"
 end: marker;   ! lattix: name="END"
 
 demo: sequence, l=5.8, refer=centre;

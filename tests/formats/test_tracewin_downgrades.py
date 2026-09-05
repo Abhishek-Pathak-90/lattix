@@ -37,6 +37,7 @@ from lattix.ir import (
     Taylor,
     species,
 )
+from lattix.ir.reference_tag import format_reference_tag
 
 PROTON = ReferenceParticle(species=species("proton"), kinetic_energy_eV=2.1e6, rf_frequency_Hz=162.5e6)
 
@@ -299,7 +300,7 @@ def test_writer_sync_phase_promoted(tmp_path):
     lat = _lat(Directive(name="s", card="SET_SYNC_PHASE", role="sync_phase"), raw)
     text, rep = render(lat, tmp_path)
     assert (
-        text == "FREQ 162.5\nSET_SYNC_PHASE\ng: GAP 1000000 -30 0\nEND\n"
+        text == format_reference_tag(lat.reference, ";") + "\nFREQ 162.5\nSET_SYNC_PHASE\ng: GAP 1000000 -30 0\nEND\n"
     )  # FREQ lands before the directive
     assert rep.codes() == {"SYNC_PHASE_PROMOTED": 1} and rep.ok
 

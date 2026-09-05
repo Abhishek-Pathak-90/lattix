@@ -28,14 +28,15 @@ zero length, as a `line` (EQUIVALENT `ZERO_LENGTH_LINE_MODE`).
 | Drift, Quadrupole, Sextupole, Octupole, Solenoid | `drift`, `quadrupole k1 tilt`, `sextupole k2`, `octupole k3`, `solenoid ks` | EXACT; a drift's aperture is LOSSY `APERTURE_DROPPED` |
 | Multipole | `multipole knl={…} ksl={…}` | EXACT |
 | Bend | `sbend l angle e1 e2 fint fintx hgap k1 tilt` (a rectangular source gets `e += angle/2`) | EXACT |
-| RFCavity | `rfcavity volt lag freq` | EQUIVALENT `CONST_P0` + `CONST_P0_LOCAL_RIGIDITY` (or `CONST_P0_START_RIGIDITY`) |
+| RFCavity | `rfcavity volt lag freq` | EQUIVALENT `CONST_P0` + `CONST_P0_DELTA_RIGIDITY` (or `…_LOCAL_RIGIDITY` / `…_START_RIGIDITY`) |
 | FieldMap | thick `rfcavity` with the map's self-consistent voltage and synchronous phase | EQUIVALENT `FM_TO_CAVITY` |
 | NCells, RFQCell | drift of the same length | LOSSY `NCELLS_TO_DRIFT`, `RFQ_TO_DRIFT` |
 | Kicker | `kicker hkick vkick` / `hkicker` / `vkicker` | EXACT |
 | Collimator | `rcollimator` / `ecollimator` with `apertype`, `aperture` | EXACT |
 | Marker, Instrument | `marker`, `instrument` / `monitor` | EXACT |
 | Taylor | `matrix` element | EXACT |
-| Foil, Patch, ReferenceChange | marker | LOSSY `FOIL_TO_MARKER`, `PATCH_DROPPED`, `REFCHANGE_DROPPED` |
+| Foil, Patch | marker | LOSSY `FOIL_TO_MARKER`, `PATCH_DROPPED` |
+| ReferenceChange | marker + lattix tag carrying the jump (restored on read) | EQUIVALENT `REFCHANGE_AS_TAG` |
 | Freq | comment (the frequency is already in each cavity) | EXACT |
 | Directive | comment | DROPPED `FOREIGN_DIRECTIVE` (MAD-X-native directives are re-emitted) |
 | Superposition | consecutive elements | LOSSY `SUPERPOSITION_FLATTENED` |
@@ -50,9 +51,12 @@ overlap are moved out (`MARKER_MOVED_OUT_OF_OVERLAP`).
 
 * m, rad, `volt` in MV, `freq` in MHz, `lag` in turns: `lag = φ/2π + 0.25`, gain
   `V·sin(2π·lag)`, species-independent (measured with cpymad 5.09.03 for charge ±1).
-* Normalized strengths use the signed rigidity `Bρ_signed = sign(q)·pc/(|q|c)` at each
-  element's entrance (`energy_mode=local`, default) or at the lattice start
-  (`energy_mode=constant`).
+* Normalized strengths use the signed rigidity `Bρ_signed = sign(q)·pc/(|q|c)` of MAD-X's
+  own reference orbit at each element (`energy_mode=delta`, default: the start rigidity across
+  the RF gains MAD-X carries as `pt`, the local rigidity across reference changes it cannot
+  apply — kicks, `matrix` maps and a bend's `k0` are rescaled alike), at each element's
+  entrance (`energy_mode=local`) or at the lattice start (`energy_mode=constant`); see
+  `conventions.md` §3.
 * Longitudinal basis `(T, pt)` with T ahead-positive (measured: a drift's R56 is positive);
   p0 is constant through RF, so accelerating lattices are optically correct per section
   only — compare them against Elegant, Bmad or TraceWin rather than MAD-X.

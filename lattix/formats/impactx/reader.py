@@ -203,6 +203,7 @@ class Reader:
                 elements[n] = self._element(n, types[n], values, brho_by_name[n], ref0,
                                             default_nslice, entry[1], entry[2], rep)
             items.append(LineItem(ref=n))
+        self._restore_thick_cavities(elements, items, rep)
         for e in edges:
             rep.equivalent("DIPEDGE_FOLDED",
                            "a dipedge next to its bend became the bend's e1/e2 + fint/hgap",
@@ -369,6 +370,40 @@ class Reader:
                           "reference energy was left unchanged for the rigidity walk", element=n)
         return out
 
+    @staticmethod
+    def _restore_thick_cavities(elements: dict[str, Element], items: list[LineItem],
+                                rep: FidelityReport) -> None:
+        """The writer's ``THICK_CAVITY_AS_SHORTRF`` triple — ``X_in`` drift, ``X_rf`` ShortRF,
+        ``X_out`` drift of equal length — is one thick :class:`RFCavity` ``X`` again, so
+        write → read → write is a fixed point (and the cavity does not gain a thin-gap lens
+        it never had)."""
+        i = 0
+        while i + 2 < len(items):
+            a, b, c = (items[i].ref, items[i + 1].ref, items[i + 2].ref)
+            ea, eb, ec = elements.get(a), elements.get(b), elements.get(c)
+            if (isinstance(eb, RFCavity) and eb.length == 0.0 and b.endswith("_rf")
+                    and isinstance(ea, Drift) and isinstance(ec, Drift)
+                    and a == b[:-3] + "_in" and c == b[:-3] + "_out"
+                    and abs(ea.length - ec.length) <= 1e-12 * max(1.0, ea.length)
+                    and sum(1 for it in items if it.ref in (a, b, c)) == 3):
+                name = b[:-3]
+                cav = RFCavity(name=name, length=ea.length + ec.length, rf=eb.rf,
+                               aperture=eb.aperture, shift=eb.shift, native=eb.native,
+                               provenance=eb.provenance, meta=eb.meta)
+                if cav.provenance is not None:
+                    cav.provenance = cav.provenance.model_copy(update={"original_name": name})
+                for old in (a, b, c):
+                    elements.pop(old, None)
+                elements[name] = cav
+                items[i:i + 3] = [LineItem(ref=name)]
+                for entry in list(rep.entries):
+                    if entry.element in (a, b, c):
+                        rep.entries.remove(entry)
+                rep.equivalent("THICK_CAVITY_RESTORED",
+                               f"drift + ShortRF + drift ({a}, {b}, {c}) read back as one thick "
+                               f"cavity of length {cav.length:.6g} m", element=name, kind="RFCavity")
+            i += 1
+
     # -- one element ------------------------------------------------------
     def _element(self, n: str, t: str, values: dict[str, list[str]], brho: float,
                  ref0: ReferenceParticle, default_nslice: int, entry: dict, exit_: dict,
@@ -475,8 +510,8 @@ class Reader:
 
         if t == "multipole":
             m = int(num("multipole", 1) or 1)
-            mp = MagneticMultipoleP(BnL={m - 1: float(num("k_normal", 0.0) or 0.0) * brho},
-                                    BsL={m - 1: float(num("k_skew", 0.0) or 0.0) * brho})
+            kn, ks = float(num("k_normal", 0.0) or 0.0) * brho, float(num("k_skew", 0.0) or 0.0) * brho
+            mp = MagneticMultipoleP(BnL={m - 1: kn}, BsL=({m - 1: ks} if ks else {}))
             if rot:
                 mp.tilt[m - 1] = rot
             return Multipole(length=0.0, multipole=mp, **common)

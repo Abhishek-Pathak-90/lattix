@@ -37,6 +37,7 @@ from lattix.formats.tracewin.syntax import DEFAULT_FREQ_MHZ, HARDWARE_MARKER_CAR
 from lattix.ir.elements import Element, FieldMap
 from lattix.ir.lattice import Lattice, Placed
 from lattix.ir.normalize import field_index_from_k1, k1_from_gradient
+from lattix.ir.reference_tag import format_reference_tag
 from lattix.ir.rf import tracewin_phase_deg
 from lattix.ir.units import C_LIGHT, DEG, MEV, MHZ, MM
 from lattix.ir.walk import propagate
@@ -135,6 +136,8 @@ class _Emitter:
 
     def render(self) -> str:
         self._recount_lattice_cards()
+        # the deck carries no beam: the reference particle travels in a comment the reader parses
+        self.lines.append(format_reference_tag(self.lat.reference, ";"))
         if self.header_freq:
             self._freq(float(self.header_freq), force=True)
         for p in self.placed:
@@ -431,9 +434,11 @@ def _bend(em: _Emitter, p: Placed) -> None:
     nat = e.native.get("tracewin", {})
     has_edges = bool(nat.get("has_edges")) or any((b.e1, b.e2, b.hgap))
     gap_mm = 2.0 * b.hgap / MM
-    k1_in = b.edge_int1 if gap_mm else _K1_DEFAULT
-    k1_out = (b.edge_int2 if b.edge_int2 is not None else b.edge_int1) if gap_mm else _K1_DEFAULT
-    k2 = b.fringe_k2 if (b.fringe_k2 is not None and gap_mm) else _K2_DEFAULT
+    # the IR values are written as they are (a zero gap makes K1/K2 inert in TraceWin, but a
+    # default written here would come back as a different IR on re-read)
+    k1_in = b.edge_int1
+    k1_out = b.edge_int2 if b.edge_int2 is not None else b.edge_int1
+    k2 = b.fringe_k2 if b.fringe_k2 is not None else _K2_DEFAULT
     rho_mm = rho_m / MM
 
     def edge(beta_rad: float, k1: float) -> None:
@@ -619,9 +624,11 @@ def _collimator(em: _Emitter, p: Placed) -> None:
     R, Ry, rect = _aperture_mm(e)
     if e.aperture is None:
         em.lines.append(f"; lattix: Collimator '{e.name}' has no aperture (omitted)")
+        if e.length:
+            em.lines.append(f"DRIFT {_fmt(e.length * 1e3)} 0")
         em.rep.equivalent(
             "COLLIMATOR_NO_APERTURE",
-            "collimator without aperture limits omitted",
+            "collimator without aperture limits omitted" + (" (body kept as a DRIFT)" if e.length else ""),
             element=e.name,
             kind=e.kind,
         )
@@ -630,9 +637,12 @@ def _collimator(em: _Emitter, p: Placed) -> None:
     dy = Ry if Ry is not None else R
     em.lines.append(f"{em.label(e)}APERTURE {_fmt(R)} {_fmt(dy)} {t}")
     if e.length:
+        # TraceWin's APERTURE is thin: the aperture acts at the entrance and the body is a DRIFT
+        # of the same length and radius, so the lattice keeps its length (invariant I-1)
+        em.lines.append(f"DRIFT {_fmt(e.length * 1e3)} {_fmt(R)}")
         em.rep.equivalent(
             "THICK_COLLIMATOR_AS_THIN",
-            f"collimator length {e.length:.4g} m dropped (APERTURE)",
+            f"collimator written as APERTURE at the entrance + DRIFT {e.length:.4g} m",
             element=e.name,
             kind=e.kind,
         )
@@ -667,9 +677,13 @@ def _instrument(em: _Emitter, p: Placed) -> None:
         em.lines.append(f"{fam} :")
     else:
         em.lines.append(f"{em.label(e)}MARKER")
+    if e.length:
+        R, _ry, _rect = _aperture_mm(e)
+        em.lines.append(f"DRIFT {_fmt(e.length / MM)} {_fmt(R)}")      # the body keeps its length
     em.rep.equivalent(
         "INSTRUMENT_AS_MARKER",
-        f"Instrument family {fam!r} written as a TraceWin marker",
+        f"Instrument family {fam!r} written as a TraceWin marker"
+        + (f" followed by a DRIFT of {e.length:.4g} m" if e.length else ""),
         element=e.name,
         kind=e.kind,
     )

@@ -30,7 +30,11 @@ jobs:
       - name: Oracle-backed tests (elegant, MAD-X, xtrack, Bmad, ImpactX, IMPACT-Z)
         env:
           LATTIX_BMAD_ENV: lattix-bmad
-        run: pytest -m "oracle_madx or oracle_xtrack or oracle_bmad or oracle_elegant or oracle_impactx or oracle_impactz" -ra
+        run: pytest -m "(oracle_madx or oracle_xtrack or oracle_bmad or oracle_elegant or oracle_impactx or oracle_impactz) and not crossval" -ra
+      - name: Cross-format battery (every pair on every public deck; engine pairs where engines exist)
+        env:
+          LATTIX_BMAD_ENV: lattix-bmad
+        run: pytest tests/crossval -m "crossval and not oracle_flame and not oracle_helix and not oracle_tracewin" -ra
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -207,11 +207,19 @@ class XtrackOracle:
         lengths = (s_down - s_up)[keep]
 
         # -- per-element maps by finite differences --------------------------
+        # centred on the *tracked* reference orbit: xtrack keeps p0c fixed, so a cavity's
+        # gain lives in the orbit's delta and every downstream map must be measured around
+        # that orbit (a quad after a 1 MV gap at 2 MeV focuses with k1/(1+delta), which is
+        # what the energy_mode="delta" deck relies on; measured 2026-09-04)
+        centre = self._reference_orbit(line, n_all)
         seed = line.build_particles(**fd_seed(FD_STEP))
-        ins = _stack(seed)
+        ins0 = _stack(seed)
         R = np.full((n, 6, 6), np.nan)
         for j, i in enumerate(keep):
             p = seed.copy()
+            for k, coord in enumerate(_COORDS):
+                setattr(p, coord, getattr(p, coord) + centre[i, k])
+            ins = _stack(p)
             line.track(p, ele_start=i, ele_stop=i + 1)
             p.sort(interleave_lost_particles=True)
             if np.any(np.asarray(p.state) <= 0):
@@ -219,6 +227,8 @@ class XtrackOracle:
                                 f"particles; its map is NaN")
                 continue
             R[j] = fd_matrix(ins, _stack(p))
+        del ins0
+        meta["fd_centre"] = "reference particle tracked through the line (delta carries the RF gain)"
 
         # -- twiss / dispersion at exits -------------------------------------
         b = beam_used
@@ -308,6 +318,20 @@ class XtrackOracle:
             loader_name = "cpymad + xt.MadLoader(classes=xt, allow_thick=True)"
         m.quit()
         return line, beam_used, loader_name, seq
+
+    @staticmethod
+    def _reference_orbit(line, n_all: int) -> np.ndarray:
+        """(n_all, 6) native coordinates of the reference particle at every element's
+        entrance: zeros until the first cavity, then the accumulated ``delta`` (and the
+        ``zeta`` slip that goes with it)."""
+        out = np.zeros((n_all, 6))
+        p = line.build_particles(x=[0.0])
+        for i in range(n_all):
+            out[i] = _stack(p)[0]
+            line.track(p, ele_start=i, ele_stop=i + 1)
+            if np.any(np.asarray(p.state) <= 0):          # pragma: no cover - a lost reference
+                break
+        return out
 
     @staticmethod
     def _track_probe(line, probe: Probe, ke: float, mass_eV: float) -> np.ndarray:

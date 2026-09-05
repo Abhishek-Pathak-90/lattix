@@ -1,4 +1,5 @@
 ! lattix <version> from madx
+! lattix: energy_mode=delta
 TITLE, "HELIX MAD-X demo - FODO cell"
 
 BEAM, PARTICLE=PROTON, MASS=0.93827208816, CHARGE=1, ENERGY=1.738272

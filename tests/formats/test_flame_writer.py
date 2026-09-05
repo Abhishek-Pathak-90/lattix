@@ -343,7 +343,8 @@ def test_thin_type_with_a_length_is_padded_by_a_drift():
 
 
 def test_taylor_rebuilds_the_7x7():
-    t = Taylor(name="TM")
+    # a map read from FLAME (basis "flame") is re-emitted verbatim
+    t = Taylor(name="TM", basis="flame")
     t.matrix[0][1] = 2.0
     t.offset[2] = 3.0
     line = _def_line(one_element(t), "TM")
@@ -352,6 +353,19 @@ def test_taylor_rebuilds_the_7x7():
     assert flat[1] == 2.0                                        # R12
     assert flat[2 * 7 + 6] == 3.0                                # the constant column
     assert flat[48] == 1.0                                       # the augmentation row
+
+
+def test_taylor_in_metres_is_rescaled_to_flame_mm():
+    # an IR map with no basis is SI (x in m): FLAME's state is (x mm, x' rad, ...)
+    t = Taylor(name="TM")
+    t.matrix[0][1] = 2.0                                         # R12 in m/rad
+    t.matrix[1][0] = -0.5                                        # R21 in rad/m
+    t.offset[2] = 3.0                                            # y offset in m
+    line = _def_line(one_element(t), "TM")
+    flat = [float(x) for x in line.split("[")[1].split("]")[0].split(",")]
+    assert flat[1] == 2000.0                                     # mm/rad
+    assert flat[7] == -0.5e-3                                    # rad/mm
+    assert flat[2 * 7 + 6] == 3000.0                             # mm
 
 
 def test_electrostatic_elements_round_trip_through_native():

@@ -86,14 +86,17 @@ from lattix.ir.elements import (
     Patch,
     Provenance,
     Quadrupole,
+    ReferenceChange,
     RFCavity,
     Sextupole,
     Solenoid,
 )
+from lattix.ir.energy_mode import ENERGY_MODES, restore_energy_mode, undo_phase_slip
 from lattix.ir.expr import Expression, ExpressionError, evaluate
 from lattix.ir.lattice import Lattice, Line, LineItem, Variable
 from lattix.ir.reference import SPECIES, ReferenceParticle, Species
 from lattix.ir.reference import species as species_by_name
+from lattix.ir.reference_tag import parse_reference_tag
 from lattix.ir.rf import phase_from_madx_lag
 
 #: MAD8 identifiers start with a letter and may carry ``'`` (``QX'`` = dQx/dδ).
@@ -110,6 +113,12 @@ _RE_TITLE = re.compile(r'^TITLE\s*[, ]\s*(?:"([^"]*)"|\'([^\']*)\'|(.*))$', re.I
 _RE_NUMBER = re.compile(r"^[-+]?(\d+\.?\d*|\.\d+)([eEdD][-+]?\d+)?$")
 #: ``! lattix: name="…" type="…"`` tags written above a renamed definition.
 _RE_TAG_COMMENT = re.compile(r'!\s*lattix:\s*(.*?)\s*$')
+_ENERGY_MODE = re.compile(r"^!\s*lattix:\s*energy_mode=(\w+)", re.M)
+
+
+def _energy_mode_tag(text: str) -> str | None:
+    m = _ENERGY_MODE.search(text)
+    return m.group(1).lower() if m else None
 _RE_TAG_KV = re.compile(r'(\w+)\s*=\s*"([^"]*)"')
 _RE_DEFN_NAME = re.compile(rf"^({_IDENT})\s*:")
 
@@ -184,11 +193,31 @@ def logical_lines(text: str) -> list[tuple[int, str]]:
             buf = buf.rstrip()[:-1]
             continue
         if buf.strip():
-            out.append((first, buf.strip()))
+            out.extend((first, part) for part in _split_statements(buf))
         buf = ""
     if buf.strip():
-        out.append((first, buf.strip()))
+        out.extend((first, part) for part in _split_statements(buf))
     return out
+
+
+def _split_statements(text: str) -> list[str]:
+    """MAD8 has no statement terminator, but MAD-X-flavoured flat files (PyORBIT's) end statements
+    with ``;`` — split on top-level semicolons and drop empty pieces."""
+    parts: list[str] = []
+    depth = 0
+    buf = ""
+    for ch in text:
+        if ch in "([":
+            depth += 1
+        elif ch in ")]":
+            depth -= 1
+        if ch == ";" and depth == 0:
+            parts.append(buf)
+            buf = ""
+        else:
+            buf += ch
+    parts.append(buf)
+    return [x.strip() for x in parts if x.strip()]
 
 
 def split_top_level(body: str) -> list[str]:
@@ -519,7 +548,7 @@ class Reader:
     format = "mad8"
 
     def read(self, path: Path, *, strict: bool = False, brho: float | None = None,
-             species: str | Species | None = "h-", auto_periods: bool = True,
+             species: str | Species | None = None, auto_periods: bool = True,
              frequency_Hz: float | None = None, keep_expressions: bool = True,
              use: str | None = None, **_ignored) -> tuple[Lattice, FidelityReport]:
         """Parse a MAD8 flat deck.
@@ -531,6 +560,13 @@ class Reader:
         """
         path = Path(path)
         text = path.read_text(encoding="latin-1", errors="replace")
+        tag = parse_reference_tag(text)
+        species_tagged = False
+        if species is None:
+            if tag is not None:
+                species, species_tagged = tag.species, True   # written by lattix: the species travels in a tag
+            else:
+                species = "h-"                                  # the PIP-II lineage default (see the docstring)
         rep = FidelityReport(source_format="mad8", source_file=str(path))
         warnings: list[str] = []
         deck = _Deck(text, rep, warnings)
@@ -544,6 +580,12 @@ class Reader:
         self._tags = parse_tags(text)
 
         ref = self._reference(brho, species, frequency_Hz)
+
+        if species_tagged:
+
+            rep.equivalent("REFERENCE_FROM_TAG", f"species {ref.species.name!r} taken from the deck's "
+
+                           "'! lattix: reference' tag", element=None, kind=None)
         self._brho = ref.brho_signed
 
         root = self._root_line(use)
@@ -570,6 +612,12 @@ class Reader:
             periods = self._declare_periods(lat, root)
         lat.meta["mad8_periods"] = periods
 
+        mode = _energy_mode_tag(text)
+        if mode in ENERGY_MODES:
+            # written by lattix: undo its normalization with the same energy walk
+            if mode == "delta":
+                undo_phase_slip(lat, rep)
+            restore_energy_mode(lat, rep, mode)
         rep.raise_if(strict)
         return lat, rep
 
@@ -842,9 +890,16 @@ class Reader:
             if len(rep.entries) == n_before:
                 rep.exact(ename, el.kind)
         tag = self._tags.get(ename, {})
+        if tag.get("kind") == "ReferenceChange" and el.kind == "Marker":
+            fields = {f: float(tag[f]) for f in ("dE_ref_eV", "energy_eV", "dtime_s", "dphase_rad") if f in tag}
+            el = ReferenceChange(name=ename, **fields)
+            rep.entries = [e for e in rep.entries if e.element != ename]
+            rep.equivalent("REFCHANGE_FROM_TAG",
+                           "reference change restored from the marker's lattix tag (MAD8 itself ignores it)",
+                           element=ename, kind="ReferenceChange", line=defn.line, **fields)
         el.provenance = Provenance(format="mad8", file=str(self._path), line=defn.line,
                                    original_name=tag.get("name", ename),
-                                   original_type=tag.get("type", etype.upper()))
+                                   original_type=(tag.get("type") if tag else etype.upper()))
         self._apply_aperture(el, ename, attrs)
         self._expr(el, ename, "l", "length")
         return el

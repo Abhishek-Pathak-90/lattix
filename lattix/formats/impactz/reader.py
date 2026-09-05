@@ -368,6 +368,19 @@ def read_rfdata(path: Path) -> list[list[float]]:
 
 
 # ---------------------------------------------------------------------------
+_NAME_TAG = re.compile(r"^\s*!\s*lattice:\s*'([^']*)'")
+
+
+def _lattice_name(comments) -> str | None:
+    """The name lattix's writer puts in ``! lattice: '<name>' — …`` (a round trip keeps it)."""
+    for c in comments or ():
+        text = c if isinstance(c, str) else (c[1] if isinstance(c, tuple) and len(c) > 1 else str(c))
+        m = _NAME_TAG.match(str(text))
+        if m:
+            return m.group(1)
+    return None
+
+
 class Reader:
     """``Reader().read(path)`` → ``(Lattice, FidelityReport)``."""
 
@@ -396,7 +409,7 @@ class Reader:
             if el is not None:
                 elements.append(self._promote(el, card))
 
-        lat = Lattice.from_sequence(path.stem or "impactz", elements, ref)
+        lat = Lattice.from_sequence(_lattice_name(_comments) or path.stem or "impactz", elements, ref)
         lat.meta.update({
             "source_format": "impactz",
             "impactz_header": _header_meta(header),
