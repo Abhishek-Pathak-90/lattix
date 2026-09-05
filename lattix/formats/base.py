@@ -93,6 +93,8 @@ FORMATS: dict[str, FormatSpec] = {
                           description="Cheetah LatticeJSON (cheetah.latticejson)"),
     "pyorbit": FormatSpec("pyorbit", (".pyorbit.xml", ".xml"), "lattix.formats.pyorbit",
                           description="PyORBIT3 linac XML (SNS_LinacLatticeFactory)"),
+    "ocelot": FormatSpec("ocelot", (".ocelot.py", ".py"), "lattix.formats.ocelot",
+                         description="Ocelot lattice module (MagneticLattice cell, python)"),
     # keep last: a bare .json is xtrack's unless the content says otherwise (sniffed below)
     "xtrack": FormatSpec("xtrack", (".json",), "lattix.formats.xtrack", description="xtrack Line/Environment JSON"),
 }

@@ -73,6 +73,7 @@ from lattix.ir.elements import (
 )
 from lattix.ir.fieldmap import replacement_for
 from lattix.ir.lattice import Lattice, Placed
+from lattix.ir.rf import thin_gap_surrogate_length
 from lattix.ir.walk import propagate
 
 _THIN = 1e-12
@@ -88,13 +89,7 @@ _THIN_SURROGATE_MIN = 1e-3    # the shortest surrogate cavity standing in for a 
 
 
 def _surrogate_length(V: float, phase_rad: float, freq: float, ref) -> float:
-    """Length of the bump standing in for a thin gap: ``0.4·sqrt(qVλ/(2π mc² βγ³ |sin φ|))`` — the
-    kick-smearing error grows like the length, the ponderomotive one like ``V²/length`` — within
-    ``[1 mm, βλ/2]``."""
-    lam = C_LIGHT / freq
-    sin_phi = max(abs(math.sin(phase_rad)), 0.1)
-    ell = 0.4 * math.sqrt(abs(V) * lam / (2.0 * math.pi * ref.species.mass_eV * ref.beta * ref.gamma ** 3 * sin_phi))
-    return min(max(ell, _THIN_SURROGATE_MIN), 0.5 * ref.beta * lam)
+    return thin_gap_surrogate_length(V, phase_rad, freq, ref, _THIN_SURROGATE_MIN)
 _FILE_COLUMN = {1: 2, 3: 2, 4: 3, 5: 3}       # 0-based index of the file id among a card's values (RF: 4)
 #: value indices (0 = zedge) that hold a position for the run-control types, moved with the card
 _POSITION_VALUES: dict[int, tuple[int, ...]] = {-1: (0, 1), -11: (0, 1), -2: (0, 2), -3: (0, 2), -4: (0, 2),

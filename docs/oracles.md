@@ -17,6 +17,7 @@ recalled.  Re-run `lattix fingerprint` / `pytest tests/oracles` after any engine
 | LightWin | env `lightwin` (python 3.12, LightWin 0.16.5, MIT) | `lattix/oracles/lightwin.py` + `lightwin_worker.py` | (x, x', y, y', z [m], dp/p) — TraceWin's, SI | follows the field maps | Envelope3D only: DRIFT, QUAD, SOLENOID, BEND, FIELD_MAP (1-D); EDGE/THIN_STEERING/APERTURE/DIAG_* propagated as drifts, GAP/NCELLS/DTL_CEL skipped — both audited in `meta` and report-only in the battery. |
 | Cheetah | env `cheetah` (torch 2.14 CPU, cheetah-accelerator 0.8.4, GPL-3) | `lattix/oracles/cheetah.py` + `cheetah_worker.py` | (x, px, y, py, τ = cΔt late-positive [m], ΔE/(p0 c)) | follows the cavities | 7×7 first-order maps per element; cavity phase runs the other way (`phase = −φ`), k1/k charge-blind (signed rigidity in the writer); zero-length cavity is inf (1 µm substituted). |
 | IMPACT-T | conda-forge `impact-t` 3.1.5 (`ImpactTexe`, BSD) in env `lattix` | 3.1.5 | fixed-time `(x, γβx, y, γβy, z, γβz)` dumps drifted to the reference plane → the common basis | follows | `lattix/oracles/impactt.py`: `-2` dumps and `-4` step changes at every boundary, each element its own `dt = L/(N βc)` so the reference lands on the boundaries; 13-particle probes from `partcl.data` (`flagdist 16`); `R_elem = J_i·J_{i−1}⁻¹`; ≤ 90 controls per run (chunked, `theta0` shifted by `360·f·t`); dipoles re-base the frame one step past the face; **the dipole model has no pole-face focusing (report only)**. |
+| Ocelot | env `ocelot` (a venv from env `lattix`'s python 3.11 with `ocelot-desy` 25.6.0 → reports 25.06.0, GPL-3) | `lattix/oracles/ocelot.py` + `ocelot_worker.py` | (x, px, y, py, τ = cΔt late-positive [m], ΔE/(p0 c)) — MAD-X's set | follows the cavities (`v·cos(phi)`) | per-element `elem.R(E)` composed as `MagneticLattice.transfer_maps`; every map divides by m_e (electron only; the worker hands Ocelot the total energy giving lattix's γ); `Cavity` needs a length (thin gaps are surrogate cavities); Elegant `.lte` through Ocelot's own converter (`fmt="elegant"`). |
 | PyORBIT3 | env `pyorbit` (python 3.10, meson build of PyORBIT3 `22b45fa` 2026-05-14 with `USE_MPI=none`, MIT; `libfftw3` preloaded on macOS) | `lattix/oracles/pyorbit.py` + `pyorbit_worker.py` | (x [m], x′, y [m], y′, z [m] ahead-positive, dE [GeV]) | follows the gaps | `LinacTrMatricesController` maps at every node entrance, cumulated from the first node (per-node map `R[k+1]·R[k]⁻¹`, one extra node at the exit); 13-particle symmetric probes tracked at two amplitudes and Richardson-extrapolated; one `<Cavity>` per gap. |
 | ImpactX / IMPACT-Z | env `lattix` (`impactx` 26.08, `impact-z` 2.7.7, both osx-arm64 builds) | — | Phase 3 | follows | `ImpactZexe` on PATH in the env; `impactx` importable. |
 | SciBmad | `julia` (juliaup 1.10) with `SciBmad` 0.5.2 (Beamlines.jl + BeamTracking.jl) through `lattix/oracles/scibmad_worker.jl`; `LATTIX_JULIA` or PATH | 0.5.2 (2026-09-05) | (x, px, y, py, z, pz), z ahead-positive (drift R56 = +L/γ² measured) | constant (one reference momentum per `Beamline`; nesting and `Patch(dE_ref)` past the first element are refused) | `RFCavity` gain is **−V·cos(phi0)** with `phi0` in radians for protons and electrons alike (writer negates the voltage: `GAIN_SIGN`); a zero-length cavity and `edge1_int/edge2_int` cannot be tracked (worker substitutes 1 µm / 0 and says so); `g_ref` alone is a curved frame — the dipole field is `Kn0`; `LineElement(transport_map=f)` with `f(v, q, p=nothing)` works as a thin lens; `using Beamlines` fails in an environment that only has `SciBmad` (worker strips `using` lines). `Species("#1H-")` is H⁻ (m_p + 2 m_e); `Species("H-")` is the isotope-averaged anion. Startup ~13 s, a run ~8 s. |
@@ -34,6 +35,7 @@ reused instead), `flame-code` (Phase 3, pip).
 | helix | −6.9326e+02 (deg, MeV) | +0.9955387 | −4.305 | 866 025.4 |
 | tracewin | +0.9955387 (z, dp/p) | +0.9955387 (3e-8, 7-digit file) | −4.273 | 866 025.1 |
 | elegant | 0 (path length; −0.9955387 after the adapter's −L/γ² term) | +0.9955387 | −0.288 (matrix; ≈ β·4.30 — ultra-relativistic phase slip) | 866 025.4 (`change_p0=1`, proton phase = φs − 90°) |
+| ocelot (electron, 2.1 MeV) | −0.0398280 (τ, ΔE/p0c) | +0.0383025 = L/γ² for the electron (exact, 0.0) | −0.510 (the 37 mm surrogate cavity at phi = +30°) | 866 025.4 (`v·cos(phi)`, 1e-15) |
 
 Why the cavity R65 differs between constant-p0 and p0-following engines at this energy:
 δ = ΔW/(β²γmc²) is normalised with the *exit* β²γ in p0-following codes and the *entry*
@@ -532,3 +534,52 @@ MAD-X gate therefore checks loading and reporting, the physics gate runs on Bmad
   elements (`SUPERIMPOSE_RESOLVED`); SXF carries no energy at all, so `species=` and
   `kinetic_energy_eV=` are read options.  Every target's intermediate Bmad file re-reads to the
   IR (the bridge's consistency check); no engine runs the converted files.
+
+## Phase 5.7 measurements (Ocelot 25.06.0, 2026-09-05)
+
+* **Environment.**  conda-forge was unreachable this session (HTTP 000), so env `ocelot` is a venv made
+  from env `lattix`'s python 3.11 at `~/anaconda3/envs/ocelot` (`pip install ocelot-desy==25.6.0`, which
+  reports `ocelot.__version__ == "25.06.0"`); `resolve_python` finds it like a conda env.  Ocelot prints
+  "initializing ocelot..." and NUMBA notices on import; the worker writes its JSON to a file.
+* **Basis.**  `MagneticLattice.transfer_maps` composes `elem.R(E)` per transformation and advances `E`
+  by `tm.get_delta_e()`; a 1 m drift at 2.1 MeV (electron) gives `R56 = −L/(β²γ²) = −0.039828`: MAD-X's set
+  with `τ` late-positive (`Basis.OCELOT`, `_Z_SIGN = −1`, the MADX/CHEETAH transform branch); the
+  common-basis drift map matches the analytic one to 0.0 once Ocelot is handed the right γ.
+* **Electron mass.**  `ocelot.common.globals.m_e_GeV` is 0.510998867 (CODATA 1998), 9e-8 below
+  lattix's 510 998.95 eV; passing `E = m_e + W` gave a 1.3e-8 drift residual.  The worker now passes
+  `E = γ_lattix · m_e(ocelot)` and reports lattix's kinetic energies advanced by exactly each `ΔE`, so
+  every map sees lattix's β and γ — for any species (a proton `fodo_cell.dat` through Ocelot agrees with
+  HELIX on the transverse block below 1e-8; only the cavity model and the longitudinal coupling are an
+  electron's: `OCELOT_ELECTRON_ONLY`, report only in the battery).
+* **Cavity.**  `Cavity(l, v [GV], phi [deg], freq)`: the body transformation carries `delta_e =
+  v·cos(phi)` (no charge factor — Ocelot has no charge) and `map4cav` gives `R65 ∝ +sin(phi)` with `τ`
+  late-positive, so the IR's bunching phase is `phi = −φs` (+30° gains 866 025.4037 eV and gives
+  `R65_common = −0.510`, exactly like Cheetah).  A zero-length `Cavity` divides by zero in Ocelot itself;
+  the writer's thin gap is the short surrogate cavity of `lattix.ir.rf.thin_gap_surrogate_length`
+  (37 mm for 1 MV at 2.1 MeV, 7.5 mm for the MEBT's 80 kV gap), its length taken from the neighbouring
+  drifts on the picometre grid.  Its transverse focusing (Rosenzweig–Serafini edges + body) scales with
+  `V/(E·l)`: `R21 = −1.48` over 2 cm and `−0.79` over 37 mm for the same 1 MV at 2.1 MeV — no length-free
+  thin limit, so the surrogate is a recorded choice (`THIN_GAP_AS_SHORT_CAVITY`, `thin_gap_length_m=`)
+  and no lattix RF-focusing lens is added.
+* **Magnets.**  `Quadrupole.k1 > 0` focuses x for every species, `Solenoid.k = B/(2Bρ)` (`R11 =
+  cos²(kL)`), `Multipole(kn)` is MAD's `knl` (`R21 = −kn[1]`, `R43 = +kn[1]`, kick
+  `Σ kn[n]·(x+iy)^n/n!`) and `kn[0]` is a *design* bend: the first-order map has `R26 = kn[0]` and the
+  reference particle is not kicked (`B = 0`); `Hcor`/`Vcor` kick `px += angle` (`B[1] = angle`).
+  Elements take `dx`, `dy` and `tilt` as attributes (a quadrupole with `dx = 1 mm` gets the kick
+  `k1·L·dx` in `B`); `Matrix` takes `r11 … r66`, `t111 …`, `b1 … b6` and `delta_e` (its `r` defaults to
+  zeros, so every nonzero entry incl. the diagonal is written); `Aperture` has `xmax, ymax, dx, dy, type`.
+* **RBend.**  `RBendAtom` adds `angle/2` to both pole faces itself (`e1 = None` → `angle/2`).
+* **FODO gate.**  HELIX's `fodo.madx` with a 1 GeV electron as the reference, written to `.madx` and to an
+  Ocelot module from the same IR: cpymad vs Ocelot T4×4 1.8e-15, dispersion 7.8e-16, path 7.8e-16, R56
+  1.8e-16 (8 shared boundaries).
+* **XFEL lockstep.**  `XFEL_elegant_TD1_S2E.lte` from the Ocelot clone (4126 placed elements, 2.16 km,
+  130 MeV → 17.5 GeV; lattix's Elegant reader: 4364 EXACT, `MULTI_RIGIDITY_DEFINITION` ×1462,
+  `UNMAPPED_ELEGANT_ATTRIBUTE` ×876 on the RFCW attributes, `COLLECTIVE_DRIFT_AS_DRIFT` ×462,
+  `RBEN_CHORD_TO_ARC` ×29) written as an Ocelot module against Ocelot's own `ElegantLatticeConverter` on
+  the same file: 3284 shared boundaries, T4×4 2.9e-12, dispersion 4.1e-15, R56 7.6e-17, reference energy
+  2.4e-15, total length identical to 1e-13 — two paths to Ocelot maps that share nothing.
+* **Reader.**  An AST walk (constructors, arithmetic on literals and earlier assignments, sequence
+  algebra, `MagneticLattice(cell)`, attribute lines); a module built with loops raises and
+  `read(..., use_ocelot=True)` runs it in the Ocelot environment through the worker's `--dump`
+  (`OCELOT_EXECUTED`).
+

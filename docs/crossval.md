@@ -59,7 +59,10 @@ engine (its thin gaps carry PyORBIT's own focusing, so pairs with thin cavities 
 `ImpactT.in` is a battery format with IMPACT-T as its engine: its solenoid tables and RF profiles are
 Equivalent tier, and decks with bends are report-only (the engine's dipole has no pole-face focusing).  A derived
 IMPACT-T or IMPACT-Z deck gets a directory of its own under `derived/`: their `rfdataN` and `1TN.T7` files are
-numbered from 1 per deck and would otherwise overwrite each other.  TraceWin decks
+numbered from 1 per deck and would otherwise overwrite each other.  Ocelot's lattice module is a battery
+format with Ocelot as its engine: every public deck is a proton or H⁻ one, so its engine pairs are report only
+(`OCELOT_ELECTRON_ONLY`, Ocelot's maps divide by the electron mass); the electron gates live in
+`tests/oracles/test_ocelot_adapter.py`.  TraceWin decks
 are checked with HELIX where it exists and with LightWin's `Envelope3D` otherwise (CI); a pair whose
 LightWin run skipped or drift-substituted elements is report-only.
 

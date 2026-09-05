@@ -129,12 +129,12 @@ def _cap_tier(tier: str, cap: str | None) -> str:
 ENGINE_FOR_FORMAT: dict[str, str | None] = {
     "madx": "madx", "xtrack": "xtrack", "bmad": "bmad", "elegant": "elegant", "impactx": "impactx",
     "impactz": "impactz", "flame": "flame", "tracewin": "helix", "mad8": None, "pals": None, "lattix": None,
-    "scibmad": "scibmad", "cheetah": "cheetah", "pyorbit": "pyorbit", "impactt": "impactt",
+    "scibmad": "scibmad", "cheetah": "cheetah", "pyorbit": "pyorbit", "impactt": "impactt", "ocelot": "ocelot",
 }
 #: fallback engines per format, tried in order when the primary one is unavailable (CI has no HELIX)
 ENGINE_CANDIDATES: dict[str, tuple[str, ...]] = {"tracewin": ("helix", "lightwin")}
 FOLLOWS_P0 = {"helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True, "lightwin": True,
-              "cheetah": True, "pyorbit": True, "impactt": True,
+              "cheetah": True, "pyorbit": True, "impactt": True, "ocelot": True,
               "impactz": True, "flame": True, "madx": False, "xtrack": False, "scibmad": False}
 
 RTOL = 1e-9
@@ -189,6 +189,10 @@ AFFECTS: dict[str, set[str]] = {
     "RF_FREQUENCY_UNKNOWN": set(), "IMPACTZ_NO_FREQUENCY": set(), "RFCAVITY_GAIN_UNKNOWN": set(),
     "ZERO_ANGLE_BEND_AS_DRIFT": set(), "IMPACTZ_RF_FORM_FACTOR": set(), "THIN_GAP_AS_SHORT_CAVITY": set(),
     "PALS_TTF_DROPPED": set(), "RF_FREQUENCY_MISSING": set(),
+    "OCELOT_SKEW_MULTIPOLE_DROPPED": {*[f"BsL{k}" for k in range(6)]}, "KICKER_SPLIT_HV": set(),
+    "INSTRUMENT_AS_MONITOR": set(), "THICK_MULTIPOLE_SPLIT": set(), "REFCHANGE_AS_MATRIX": set(),
+    "NCELLS_AS_CAVITY": set(), "TAYLOR_BASIS_OCELOT": set(), "THIN_GAP_PAD_DRIFT": set(),
+    "OCELOT_ELECTRON_ONLY": set(), "APERTURE_CONTINUOUS_AT_ENDS": set(),
 }
 
 #: codes whose model moves an element boundary by up to this many metres (short cavities)
@@ -649,6 +653,18 @@ def _engine_check(res: CaseResult, deck: Path, src: str, out: Path, dst: str, la
                                          for e in lat.elements.values()):
             res.tier = "equivalent"
             res.engine_note = "IMPACT-T solenoid table / RF profile: engine models differ; "
+    if "ocelot" in (ea, eb) and lat.reference.species.name.lower() not in ("electron", "positron") \
+            and res.tier != "lossy":
+        # MEASURED (docs/oracles.md, Phase 5.7): every Ocelot map divides by the electron mass — the
+        # transverse blocks of a proton deck are right (normalized strengths), the longitudinal ones and
+        # the cavity model are an electron's: report only for any other species
+        res.tier = "lossy"
+        res.engine_note = f"Ocelot is electron-only ({lat.reference.species.name} deck, report only); "
+    elif "ocelot" in (ea, eb) and res.tier == "exact" and any(
+            e.kind in ("RFCavity", "FieldMap", "NCells") for e in lat.elements.values()):
+        # Ocelot's Cavity (Rosenzweig–Serafini edges + body) against the thin-gap or field-map models
+        res.tier = "equivalent"
+        res.engine_note = "Ocelot cavity model (RF focusing of its own): engine models differ; "
     fm_derived = any(c.startswith("FM_") for c in res.codes)
     if has_rf and (FOLLOWS_P0[ea] != FOLLOWS_P0[eb] or "elegant" in (ea, eb) or fm_derived):
         # a field map integrated by one engine and a cavity element in the other agree on the

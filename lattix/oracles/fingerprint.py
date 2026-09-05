@@ -26,7 +26,9 @@ V_VOLT = 1.0e6         # cavity effective voltage
 PHI_S_DEG = -30.0      # synchronous phase, cos convention, 0 = crest
 FOLLOWS_P0 = {"scibmad": False, "helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True,
               "impactz": True, "madx": False, "xtrack": False, "lightwin": True, "cheetah": True,
-              "pyorbit": True, "impactt": True}
+              "pyorbit": True, "impactt": True, "ocelot": True}
+#: engines whose maps assume one species (Ocelot divides by m_e): their fingerprint beam
+BEAM_SPECIES = {"ocelot": "electron"}
 
 _MASS = SPECIES["proton"][0]
 _ETOT_GEV = (_MASS + KE_EV) * 1e-9
@@ -179,6 +181,29 @@ _SUFFIX["impactt"] = ".impactt.in"
 GAIN_RTOL = {"lightwin": 0.05, "impactt": 1e-5}     # IMPACT-T: MEASURED 4e-7 (surrogate gap, 1 ps step)
 
 
+def _ocelot_deck(cavity: bool) -> tuple[str, str]:
+    """The drift / thin-cavity decks through lattix's own Ocelot writer for an electron (Ocelot's maps
+    divide by m_e): the thin gap becomes the short surrogate cavity Ocelot's matrix needs."""
+    from lattix.formats.ocelot import Writer
+    from lattix.ir.elements import RFP, Drift, RFCavity
+    from lattix.ir.lattice import Lattice
+    from lattix.ir.reference import ReferenceParticle, species
+
+    ref = ReferenceParticle(species=species("electron"), kinetic_energy_eV=KE_EV, rf_frequency_Hz=FREQ_HZ)
+    if cavity:
+        els = [Drift(name="d1", length=0.5),
+               RFCavity(name="c", length=0.0, rf=RFP(frequency_Hz=FREQ_HZ, voltage_V=V_VOLT,
+                                                    phase_rad=math.radians(PHI_S_DEG))),
+               Drift(name="d2", length=0.5)]
+    else:
+        els = [Drift(name="d", length=1.0)]
+    return "ocelot", Writer().render(Lattice.from_sequence("fp", els, ref))
+
+
+DECKS["ocelot"] = {"drift": _ocelot_deck(False), "cavity": _ocelot_deck(True)}
+_SUFFIX["ocelot"] = ".ocelot.py"
+
+
 def write_decks(engine: str, workdir: Path) -> dict[str, tuple[Path, str]]:
     workdir.mkdir(parents=True, exist_ok=True)
     out = {}
@@ -194,7 +219,8 @@ def write_decks(engine: str, workdir: Path) -> dict[str, tuple[Path, str]]:
 
 def fingerprint(engine: str, workdir: Path) -> dict:
     """Run both decks through *engine*; return measured + expected numbers."""
-    beam = BeamSpec(species="proton", kinetic_energy_eV=KE_EV, frequency_Hz=FREQ_HZ)
+    sp = BEAM_SPECIES.get(engine, "proton")
+    beam = BeamSpec(species=sp, kinetic_energy_eV=KE_EV, frequency_Hz=FREQ_HZ)
     decks = write_decks(engine, Path(workdir))
     o = get_oracle(engine)
 
@@ -202,7 +228,7 @@ def fingerprint(engine: str, workdir: Path) -> dict:
     i = int(np.argmax(dr.length))
     R_nat = dr.R_elem[i]
     R_com = dr.to_common().R_elem[i]
-    expect = drift_common(float(dr.length[i]), KE_EV, _MASS)
+    expect = drift_common(float(dr.length[i]), KE_EV, SPECIES[sp][0])
 
     cv = o.run(decks["cavity"][0], fmt=decks["cavity"][1], beam=beam, workdir=Path(workdir) / "cavity")
     j = int(np.argmax(np.abs(cv.R_elem[:, 5, 4])))
@@ -213,6 +239,7 @@ def fingerprint(engine: str, workdir: Path) -> dict:
     return {
         "engine": engine,
         "basis": dr.basis.value,
+        "species": sp,
         "drift": {"length_m": float(dr.length[i]), "R56_native": float(R_nat[4, 5]),
                   "R65_native": float(R_nat[5, 4]), "R56_common": float(R_com[4, 5]),
                   "R56_expected": float(expect[4, 5]),

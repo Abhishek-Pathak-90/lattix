@@ -43,6 +43,7 @@ The IR is SI plus electron-volts everywhere: m, rad, T, T/m, T·m^(1−n), V, V/
 | xtrack | m | rad | normalized `k1`, `knl/ksl` | `voltage` V | `frequency` Hz | `lag` deg (0.103) / `phase` rad (0.112) | eV |
 | PyORBIT3 linac XML | m | rad | `QUAD field` T/m (lab), `SOLENOID B` = B₀/Bρ 1/m, `DCH/DCV B·effLength` T·m | `RFGAP E0TL` GeV | `<Cavity frequency>` Hz | deg | GeV (`bunch.getSyncParticle().kinEnergy()`) |
 | IMPACT-T `ImpactT.in` | m, absolute `zedge` | rad (pole faces as lines `z = k·x + b`) | lab gradient T/m (type 1), `Bz0` T scaling an `(r, z)` table (type 3), `By` T (type 4) | type 104 `scale` V/m × Fourier `Ez` (`rfdataN`, period = card length) | Hz (card and header) | `theta0` deg, driven on the absolute time | eV (header; `fort.18`) |
+| Ocelot module | m | rad | normalized `k1 = Bn1/Bρ_signed`, `k = Bsol/(2Bρ_signed)`, `kn = [BnL_n/Bρ_signed]` (MAD's `knl`) | `Cavity.v` GV | `freq` Hz | `phi` deg (`phi = −φs`) | GeV total (`tws0.E`) |
 | HELIX (adapter) | mm | deg | T, T/m | MV | MHz | deg | MeV |
 
 ## 3. Reference particle and rigidity
@@ -122,8 +123,14 @@ the reference particle and the charge sign is already folded in.  Invariant I-6 
 | FLAME `rfcavity phi` | synchronous when `syncflag ≥ 1`, but the gain is a tabulated TTF polynomial, not V·cos φ | reader records `FLAME_CAVTYPE_VOLTAGE_UNKNOWN` | 3.2 % off V·cos φ at −35° |
 | PyORBIT3 `RFGAP phase` | deg; `ΔE = q·E0TL·cos(phase)`, so a negative species gets `phase + 180°` (the TraceWin rule without `SET_SYNC_PHASE`) | (writer/reader) | PyORBIT3 `22b45fa`: a proton at −30° and H⁻ at 150° both gain +V·cos 30°; the slope bunches |
 | IMPACT-T type 104 `theta0` | a driven phase on the absolute time (`scale·Ez·cos(2πf·t + θ0)`); lattix integrates the reference through the profile: `V` is the largest gain over θ0, the reference gains `V·cos φs`, the branch from the slope (a later particle gains more at φs < 0) | (writer/reader, `rfprofile.calibrate`) | IMPACT-T 3.1.5: proton and H⁻ thin gaps gain 866 025.7 eV at −30° (4e-7 of V·cos 30°), a 0.2 m cavity at 325 MHz 6.7e-7; the slope bunches |
+| Ocelot `Cavity.phi` | deg; gain `v·cos(phi)` GeV for any species (Ocelot has no charge); `R65 ∝ +sin(phi)` with τ late-positive, so the IR's bunching at φs < 0 needs `phi = −φs` | (writer/reader) | Ocelot 25.06.0: 866 025.4 eV and `R65_common = −0.51` at `phi = +30°` for the 1 MV fingerprint gap (a surrogate cavity: Ocelot's matrix divides by the length) |
 
-`energy_gain_eV(voltage_V, phase_rad)` is the one formula the walk uses.  The phase-slope
+`energy_gain_eV(voltage_V, phase_rad)` is the one formula the walk uses.  Codes whose cavity model
+needs a length (IMPACT-T's field profile, Ocelot's Rosenzweig–Serafini matrix) get a thin gap as the
+short surrogate cavity of `thin_gap_surrogate_length(voltage_V, phase_rad, frequency_Hz, ref)` —
+`0.4·sqrt(qVλ/(2π mc² βγ³ |sin φ|))` clamped to `[1 mm, βλ/2]`, the length at which the surrogate's
+own RF defocusing balances the thin-gap formula — taken from the neighbouring drifts and recorded as
+`THIN_GAP_AS_SHORT_CAVITY`.  The phase-slope
 sign (a late particle at φs < 0 gains more) is not derivable from these formulas because the
 time coordinate sign differs per engine; every writer is pinned by the cavity fingerprint in
 §8 instead.
@@ -168,6 +175,7 @@ The IR bend stores arc `length`, `angle`, `e1`, `e2` (with rectangular flags), `
 | xtrack | `rot_s_rad` is MAD-X `tilt`; `Bend.h` cannot be assigned (length + angle are passed) and `k0` reads back as `'from_h'` | xtrack 0.103.5 / 0.112.0 |
 | PyORBIT3 | `BEND theta` with MAD-X's sign, `ea1/ea2` sector-referenced; no fringe integral, no tilt | sector bends of 1°–45° vs MAD-X 1e-11 |
 | IMPACT-T | type 4 `By = Bρ_signed·θ/L` with the pole faces as lines in `rfdataN` (`k1 = tan e1`, `k4 = tan(|θ| − e2)`); the tracked dipole bends the whole bunch by the reference angle — no pole-face focusing, `R21 = R26 = 0` — so bend decks are report-only | fodo.madx bends 1e-2 vs cpymad (quads and drifts 1.2e-9) |
+| Ocelot | `SBend(l, angle, e1, e2, gap = 2·hgap, fint, fintx, tilt, k1, k2)` with sector-referenced faces; `RBend` adds `angle/2` to both faces itself; survey follows MAD8 | fodo.madx (1 GeV e⁻) vs cpymad 1.8e-15; XFEL S2E `.lte` vs Ocelot's own converter 2.9e-12 |
 
 Vertical bends are `tilt_ref = ±π/2`.  The PIP-II TraceWin export writes its two negative-angle
 vertical bends with the edge sign reversed; the MAD8 anchor test pins exactly those two.
@@ -212,6 +220,7 @@ the local `(β, γ, p0)` at every boundary.  The adapters' native pairs and the 
 | FLAME | `(x mm, x′, y mm, y′, φ rad late-positive w.r.t. SampleFreq, ΔEk MeV/u)` | −1 | follows |
 | PyORBIT3 | `(x m, x′, y m, y′, z m ahead-positive, dE GeV)` | +1 (`d[5] = 10⁹/(β²γ mc²)`) | follows |
 | IMPACT-T | fixed-time dumps `(x m, γβx, y m, γβy, z m ahead-positive, γβz)`; the adapter drifts every particle to the reference plane and returns the common basis | +1 | follows |
+| Ocelot | `(x, px, y, py, τ = c·Δt late-positive [m], ΔE/(p0 c))` — MAD-X's set, every map with γ = E/m_e (electron only) | −1 | follows (`Cavity` gains `v·cos(phi)`) |
 
 Each adapter is fingerprinted before use: a 1 m drift must give R56 = +0.9955387 for a
 2.1 MeV proton and a thin 1 MV cavity at φs = −30° must gain 866 025.4 eV in the

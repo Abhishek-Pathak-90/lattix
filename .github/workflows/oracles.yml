@@ -34,7 +34,7 @@ jobs:
       - name: Cross-format battery (every pair on every public deck; engine pairs where engines exist)
         env:
           LATTIX_BMAD_ENV: lattix-bmad
-        run: pytest tests/crossval -m "crossval and not oracle_flame and not oracle_scibmad and not oracle_lightwin and not oracle_cheetah and not oracle_pyorbit and not oracle_helix and not oracle_tracewin" -ra
+        run: pytest tests/crossval -m "crossval and not oracle_flame and not oracle_scibmad and not oracle_lightwin and not oracle_cheetah and not oracle_pyorbit and not oracle_ocelot and not oracle_helix and not oracle_tracewin" -ra
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -70,6 +70,20 @@ jobs:
           python -c "from lattix.oracles import get_oracle; print(get_oracle('cheetah').available())"
       - name: Cheetah-backed tests (fingerprint, FODO gate vs cpymad, conventions)
         run: pytest -m "oracle_cheetah and not oracle_helix" -ra
+  ocelot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Ocelot and lattix
+        run: |
+          pip install ocelot-desy==25.6.0 cpymad
+          pip install -e . pytest
+          python -c "from lattix.oracles import get_oracle; print(get_oracle('ocelot').available())"
+      - name: Ocelot-backed tests (fingerprint, FODO gate vs cpymad, conventions)
+        run: pytest -m "oracle_ocelot and not oracle_helix" -ra
   pyorbit:
     runs-on: ubuntu-latest
     continue-on-error: true

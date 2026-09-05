@@ -122,10 +122,11 @@ Toolchain on this Mac (2026-09-04): cmake 4.3.2, Boost 1.92 (Homebrew), **no gfo
 - [x] `lattix convert --from sad|sxf|at` = converter (`sad_to_bmad.py`, `sxf_to_bmad.py`, `accelerator_toolkit_to_bmad.py` of a Bmad source tree, `LATTIX_BMAD_UTIL_DIR`) → `.bmad` → IR (`VIA_BMAD` on read); PTC dropped — the shipped `ptc_flat_file_to_bmad` writes nothing.
 - [x] Tests (`tests/formats/test_bmad_bridge.py`, `oracle_bmad`): every target from `fodo.madx` with its `bmad_copy` re-read to the IR, the SAD round trip (Tao → `sad_to_bmad.py`, species as a read option), an SXF file written by MAD-X read back (species and energy as read options); no target engine.
 
-### 5.7 Ocelot (1 week, electron machines)
-- [ ] Writer for the Python lattice file (plain text, no dependency): element constructors with the §1.7 argument names, `v` in GV, `phi` in deg, `gap = 2·hgap`; reader by AST of literal constructor calls, falling back to importing ocelot for expressions; adapter `to_magnetic_lattice`/`from_magnetic_lattice` at call time (GPL).
-- [ ] Guard: writing a non-electron reference records `LOSSY OCELOT_ELECTRON_ONLY` (its cavity and energy terms assume m_e); normalized transverse strengths stay exact.
-- [ ] Oracle: `lattice_transfer_map` per element (electron beams); FLASH/XFEL `.lte` lockstep through Ocelot's own Elegant adaptor.
+### 5.7 Ocelot (1 week, electron machines) — done 2026-09-05
+- [x] Writer for the Python lattice file (plain text, no dependency): element constructors with the §1.7 argument names, `v` in GV, `phi` in deg (`phi = −φs`, measured), `gap = 2·hgap`, `kn` = MAD's `knl`; `# lattix:` tags carry the IR kind/name, surrogate padding, aperture roles, families; reader by AST of literal constructor calls (arithmetic, sequence algebra, attribute lines), falling back to running the module in the Ocelot environment (`use_ocelot=True`, GPL out of process) for code-built lattices.
+- [x] Guard: writing a non-electron reference records `LOSSY OCELOT_ELECTRON_ONLY` (its cavity and energy terms assume m_e); normalized transverse strengths stay exact; the worker hands Ocelot the total energy that reproduces lattix's γ (Ocelot's m_e is CODATA 1998, 9e-8 low), so drifts and magnets agree for any species (proton `fodo_cell.dat` vs HELIX < 1e-8).
+- [x] Oracle: per-element `elem.R(E)` composed like `MagneticLattice.transfer_maps` (electron beams); fingerprint drift exact (0.0), gain 866 025.4037 eV; `fodo.madx` (1 GeV e⁻) vs cpymad 1.8e-15; XFEL S2E `.lte` (4126 elements, 130 MeV → 17.5 GeV) lockstep through Ocelot's own `ElegantLatticeConverter`: 3284 shared boundaries, T4×4 2.9e-12, energy 2.4e-15.
+- Thin gaps are surrogate cavities (`thin_gap_surrogate_length`, a recorded choice: Ocelot's cavity focusing scales with V/(E·l), no thin limit); CI job `ocelot` (`pip install ocelot-desy==25.6.0`).
 
 ### 5.8 DYNAC (1.5 weeks; needs `brew install gcc`)
 - [ ] Writer for the tw2dyn subset and beyond: DRIFT, QUADRUPO, SOLENO, BMAGNET (+ pole faces, *verify* card layout in the V6 user guide PDF under `help/`), CAVSC (thin gap with TTF polynomial), BUNCHER, CAVNUM + FIELD (1-D Ez maps), NEWF/HARM, STEER, RFQPTQ (from RFQCell when parameters exist), STRIPPER (Foil), CHANGREF/NREF; INPUT/GEBEAM from the reference particle. Reader for the same cards.
@@ -165,4 +166,4 @@ Toolchain on this Mac (2026-09-04): cmake 4.3.2, Boost 1.92 (Homebrew), **no gfo
 * Ocelot is electron-only: record it, do not silently scale.
 
 ## 6. Order and effort (~10 weeks)
-5.0 SciBmad (done) → 5.1 xsuite (done) → 5.2 LightWin (done) → 5.3 Cheetah (done) → 5.4 PyORBIT3 (done) → 5.5 IMPACT-T (done) → 5.6 Bmad bridge (done) → 5.7 Ocelot (1) → 5.8 DYNAC (1.5) → 5.9 Synergia2 (1) → 5.10 OPAL-T (1).
+5.0 SciBmad (done) → 5.1 xsuite (done) → 5.2 LightWin (done) → 5.3 Cheetah (done) → 5.4 PyORBIT3 (done) → 5.5 IMPACT-T (done) → 5.6 Bmad bridge (done) → 5.7 Ocelot (done) → 5.8 DYNAC (1.5) → 5.9 Synergia2 (1) → 5.10 OPAL-T (1).

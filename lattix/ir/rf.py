@@ -13,6 +13,20 @@ def energy_gain_eV(voltage_V: float, phase_rad: float) -> float:
     return voltage_V * math.cos(phase_rad)
 
 
+def thin_gap_surrogate_length(voltage_V: float, phase_rad: float, frequency_Hz: float, ref,
+                              minimum_m: float = 1e-3) -> float:
+    """Length of the short cavity a field-integrating code (IMPACT-T, Ocelot's cavity matrix) gets
+    for a thin gap: ``0.4·sqrt(qVλ/(2π mc² βγ³ |sin φ|))`` within ``[minimum, βλ/2]`` — the
+    kick-smearing error grows like the length, the ponderomotive one like ``V²/length``
+    (MEASURED against HELIX with IMPACT-T: the MEBT's 80 kV gaps 6e-3 at 1–4 mm, 3.6e-2 at βλ/2;
+    a 577 kV DTL gap has 5× the thin-gap focusing at 1 mm, 4 % at 22 mm)."""
+    lam = 299792458.0 / frequency_Hz
+    sin_phi = max(abs(math.sin(phase_rad)), 0.1)
+    denom = 2.0 * math.pi * ref.species.mass_eV * ref.beta * ref.gamma ** 3 * sin_phi
+    ell = 0.4 * math.sqrt(abs(voltage_V) * lam / denom)
+    return min(max(ell, minimum_m), 0.5 * ref.beta * lam)
+
+
 # MAD-X / xtrack: gain = V·sin(2π·lag), species-independent (cpymad: charge ±1 same gain)
 def madx_lag(phase_rad: float) -> float:
     return rad_to_turns(phase_rad) + 0.25

@@ -30,6 +30,7 @@ _Z_SIGN: dict[Basis, float] = {
     Basis.IMPACTZ: -1.0,   # Δφ [rad]
     Basis.CHEETAH: -1.0,   # MEASURED 2026-09-05 (Cheetah 0.8.4 drift R56 = −L/(β²γ²)): τ = c·Δt late-positive
     Basis.PYORBIT: +1.0,   # MEASURED 2026-09-05 (PyORBIT3 drift R56 = +L/γ² · 1e9/(β²γ mc²)): z ahead-positive
+    Basis.OCELOT: -1.0,    # MEASURED 2026-09-05 (Ocelot 25.06 drift R56 = −L/(β²γ²)): τ = c·Δt late-positive
 }
 
 
@@ -49,7 +50,7 @@ def transform_matrix(basis: Basis, kinetic_eV: float, mass_eV: float,
     beta, gamma = _beta_gamma(kinetic_eV, mass_eV)
     d = np.ones(6)
     zs = _Z_SIGN[basis]
-    if basis in (Basis.MADX, Basis.IMPACTX, Basis.CHEETAH):
+    if basis in (Basis.MADX, Basis.IMPACTX, Basis.CHEETAH, Basis.OCELOT):
         # (x, px, y, py, t, pt): px = p_x/p0 ; z = zs * β t ; δ ≈ pt/β
         d[4] = zs * beta
         d[5] = 1.0 / beta
