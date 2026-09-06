@@ -40,6 +40,7 @@ HMINUS = ReferenceParticle(species=species("h-"), kinetic_energy_eV=2.1e6)
 def _read(tmp_path, text: str, **kw):
     p = tmp_path / "deck.dat"
     p.write_text(text)
+    kw.setdefault("kinetic_energy_eV", 2.1e6)          # a stated beam: these tests are about the cards
     return read(p, **kw)
 
 
@@ -639,3 +640,29 @@ def test_public_decks_read(deck):
     assert len(lat.flatten()) > 0
     assert lat.total_length > 0
     assert not any(e.code in ("UNKNOWN_CARD", "MALFORMED_CARD") for e in rep.entries), rep.summary()
+
+
+def test_beam_from_the_helix_project_file_next_to_the_deck(tmp_path):
+    import json
+
+    (tmp_path / "btl.dat").write_text("DRIFT 100 30\nQUAD 200 5 30\nEND\n")
+    (tmp_path / "btl.lgproj").write_text(json.dumps({"__kind__": "helix_project", "lattice_path": "btl.dat",
+                                                     "beam": {"species": "H-", "energy": 800.0, "frequency": 162.5}}))
+    lat, rep = read(tmp_path / "btl.dat")
+    assert lat.reference.species.name == "h-" and lat.reference.kinetic_energy_eV == 800e6
+    assert lat.reference.rf_frequency_Hz == 162.5e6
+    assert rep.codes().get("REFERENCE_FROM_PROJECT") == 1 and "BEAM_ASSUMED" not in rep.codes()
+    assert not lat.warnings
+    lat2, rep2 = read(tmp_path / "btl.dat", kinetic_energy_eV=2.0e6)        # an explicit option wins
+    assert lat2.reference.kinetic_energy_eV == 2.0e6 and lat2.reference.species.name == "h-"
+    assert "BEAM_ASSUMED" not in rep2.codes()
+
+
+def test_assumed_beam_is_flagged(tmp_path):
+    (tmp_path / "bare.dat").write_text("DRIFT 100 30\nEND\n")
+    lat, rep = read(tmp_path / "bare.dat")
+    assert lat.reference.kinetic_energy_eV == 2.1e6 and lat.reference.species.name == "proton"
+    assert rep.codes().get("BEAM_ASSUMED") == 1
+    assert lat.warnings and "2.1 MeV" in lat.warnings[0] and "proton" in lat.warnings[0]
+    lat, rep = _read(tmp_path, "DRIFT 100 30\nEND\n", kinetic_energy_eV=800e6, species="h-")
+    assert "BEAM_ASSUMED" not in rep.codes() and not lat.warnings

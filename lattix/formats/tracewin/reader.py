@@ -30,6 +30,7 @@ Units: deck mm / deg / MHz / MeV / V → IR m / rad / Hz / eV / V.
 
 from __future__ import annotations
 
+import json
 import math
 import os
 import re
@@ -223,6 +224,33 @@ def _circle(r_mm: float) -> ApertureP | None:
 
 def _coerce_float(v, default: float) -> float:
     return default if v is None else float(v)
+
+
+def _project_beam(path: Path) -> dict | None:
+    """The beam of a HELIX project file next to the deck (``<stem>.lgproj``, JSON: ``beam.species``,
+    ``beam.energy`` [MeV], ``beam.frequency`` [MHz]) — TraceWin decks carry no beam of their own."""
+    cand = path.with_suffix(".lgproj")
+    if not cand.is_file():
+        return None
+    try:
+        doc = json.loads(cand.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    beam = doc.get("beam") if isinstance(doc, dict) else None
+    if not isinstance(beam, dict):
+        return None
+    out: dict = {"file": cand.name}
+    sp = beam.get("species")
+    if isinstance(sp, str):
+        try:
+            out["species"] = _species(sp).name
+        except (KeyError, ValueError, TypeError):
+            pass
+    for key, dst in (("energy", "kinetic_energy_eV"), ("frequency", "frequency_Hz")):
+        v = beam.get(key)
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0:
+            out[dst] = float(v) * 1e6
+    return out
 
 
 class _Parser:
@@ -1283,6 +1311,16 @@ class Reader:
             kinetic_energy_eV, tagged = tag.kinetic_energy_eV, True
         if frequency_Hz in (None, "") and tag is not None and tag.rf_frequency_Hz:
             frequency_Hz = tag.rf_frequency_Hz
+        project = _project_beam(Path(path)) if (species is None or kinetic_energy_eV is None) else None
+        from_project: list[str] = []
+        if project is not None:
+            if species is None and project.get("species"):
+                species, from_project = project["species"], [*from_project, "species"]
+            if kinetic_energy_eV is None and project.get("kinetic_energy_eV"):
+                kinetic_energy_eV, from_project = project["kinetic_energy_eV"], [*from_project, "energy"]
+            if frequency_Hz in (None, "") and project.get("frequency_Hz"):
+                frequency_Hz, from_project = project["frequency_Hz"], [*from_project, "RF frequency"]
+        assumed = ([] if kinetic_energy_eV is not None else ["2.1 MeV kinetic"]) + ([] if species else ["proton"])
         p = _Parser(
             Path(path),
             species=species,
@@ -1297,6 +1335,15 @@ class Reader:
             rep.equivalent("REFERENCE_FROM_TAG", f"reference particle ({lat.reference.species.name}, "
                            f"{lat.reference.kinetic_energy_eV:.6g} eV kinetic) taken from the deck's "
                            "'; lattix: reference' tag", element=None, kind=None)
+        if from_project:
+            rep.equivalent("REFERENCE_FROM_PROJECT", f"reference particle ({lat.reference.species.name}, "
+                           f"{lat.reference.kinetic_energy_eV:.6g} eV kinetic) taken from the HELIX project file "
+                           f"{project['file']} next to the deck ({', '.join(from_project)})", element=None, kind=None)
+        if "2.1 MeV kinetic" in assumed:
+            msg = (f"no beam given: {' and '.join(assumed)} assumed — set the species and kinetic energy "
+                   "(reader options / the top bar), or keep the deck's HELIX .lgproj next to it")
+            rep.equivalent("BEAM_ASSUMED", msg, element=None, kind=None)
+            lat.warnings.append(msg)
         rep.raise_if(strict)
         return lat, rep
 

@@ -1011,6 +1011,8 @@ const topbar = {
       loadSource(r.source);
       $("#src-format option[value='']").textContent = `auto — detected: ${r.detected_format}`;
       ui.toast("ok", `read ${r.source.header.n_placed} elements (${r.detected_format})`);
+      const w = r.source.header.warnings || [];
+      if (w.length) ui.toast("warn", `${w.length} warning(s)`, w.slice(0, 3).join("\n"));
     } catch (e) { ui.toast("err", "read failed", e.message); }
     finally { ui.busy(false, ""); }
   },

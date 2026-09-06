@@ -45,6 +45,7 @@ PROTON = ReferenceParticle(species=species("proton"), kinetic_energy_eV=2.1e6, r
 def _parse(tmp_path, text, **kw):
     p = tmp_path / "deck.dat"
     p.write_text(text)
+    kw.setdefault("kinetic_energy_eV", 2.1e6)          # a stated beam: these tests are about the cards
     return read(p, **kw)
 
 

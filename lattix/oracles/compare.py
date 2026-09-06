@@ -92,12 +92,14 @@ def compare_pair(a: OracleResult, b: OracleResult, tol_s: float = 1e-9) -> PairC
     pa0 = momentum_eV(ca.ref_kinetic_eV_in[0], ca.mass_eV)
     pb0 = momentum_eV(cb.ref_kinetic_eV_in[0], cb.mass_eV)
     diffs, rels = [], []
+    scale = 0.0
     blocks = {k: 0.0 for k in BLOCKS}
     per_boundary: list[tuple[float, dict[str, float]]] = []
     for ia, ib in pairs:
         ma = rescale_to_constant_p0(Ra[ia], pa0, momentum_eV(ca.ref_kinetic_eV_out[ia], ca.mass_eV))
         mb = rescale_to_constant_p0(Rb[ib], pb0, momentum_eV(cb.ref_kinetic_eV_out[ib], cb.mass_eV))
         dm = np.abs(ma - mb)
+        scale = max(scale, float(np.max(np.abs(ma))), float(np.max(np.abs(mb))))
         d = float(np.max(dm))
         diffs.append(d)
         rels.append(d / max(np.max(np.abs(ma)), 1e-300))
@@ -116,6 +118,9 @@ def compare_pair(a: OracleResult, b: OracleResult, tol_s: float = 1e-9) -> PairC
         sv = float(np.max(np.abs(a.survey[ia, :3] - b.survey[ib, :3])))
     if abs(a.total_length - b.total_length) > tol_s:
         notes.append("total length differs")
+    if scale > 1e6:
+        notes.append(f"cumulative maps reach {scale:.1e}: the line is unstable at this reference — check the "
+                     "species and energy the decks were read with")
     return PairComparison(a.engine, b.engine, len(pairs), a.total_length, b.total_length,
                           float(np.max(diffs)), float(np.max(rels)), float(diffs[-1]),
                           energy_rel, sv, blocks, notes, per_boundary=per_boundary)

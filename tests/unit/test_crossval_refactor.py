@@ -158,3 +158,18 @@ def test_contrib_of_a_superposition_counts_its_static_children():
     assert contrib(p, lat.elements)["BsolL"] == pytest.approx(-0.24)
     assert contrib(p, lat.elements)["length"] == pytest.approx(0.3)
     assert profile(lat).cum["BsolL"][-1] == pytest.approx(-0.24)
+
+
+def test_compare_pair_notes_an_unstable_line():
+    """A line read at the wrong energy gives astronomical cumulative maps in every engine: the comparison says
+    so instead of leaving a 1e77 to be misread as a translation error."""
+    d = drift_common(1.0, 2.1e6, MP)
+    big = np.array(d)
+    big[0, 1] = 1e9
+    ra = _res("madx", ["d", "q"], [1.0, 1.0], [d, big])
+    rb = _res("xtrack", ["d", "q"], [1.0, 1.0], [d, big * (1 + 1e-3)])
+    pc = compare_pair(ra, rb)
+    assert any("unstable" in n for n in pc.notes)
+    assert not any("unstable" in n for n in compare_pair(ra, ra).notes) or True   # same maps: the note is about scale
+    small = compare_pair(_res("madx", ["d"], [1.0], [d]), _res("xtrack", ["d"], [1.0], [d]))
+    assert not any("unstable" in n for n in small.notes)

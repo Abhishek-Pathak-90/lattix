@@ -30,7 +30,12 @@ machine.  Every card becomes an IR element in deck order:
 
 Raw (non-synchronous) RF phases are converted to the IR's species-independent synchronous
 phase with `phase_from_tracewin_deg` (a π shift for negative species); the species is a
-reader option and EQUIVALENT `SPECIES_ASSUMED` is recorded when it was defaulted.  Unknown
+reader option and EQUIVALENT `SPECIES_ASSUMED` is recorded when it was defaulted.  A TraceWin deck
+carries no beam: `species`, `kinetic_energy_eV` and `frequency_Hz` are reader options, taken from the
+deck's `; lattix: reference` tag when present (`REFERENCE_FROM_TAG`), else from a HELIX project file
+`<stem>.lgproj` next to the deck (`REFERENCE_FROM_PROJECT`); without any of them a 2.1 MeV proton is
+assumed and flagged (`BEAM_ASSUMED`, also a lattice warning) — a deck of a different energy read that
+way is not wrong element by element, but every normalised strength and any engine run is.  Unknown
 cards are kept as directives with DROPPED `UNKNOWN_CARD`; a `FIELD_MAP` whose files are
 missing is kept with LOSSY `FM_FILES_MISSING`; the DIAG_POSITION `1e50` sentinels and the
 no-op hardware cards (`BPM :`) are recognised.
