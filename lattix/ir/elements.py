@@ -258,7 +258,7 @@ class Taylor(Element):
     matrix: list[list[float]] = Field(default_factory=lambda: [[1.0 if i == j else 0.0 for j in range(6)]
                                                                 for i in range(6)])
     offset: list[float] = Field(default_factory=lambda: [0.0] * 6)
-    basis: Literal["madx", "elegant", "bmad", "xtrack", "tracewin", "flame", "impactx", "cheetah", "ocelot", "common"] | None = None  # noqa: E501  # source coordinate basis
+    basis: Literal["madx", "elegant", "bmad", "xtrack", "tracewin", "flame", "impactx", "cheetah", "ocelot", "dynac", "common"] | None = None  # noqa: E501  # source coordinate basis
 
 
 class Patch(Element):

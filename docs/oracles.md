@@ -18,6 +18,7 @@ recalled.  Re-run `lattix fingerprint` / `pytest tests/oracles` after any engine
 | Cheetah | env `cheetah` (torch 2.14 CPU, cheetah-accelerator 0.8.4, GPL-3) | `lattix/oracles/cheetah.py` + `cheetah_worker.py` | (x, px, y, py, τ = cΔt late-positive [m], ΔE/(p0 c)) | follows the cavities | 7×7 first-order maps per element; cavity phase runs the other way (`phase = −φ`), k1/k charge-blind (signed rigidity in the writer); zero-length cavity is inf (1 µm substituted). |
 | IMPACT-T | conda-forge `impact-t` 3.1.5 (`ImpactTexe`, BSD) in env `lattix` | 3.1.5 | fixed-time `(x, γβx, y, γβy, z, γβz)` dumps drifted to the reference plane → the common basis | follows | `lattix/oracles/impactt.py`: `-2` dumps and `-4` step changes at every boundary, each element its own `dt = L/(N βc)` so the reference lands on the boundaries; 13-particle probes from `partcl.data` (`flagdist 16`); `R_elem = J_i·J_{i−1}⁻¹`; ≤ 90 controls per run (chunked, `theta0` shifted by `360·f·t`); dipoles re-base the frame one step past the face; **the dipole model has no pole-face focusing (report only)**. |
 | Ocelot | env `ocelot` (a venv from env `lattix`'s python 3.11 with `ocelot-desy` 25.6.0 → reports 25.06.0, GPL-3) | `lattix/oracles/ocelot.py` + `ocelot_worker.py` | (x, px, y, py, τ = cΔt late-positive [m], ΔE/(p0 c)) — MAD-X's set | follows the cavities (`v·cos(phi)`) | per-element `elem.R(E)` composed as `MagneticLattice.transfer_maps`; every map divides by m_e (electron only; the worker hands Ocelot the total energy giving lattix's γ); `Cavity` needs a length (thin gaps are surrogate cavities); Elegant `.lte` through Ocelot's own converter (`fmt="elegant"`). |
+| DYNAC | local build of the clone (V6R16, gfortran 16 from Homebrew gcc; `cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5`); EULA freeware, never in CI | `lattix/oracles/dynac.py` | (x cm, x′, y cm, y′, φ rad late-positive w.r.t. the master f, ΔW MeV) | follows | no matrix output: one DYNAC job per optics card with a fresh `RDBEAM` probe and a `WRBEAM` dump, the map fitted from the dump (6 digits → ~1e-5); `REFCOG 1`; thick cavities are centred bunchers, cell trains and maps `FIELD` + `CAVNUM`; left bends `ZROT 180` with negated faces. |
 | PyORBIT3 | env `pyorbit` (python 3.10, meson build of PyORBIT3 `22b45fa` 2026-05-14 with `USE_MPI=none`, MIT; `libfftw3` preloaded on macOS) | `lattix/oracles/pyorbit.py` + `pyorbit_worker.py` | (x [m], x′, y [m], y′, z [m] ahead-positive, dE [GeV]) | follows the gaps | `LinacTrMatricesController` maps at every node entrance, cumulated from the first node (per-node map `R[k+1]·R[k]⁻¹`, one extra node at the exit); 13-particle symmetric probes tracked at two amplitudes and Richardson-extrapolated; one `<Cavity>` per gap. |
 | ImpactX / IMPACT-Z | env `lattix` (`impactx` 26.08, `impact-z` 2.7.7, both osx-arm64 builds) | — | Phase 3 | follows | `ImpactZexe` on PATH in the env; `impactx` importable. |
 | SciBmad | `julia` (juliaup 1.10) with `SciBmad` 0.5.2 (Beamlines.jl + BeamTracking.jl) through `lattix/oracles/scibmad_worker.jl`; `LATTIX_JULIA` or PATH | 0.5.2 (2026-09-05) | (x, px, y, py, z, pz), z ahead-positive (drift R56 = +L/γ² measured) | constant (one reference momentum per `Beamline`; nesting and `Patch(dE_ref)` past the first element are refused) | `RFCavity` gain is **−V·cos(phi0)** with `phi0` in radians for protons and electrons alike (writer negates the voltage: `GAIN_SIGN`); a zero-length cavity and `edge1_int/edge2_int` cannot be tracked (worker substitutes 1 µm / 0 and says so); `g_ref` alone is a curved frame — the dipole field is `Kn0`; `LineElement(transport_map=f)` with `f(v, q, p=nothing)` works as a thin lens; `using Beamlines` fails in an environment that only has `SciBmad` (worker strips `using` lines). `Species("#1H-")` is H⁻ (m_p + 2 m_e); `Species("H-")` is the isotope-averaged anion. Startup ~13 s, a run ~8 s. |
@@ -36,6 +37,7 @@ reused instead), `flame-code` (Phase 3, pip).
 | tracewin | +0.9955387 (z, dp/p) | +0.9955387 (3e-8, 7-digit file) | −4.273 | 866 025.1 |
 | elegant | 0 (path length; −0.9955387 after the adapter's −L/γ² term) | +0.9955387 | −0.288 (matrix; ≈ β·4.30 — ultra-relativistic phase slip) | 866 025.4 (`change_p0=1`, proton phase = φs − 90°) |
 | ocelot (electron, 2.1 MeV) | −0.0398280 (τ, ΔE/p0c) | +0.0383025 = L/γ² for the electron (exact, 0.0) | −0.510 (the 37 mm surrogate cavity at phi = +30°) | 866 025.4 (`v·cos(phi)`, 1e-15) |
+| dynac | −12.0997 rad/MeV (φ, ΔW) | +0.9955392 (5e-7: 6-digit dumps) | −4.305 (BUNCHER) | 866 020 (`q·V·cos φ`, 6-digit dumps) |
 
 Why the cavity R65 differs between constant-p0 and p0-following engines at this energy:
 δ = ΔW/(β²γmc²) is normalised with the *exit* β²γ in p0-following codes and the *entry*
@@ -582,4 +584,77 @@ MAD-X gate therefore checks loading and reporting, the physics gate runs on Bmad
   algebra, `MagneticLattice(cell)`, attribute lines); a module built with loops raises and
   `read(..., use_ocelot=True)` runs it in the Ocelot environment through the worker's `--dump`
   (`OCELOT_EXECUTED`).
+
+## Phase 5.8 measurements (DYNAC V6R16, 2026-09-05)
+
+* **Build.**  `brew install gcc` (gfortran 16.2); the clone's CMake 2.8 minimum needs
+  `cmake .. -DCMAKE_POLICY_VERSION_MINIMUM=3.5` with CMake 4.3; `dynac`, `dynplt`, `dst2ascii` and
+  `converters/tw2dyn` build.  The SNS `mebt_dtl1.in` example runs in 0.2 s and ends at 7.5484 MeV like
+  the shipped `dynac.print.ref` (an older column layout).
+* **Deck grammar.**  Cards are type codes alone on a line; their entries are list-directed reads that
+  continue on the next line (the SNS deck splits `CAVSC`'s 16 entries in two lines); `;` comments;
+  the first line is the title (`tw2dyn` writes none — lattix reads a deck whose first line is a type
+  code as title-less).  DYNAC dies (segfault) on a `FIELD` block with a long run of zeros and produces
+  NaN for `CAVSC` with `TP = 0` or for `HARM` + `CAVNUM` without a `FIELD`.
+* **Probe.**  `RDBEAM` with `IFLAG 0` (six columns), `WRBEAM name / IREC IFLAG` with `IREC = 1`
+  (absolute energies, phase relative to the COG) and `IFLAG = 100` (the energies of the reference and
+  COG on the first line): thirteen particles (on-axis + ± offsets of 0.01 cm, 1 mrad, 0.01 rad, 1 keV)
+  give each card's map by least squares.  Dumps carry six significant digits: a 1 m drift's R56 comes
+  out 5e-7 off the analytic value, quadrupole R11 to 3e-6 — DYNAC's exact tier floor is 5e-5
+  (`crossval.ENGINE_PRECISION`).  One run with a dump after every card fits the later maps from the
+  *propagated* offsets: on the 5 m `csr_chicane.dat` (strong quads at 2.1 MeV, growth 1e5) their
+  conditioning reaches 1.6e5 and the fitted drift maps are wrong by 2 — so the adapter runs one job
+  per card with a fresh probe at the energy reached so far, carrying `NEWF`, `SECORD`, `TWQA`, the
+  cavity's `FIELD`/`HARM` block and `NREF` offsets along (`ALINER` skipped, `TOF 0` flagged; 8 jobs for
+  the FODO, 287 for the SNS deck, 407 for the PSB in ~10 s).
+* **Left bends.**  A negative `ANGL` with `RMO > 0` gives the right bend's map with the x′ column
+  mirrored (R12 < 0) and a negative `RMO` displaces the on-axis particle by 2ρ(1−cos θ): neither is a
+  bend to the left.  DYNAC's manual turns the magnet with `ZROT` (a bend to the left = `ZROT 180`, the
+  right magnet, `ZROT −180`), and MAD-X's own `(angle < 0, e1, e2)` equals `(angle > 0, tilt = π, −e1,
+  −e2)` to 1e-17 (cpymad 5.09.03: its face angles are measured from the x axis) — so the writer turns
+  the magnet and negates the faces (tag `neg=1`).  The PSB's rectangular left bends (e = angle/2 < 0)
+  then come out drift-like in x as in MAD-X (1.8e-15 on `bi4.bsw1l1.1`), and the earlier vertical
+  blow-up of the PSB probe (y = 1 m after 70 m from the un-negated faces) is gone.
+* **Basis.**  `(x cm, x′ rad, y cm, y′ rad, φ rad, W MeV)` with φ late-positive (a 50 cm drift gives
+  R56 = −6.05 rad/MeV at 2.1 MeV, i.e. −12.10 per metre); `Basis.DYNAC`, `_Z_SIGN = −1`, `d[0] = d[2] =
+  1e-2`, `d[4] = −βλ/2π`, `d[5] = 10⁶/(β²γmc²)` with λ from the master frequency (`NEWF` changes it; the
+  adapter records the frequency per card).
+* **Reference bookkeeping.**  After an `RDBEAM`, DYNAC's printed "reference" (`dynac.long`, `dynac.dmp`)
+  gets half a buncher's gain (0.433 MeV of 0.866) while the COG and every particle get the full one;
+  `REFCOG 1` (reference and COG independent) restores the full gain.  The rest mass is `UEM × ATM`
+  (`xmat = uem*atm`, dynac.F:11221) — a proton is `938.27231 1.`, and lattix writes `m/A` with `A =
+  round(m/u)`.
+* **Magnets.**  `QUADRUPO L B_tip R`: R11 = 0.698320 for 0.5 kG at 1.5 cm over 20 cm at 2.1 MeV, the
+  analytic hard-edge value to 3e-6; an H⁻ is defocused by the same card (lab field).  `SOLENO 1 L B`:
+  R11 = 0.87723 (= cos²(kL), k = B/2Bρ) with the rotation sign flipped for H⁻.  `STEER 0.001 0`: +4.77
+  mrad for a proton, −4.77 for an H⁻ (∫B·dl/Bρ_signed).  `TWQA 0 10.`: R13 = −0.10895, MAD-X `tilt =
+  +10°` gives the same.  `ALINER 0.1 0 0 0` moves every particle by +1 mm permanently.
+* **Bends.**  `BMAGNET` 10°, ρ = 1 m, proton at 2.1 MeV: R11 0.98481, R12 17.365 cm/rad, R16 0.36215
+  cm/MeV, R51 +0.0885 — MAD-X's sector map (0.98481, 17.3648, 0.36211) to 1e-4; the wedge with 5° faces,
+  fint 0.45, gap 6 cm and n = 0.5 (k1 = −0.5 m⁻²): R11 1.00764 / MAD-X 1.00763, R33 0.98190 / 0.98194,
+  R43 −0.00206 / −0.002056 cm⁻¹.  For an H⁻ with `BAIM = 0` the derived field bends the *other* way (the
+  on-axis particle leaves at x = +3.2 cm): the writer gives `BAIM = −|Bρ|/ρ` (negative kG), which
+  reproduces the proton map incl. R16 and R51 signs; DYNAC's documented recipe (negate `ANGL` and
+  `RMO`) gives the mirror geometry (R51 < 0).  `ZROT +90` · `BMAGNET` · `ZROT −90` bends down (R36 =
+  +0.362), like MAD-X `tilt = +π/2` (R36 = +0.1305 in its units): `ZROT a` = MAD's tilt.
+* **RF.**  `BUNCHER 1.0 −30. 1 1.5` on a 2.1 MeV proton: +0.866 MeV, native R65 = +0.5 MeV/rad
+  (bunching), R21 = +0.02317 /cm (2.32 /m; lattix's thin-gap formula at the entrance energy gives 3.02,
+  at the mid-gap energy 2.28); an H⁻ at −30° *loses* 0.433 MeV and gains +0.866 at +150°: the phase is
+  charge-signed.  `CAVSC` with a βλ cell (5.43 cm, 402.5 MHz, E0 = 1 MV/m, T = 0.8): 43.54 keV at 0°
+  against E0·T·L = 43.4, 30.67 at ±45°, −43.26 at 180°, identical for an H⁻ (not charge-signed); along
+  the SNS DTL each gap gains 0.6–1.2 % more than `E0·T·L·cos φ` (the TTF-derivative model), the tank
+  ending at 7.548 MeV against 7.525 for the thin-gap reading.  `FIELD` + `CAVNUM` on a 20 cm raised
+  cosine of 1 MV/m peak at 162.5 MHz: 11 216 eV at crest (RK4 of the same field: 11 208; 7e-4), 9 732 at
+  −30° (9 725), 9 715 at +30°, independent of `INTRVL` 10–80 and `IELEC`; the writer's 1 MV, 2.1 MeV
+  cavity over a 6.2 cm bump (βλ/2) gains 1.59 V at DPHASE 0 — the strong-acceleration regime where the
+  two integrations part company — so thick cavities are written as centred `BUNCHER`s (exact gain).
+* **Gates.**  `fodo.madx` vs cpymad: 3.5e-5 on T4×4, below 2e-6 on every other block (8 boundaries);
+  `fodo_cell.dat` 3.2e-5, `solenoid_channel.dat` 3.9e-6 and `bend_line.dat` 8e-5 vs HELIX;
+  `mebt_line.dat` vs HELIX 6.4e-3 on T4×4 (the bunchers' mid-gap kick) and 2.4e-6 on the energy; the
+  synthetic `csr_chicane.dat` 2.4e-2 (the dump precision amplified by its 1e5 growth); the fingerprint
+  gap gains 866 030 eV and bunches for a proton and an H⁻; `tw2dyn` on the MEBT deck (filtered to the
+  cards it knows, `GAP` padded to ten entries) gives the same quadrupoles, drifts and bunchers as lattix's
+  writer and the same DYNAC maps; the SNS deck as shipped vs lattix's rewrite: the MEBT maps identical
+  at the tank entrance, the end energy to 0.3 %; the battery's 39 DYNAC cases (fixed points, IR round
+  trips and the HELIX/MAD-X engine pairs on the public decks) pass.
 

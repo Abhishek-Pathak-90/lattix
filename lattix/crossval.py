@@ -88,7 +88,7 @@ DERIVATION_TIER = "_derivation_tier"
 
 
 #: formats whose decks come with data files next to them (IMPACT-T and IMPACT-Z's rfdataN, 1TN.T7)
-_SIDE_FILE_FORMATS = frozenset({"impactt", "impactz"})
+_SIDE_FILE_FORMATS = frozenset({"impactt", "impactz", "dynac"})
 
 
 def derived_decks(workdir: Path, bases: list[tuple[str, str, dict]] | None = None) -> list[tuple[Path, str, dict]]:
@@ -130,17 +130,20 @@ ENGINE_FOR_FORMAT: dict[str, str | None] = {
     "madx": "madx", "xtrack": "xtrack", "bmad": "bmad", "elegant": "elegant", "impactx": "impactx",
     "impactz": "impactz", "flame": "flame", "tracewin": "helix", "mad8": None, "pals": None, "lattix": None,
     "scibmad": "scibmad", "cheetah": "cheetah", "pyorbit": "pyorbit", "impactt": "impactt", "ocelot": "ocelot",
+    "dynac": "dynac",
 }
 #: fallback engines per format, tried in order when the primary one is unavailable (CI has no HELIX)
 ENGINE_CANDIDATES: dict[str, tuple[str, ...]] = {"tracewin": ("helix", "lightwin")}
 FOLLOWS_P0 = {"helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True, "lightwin": True,
-              "cheetah": True, "pyorbit": True, "impactt": True, "ocelot": True,
+              "cheetah": True, "pyorbit": True, "impactt": True, "ocelot": True, "dynac": True,
               "impactz": True, "flame": True, "madx": False, "xtrack": False, "scibmad": False}
 
 RTOL = 1e-9
 #: lattice-level codes after which normalized strengths no longer mean the same thing
 _SPECIES_LOSS = ("SPECIES_NOT_REPRESENTABLE", "UNKNOWN_SPECIES", "PALS_SPECIES_UNKNOWN", "SPECIES_ASSUMED")
 EXACT_MAP_TOL = 1e-7          # max |ΔR̂cum| relative, exact tier (roundoff over long lines)
+#: engines whose output files limit the maps fitted from them (the exact tier is held at that floor)
+ENGINE_PRECISION = {"dynac": 5e-5, "tracewin": 1e-6}
 EQUIV_MAP_TOL = 2e-2          # equivalent tier
 EXACT_ENERGY_TOL = 1e-9
 EQUIV_ENERGY_TOL = 5e-3
@@ -193,6 +196,14 @@ AFFECTS: dict[str, set[str]] = {
     "INSTRUMENT_AS_MONITOR": set(), "THICK_MULTIPOLE_SPLIT": set(), "REFCHANGE_AS_MATRIX": set(),
     "NCELLS_AS_CAVITY": set(), "TAYLOR_BASIS_OCELOT": set(), "THIN_GAP_PAD_DRIFT": set(),
     "OCELOT_ELECTRON_ONLY": set(), "APERTURE_CONTINUOUS_AT_ENDS": set(),
+    "MULTIPOLE_AS_STEER": set(), "COLLIMATOR_AS_REJECT": set(), "INSTRUMENT_AS_EMIT": set(),
+    "FOIL_AS_STRIPPER": set(), "PATCH_AS_ALINER": set(), "REFCHANGE_AS_NREF": set(), "MISALIGN_AS_ALINER": set(),
+    "QUAD_TILT_AS_TWQA": set(), "APERTURE_AS_REJECT": set(), "KICKER_THIN_AT_ENTRANCE": set(),
+    "THICK_CAVITY_AS_BUNCHER": set(), "NCELLS_AS_CAVNUM": set(), "FM_AS_CAVNUM": set(), "BUNCHER_HARMONIC": set(),
+    "DYNAC_FREQUENCY_ASSUMED": set(), "DYNAC_NCELLS_PARAMS": set(), "PATCH_ROTATION_DROPPED": set(),
+    "RF_RAW_PHASE_AS_SYNC": set(), "DYNAC_DIRECTIVE_KEPT": set(),
+    "CAVSC_AS_GAP": {"gain", "volt", "energy"}, "NCELLS_FROM_CAVNUM": set(), "FM_READ_AS_CAVITY": set(),
+    "CHANGREF_AS_PATCH": set(),
 }
 
 #: codes whose model moves an element boundary by up to this many metres (short cavities)
@@ -665,6 +676,12 @@ def _engine_check(res: CaseResult, deck: Path, src: str, out: Path, dst: str, la
         # Ocelot's Cavity (Rosenzweig–Serafini edges + body) against the thin-gap or field-map models
         res.tier = "equivalent"
         res.engine_note = "Ocelot cavity model (RF focusing of its own): engine models differ; "
+    if "dynac" in (ea, eb) and res.tier == "exact" and has_rf:
+        # MEASURED (docs/oracles.md, Phase 5.8): DYNAC's BUNCHER applies the RF defocusing with the mid-gap
+        # velocity (TraceWin/HELIX: the entrance one) and CAVNUM integrates a generated profile against its
+        # own crest (7e-4): engine models differ on every RF element
+        res.tier = "equivalent"
+        res.engine_note = "DYNAC buncher / CAVNUM models: engine models differ; "
     fm_derived = any(c.startswith("FM_") for c in res.codes)
     if has_rf and (FOLLOWS_P0[ea] != FOLLOWS_P0[eb] or "elegant" in (ea, eb) or fm_derived):
         # a field map integrated by one engine and a cavity element in the other agree on the
@@ -700,9 +717,10 @@ def _engine_check(res: CaseResult, deck: Path, src: str, out: Path, dst: str, la
         # differ at O(ψ²) in the fint·hgap correction (8.6e-4 on ELENA's 60° bend, 0 without it)
         res.tier = "equivalent"
         res.engine_note = "fringe-integral bends: engine models differ; "
+    floor = max(ENGINE_PRECISION.get(ea, 0.0), ENGINE_PRECISION.get(eb, 0.0))
     if res.tier == "exact":
-        map_ok = metric_rel <= EXACT_MAP_TOL
-        e_ok = (not (FOLLOWS_P0[ea] and FOLLOWS_P0[eb])) or pc.energy_rel <= EXACT_ENERGY_TOL
+        map_ok = metric_rel <= max(EXACT_MAP_TOL, floor)
+        e_ok = (not (FOLLOWS_P0[ea] and FOLLOWS_P0[eb])) or pc.energy_rel <= max(EXACT_ENERGY_TOL, floor)
     elif res.tier == "equivalent":
         map_ok = metric_rel <= EQUIV_MAP_TOL
         e_ok = (not (FOLLOWS_P0[ea] and FOLLOWS_P0[eb])) or pc.energy_rel <= EQUIV_ENERGY_TOL

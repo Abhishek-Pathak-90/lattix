@@ -62,7 +62,10 @@ IMPACT-T or IMPACT-Z deck gets a directory of its own under `derived/`: their `r
 numbered from 1 per deck and would otherwise overwrite each other.  Ocelot's lattice module is a battery
 format with Ocelot as its engine: every public deck is a proton or H⁻ one, so its engine pairs are report only
 (`OCELOT_ELECTRON_ONLY`, Ocelot's maps divide by the electron mass); the electron gates live in
-`tests/oracles/test_ocelot_adapter.py`.  TraceWin decks
+`tests/oracles/test_ocelot_adapter.py`.  DYNAC's deck is a battery format with DYNAC as its engine where a
+built binary is at hand (never in CI): its `.fields.txt` side file gets a directory of its own like IMPACT-T's,
+RF pairs are Equivalent tier (the buncher's mid-gap kick, CAVNUM's own crest) and the exact tier is held at the
+6-digit dump precision (`ENGINE_PRECISION`).  TraceWin decks
 are checked with HELIX where it exists and with LightWin's `Envelope3D` otherwise (CI); a pair whose
 LightWin run skipped or drift-substituted elements is report-only.
 

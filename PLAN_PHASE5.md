@@ -128,10 +128,10 @@ Toolchain on this Mac (2026-09-04): cmake 4.3.2, Boost 1.92 (Homebrew), **no gfo
 - [x] Oracle: per-element `elem.R(E)` composed like `MagneticLattice.transfer_maps` (electron beams); fingerprint drift exact (0.0), gain 866 025.4037 eV; `fodo.madx` (1 GeV e⁻) vs cpymad 1.8e-15; XFEL S2E `.lte` (4126 elements, 130 MeV → 17.5 GeV) lockstep through Ocelot's own `ElegantLatticeConverter`: 3284 shared boundaries, T4×4 2.9e-12, energy 2.4e-15.
 - Thin gaps are surrogate cavities (`thin_gap_surrogate_length`, a recorded choice: Ocelot's cavity focusing scales with V/(E·l), no thin limit); CI job `ocelot` (`pip install ocelot-desy==25.6.0`).
 
-### 5.8 DYNAC (1.5 weeks; needs `brew install gcc`)
-- [ ] Writer for the tw2dyn subset and beyond: DRIFT, QUADRUPO, SOLENO, BMAGNET (+ pole faces, *verify* card layout in the V6 user guide PDF under `help/`), CAVSC (thin gap with TTF polynomial), BUNCHER, CAVNUM + FIELD (1-D Ez maps), NEWF/HARM, STEER, RFQPTQ (from RFQCell when parameters exist), STRIPPER (Foil), CHANGREF/NREF; INPUT/GEBEAM from the reference particle. Reader for the same cards.
-- [ ] Lockstep: our TraceWin reader → DYNAC writer vs `tw2dyn` on the SNS MEBT+DTL1 deck (same cards, same numbers).
-- [ ] Oracle: build DYNAC, run with `FIRORD`, parse the printed first-order matrices; marker `oracle_dynac`, local only (EULA): nothing from `datafiles/` enters the repo.
+### 5.8 DYNAC (1.5 weeks; needs `brew install gcc`) — done 2026-09-05
+- [x] Writer for the tw2dyn subset and beyond: DRIFT, QUADRUPO (+ TWQA roll), SEXTUPO, SOLENO, BMAGNET (pole faces, fint, gap, n = −k1ρ², `BAIM = −|Bρ|/ρ` for negative species, ZROT tilt; layout verified in the V6R16 user guide and by probes), BUNCHER (thin gap, charge-signed phase; thick cavities as centred bunchers), FIELD + CAVNUM (cell trains, 1-D field maps), NEWF, NREF, STEER, STRIPPER, REJECT windows, ALINER pairs; GEBEAM/INPUT from the reference (rest mass UEM × ATM). Reader for every card (list-directed tokenizer; CAVSC as a thin gap; DYNAC-only cards kept as directives).
+- [x] Lockstep: TraceWin reader → DYNAC writer vs `tw2dyn` on HELIX's MEBT deck (filtered to tw2dyn's five cards, GAP padded): identical quadrupoles, drifts, bunchers and DYNAC maps. The SNS MEBT + DTL1 example (never in the repo) reads, re-writes and re-runs: MEBT maps 2.8e-4, end energy 0.3 %.
+- [x] Oracle: built DYNAC (gfortran 16, CMake policy override); no printed matrices — one job per card with a fresh RDBEAM probe and a WRBEAM dump, the map fitted from it (6-digit floor 5e-5; a single run's propagated probe loses conditioning, 1.6e5 on the chicane); marker `oracle_dynac`, local only (EULA). Gates: fodo.madx vs cpymad 3.5e-5, fodo_cell/solenoid_channel/bend_line vs HELIX ≤ 8e-5, mebt_line vs HELIX Equivalent (mid-gap RF kick), fingerprint drift 5e-7 and gain 866 030 eV; left bends = ZROT 180 + negated faces (MAD-X's own identity), PSB and chicane battery cases pass.
 
 ### 5.9 Synergia2 (1 week, when a Booster study needs it)
 - [ ] pixi install of the clone (osx-arm64); reader/writer for the JSON lattice (schema from `as_json` of the MAD-X-loaded MI lattice); MAD-X path already exists.
@@ -166,4 +166,4 @@ Toolchain on this Mac (2026-09-04): cmake 4.3.2, Boost 1.92 (Homebrew), **no gfo
 * Ocelot is electron-only: record it, do not silently scale.
 
 ## 6. Order and effort (~10 weeks)
-5.0 SciBmad (done) → 5.1 xsuite (done) → 5.2 LightWin (done) → 5.3 Cheetah (done) → 5.4 PyORBIT3 (done) → 5.5 IMPACT-T (done) → 5.6 Bmad bridge (done) → 5.7 Ocelot (done) → 5.8 DYNAC (1.5) → 5.9 Synergia2 (1) → 5.10 OPAL-T (1).
+5.0 SciBmad (done) → 5.1 xsuite (done) → 5.2 LightWin (done) → 5.3 Cheetah (done) → 5.4 PyORBIT3 (done) → 5.5 IMPACT-T (done) → 5.6 Bmad bridge (done) → 5.7 Ocelot (done) → 5.8 DYNAC (done) → 5.9 Synergia2 (1) → 5.10 OPAL-T (1).

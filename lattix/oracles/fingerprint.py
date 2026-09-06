@@ -26,7 +26,7 @@ V_VOLT = 1.0e6         # cavity effective voltage
 PHI_S_DEG = -30.0      # synchronous phase, cos convention, 0 = crest
 FOLLOWS_P0 = {"scibmad": False, "helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True,
               "impactz": True, "madx": False, "xtrack": False, "lightwin": True, "cheetah": True,
-              "pyorbit": True, "impactt": True, "ocelot": True}
+              "pyorbit": True, "impactt": True, "ocelot": True, "dynac": True}
 #: engines whose maps assume one species (Ocelot divides by m_e): their fingerprint beam
 BEAM_SPECIES = {"ocelot": "electron"}
 
@@ -178,7 +178,8 @@ def _impactt_deck(cavity: bool) -> tuple[str, str, dict[str, str]]:
 
 DECKS["impactt"] = {"drift": _impactt_deck(False), "cavity": _impactt_deck(True)}
 _SUFFIX["impactt"] = ".impactt.in"
-GAIN_RTOL = {"lightwin": 0.05, "impactt": 1e-5}     # IMPACT-T: MEASURED 4e-7 (surrogate gap, 1 ps step)
+GAIN_RTOL = {"lightwin": 0.05, "impactt": 1e-5,     # IMPACT-T: MEASURED 4e-7 (surrogate gap, 1 ps step)
+             "dynac": 2e-5}                          # DYNAC: the energies come from 6-digit WRBEAM dumps
 
 
 def _ocelot_deck(cavity: bool) -> tuple[str, str]:
@@ -202,6 +203,29 @@ def _ocelot_deck(cavity: bool) -> tuple[str, str]:
 
 DECKS["ocelot"] = {"drift": _ocelot_deck(False), "cavity": _ocelot_deck(True)}
 _SUFFIX["ocelot"] = ".ocelot.py"
+
+
+def _dynac_deck(cavity: bool) -> tuple[str, str, dict[str, str]]:
+    """The drift / thin-cavity decks through lattix's own DYNAC writer (the thin gap is a BUNCHER)."""
+    from lattix.formats.dynac import Writer
+    from lattix.ir.elements import RFP, Drift, RFCavity
+    from lattix.ir.lattice import Lattice
+    from lattix.ir.reference import ReferenceParticle, species
+
+    ref = ReferenceParticle(species=species("proton"), kinetic_energy_eV=KE_EV, rf_frequency_Hz=FREQ_HZ)
+    if cavity:
+        els = [Drift(name="d1", length=0.5),
+               RFCavity(name="c", length=0.0, rf=RFP(frequency_Hz=FREQ_HZ, voltage_V=V_VOLT,
+                                                    phase_rad=math.radians(PHI_S_DEG))),
+               Drift(name="d2", length=0.5)]
+    else:
+        els = [Drift(name="d", length=1.0)]
+    text, files = Writer().render(Lattice.from_sequence("fp", els, ref), field_file="fp.fields.txt")
+    return "dynac", text, files
+
+
+DECKS["dynac"] = {"drift": _dynac_deck(False), "cavity": _dynac_deck(True)}
+_SUFFIX["dynac"] = ".dynac.in"
 
 
 def write_decks(engine: str, workdir: Path) -> dict[str, tuple[Path, str]]:

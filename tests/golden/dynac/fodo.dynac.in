@@ -1,0 +1,47 @@
+fodo (lattix 0.1.0)
+; lattix: reference species="proton" mass_eV=938272088.16 charge=1 kinetic_energy_eV=799999911.84
+; lattix: lattice name=fodo use=fodo
+; the beam block is a placeholder ellipsoid for DYNAC's bunch (lattix carries no emittance)
+GEBEAM
+2 0
+1000000. 1000
+0. 0. 0. 0. 0. 0.
+0.1 1. 0.1 1. 0.001 1.e-11
+INPUT
+938.27208816 1 1.
+799.99991184 0.
+EMIPRT
+2
+; lattix: name=qf kind=Quadrupole
+QUADRUPO
+30. 1.46430896778 5.
+; lattix: name=drift_0 kind=Drift
+DRIFT
+70.
+; lattix: name=b1 kind=Bend
+BMAGNET
+1
+5.72957795131 1000. 0. 0. 0.
+2.86478897565 0. 0. 0. 0.
+2.86478897565 0. 0. 0. 0.
+; lattix: name=drift_1 kind=Drift
+DRIFT
+100.
+; lattix: name=qd kind=Quadrupole
+QUADRUPO
+30. -1.46430896778 5.
+; lattix: name=drift_2 kind=Drift
+DRIFT
+100.
+; lattix: name=b1 kind=Bend
+BMAGNET
+1
+5.72957795131 1000. 0. 0. 0.
+2.86478897565 0. 0. 0. 0.
+2.86478897565 0. 0. 0. 0.
+; lattix: name=drift_3 kind=Drift
+DRIFT
+130.
+; lattix: name=m1 kind=Marker
+EMIT
+STOP

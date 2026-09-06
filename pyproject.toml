@@ -45,6 +45,7 @@ markers = [
   "oracle_pyorbit: needs PyORBIT3 (conda env `pyorbit` or LATTIX_PYORBIT_PYTHON)",
   "oracle_impactt: needs the IMPACT-T binary (ImpactTexe; conda-forge impact-t)",
   "oracle_ocelot: needs Ocelot (env `ocelot` with ocelot-desy, or LATTIX_OCELOT_PYTHON)",
+  "oracle_dynac: needs a locally built DYNAC binary (LATTIX_DYNAC_EXE); never in CI (EULA)",
   "oracle_helix: needs a HELIX checkout (HELIX_ROOT)",
   "oracle_tracewin: needs a licensed TraceWin binary (TRACEWIN_EXE); local only",
   "corpus: needs LATTIX_CORPUS_DIR with the private corpus manifest",

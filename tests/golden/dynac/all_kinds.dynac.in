@@ -1,0 +1,104 @@
+all_kinds (lattix 0.1.0)
+; lattix: reference species="electron" mass_eV=510998.95 charge=-1 kinetic_energy_eV=2100000 rf_frequency_Hz=162500000
+; lattix: lattice name=all_kinds use=all_kinds
+; the beam block is a placeholder ellipsoid for DYNAC's bunch (lattix carries no emittance)
+GEBEAM
+2 0
+162500000. 1000
+0. 0. 0. 0. 0. 0.
+0.1 1. 0.1 1. 0.001 1.e-11
+INPUT
+0.51099895 1 -1.
+2.1 0.
+EMIPRT
+2
+; lattix: name=d1 kind=Drift
+DRIFT
+50.
+; lattix: name=q1 kind=Quadrupole
+ALINER
+-0.1 0. 0. 0.
+QUADRUPO
+20. 0.6 5.
+ALINER
+0.1 0. 0. 0.
+; lattix: name=s1 kind=Sextupole
+SEXTUPO
+1 0.0375 10. 5.
+; lattix: name=o1 kind=Octupole
+DRIFT
+10.
+; lattix: name=m1 kind=Multipole
+STEER
+-0.01 0
+STEER
+0.02 1
+; lattix: name=b1 kind=Bend
+BMAGNET
+1
+5.72957795131 1000. -0.00854093167676 0. 0.
+2.86478897565 0. 0.45 0. 3.
+2.86478897565 0. 0.45 0. 3.
+; lattix: name=sol1 kind=Solenoid
+SOLENO
+1 30. 5.
+; lattix: name=d2 kind=Drift
+DRIFT
+30.
+; lattix: name=c1 kind=RFCavity
+BUNCHER
+0.08 95. 1. 5.
+; lattix: name=d3 kind=Drift
+DRIFT
+30.
+; lattix: name=c2 kind=RFCavity tw=1 L=0.2
+DRIFT
+10.
+BUNCHER
+1. 150. 1. 5.
+DRIFT
+10.
+; lattix: name=k1 kind=Kicker
+STEER
+-1.14956824114e-5 0
+STEER
+2.29913648229e-5 1
+DRIFT
+10.
+; lattix: name=col1 kind=Collimator
+REJECT
+1 1000. 4000. 1. 2. 400.
+DRIFT
+5.
+REJECT
+1 1000. 4000. 100. 100. 400.
+; lattix: name=mk1 kind=Marker
+EMIT
+; lattix: name=bpm1 kind=Instrument family=BPM
+EMIT
+; lattix: name=scr1 kind=Instrument family=SCREEN
+EMIT
+; lattix: name=f1 kind=Foil material=C thick=0.001
+STRIPPER
+6 12.011 0.0001 1
+; lattix: name=t1 kind=Taylor
+DRIFT
+10.
+; lattix: name=p1 kind=Patch x_offset=0.001
+ALINER
+-0.1 0. 0. 0.
+; lattix: name=rc1 kind=ReferenceChange dE=1000.
+NREF
+0. 0.001 0 1
+; lattix: name=fq1 kind=Freq
+NEWF
+162500000.
+; lattix: name=dir1 kind=Directive format=tracewin card=LATTICE args="4 0" role=period_start
+; lattix: name=d4 kind=Drift
+REJECT
+1 1000. 4000. 100. 100. 1.5
+DRIFT
+20.
+REJECT
+1 1000. 4000. 100. 100. 400.
+STOP
