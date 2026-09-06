@@ -1307,9 +1307,21 @@ const summaryStrip = {
     const box = $("#summary-chips"); box.replaceChildren();
     const c = store.comparison; if (!c) return;
     const wc = c.summary.worst_counts;
+    // what the writer's ledger says per class: "786 × APERTURE_DROPPED (Drift)" explains a red 787 at a glance
+    const byClass = {};
+    for (const e of store.translation?.fidelity?.entries || []) {
+      if (e.cls === "EXACT") continue;
+      const m = byClass[e.cls] || (byClass[e.cls] = new Map());
+      const key = e.code + (e.kind ? ` (${e.kind})` : "");
+      m.set(key, (m.get(key) || 0) + 1);
+    }
+    const top = cls => [...(byClass[cls] || new Map()).entries()].sort((a, b) => b[1] - a[1]);
     for (const cls of ["EXACT", "EQUIVALENT", "LOSSY", "DROPPED", "DIFF"]) {
       if (!wc[cls]) continue;
-      const chip = h("span", { class: "chip" + (store.classFilter && store.classFilter !== cls ? " off" : ""), title: cls === "DIFF" ? "translation defect: a difference the ledger does not explain — please report" : "worst ledger class per source element; click to filter" }, h("span", { class: "cls cls-" + cls, text: CLS_LETTER[cls] }), `${cls} ${wc[cls]}`);
+      const codes = top(cls);
+      const why = codes.length ? "\n" + codes.slice(0, 6).map(([k, n]) => `${n} × ${k}`).join("\n") + (codes.length > 6 ? "\n…" : "") : "";
+      const lead = codes.length && codes[0][1] >= 0.8 * wc[cls] ? ` · ${codes[0][0].split(" ")[0]}` : "";
+      const chip = h("span", { class: "chip" + (store.classFilter && store.classFilter !== cls ? " off" : ""), title: (cls === "DIFF" ? "translation defect: a difference the ledger does not explain — please report" : "worst ledger class per source element; click to filter (the Fidelity tab lists every entry)") + why }, h("span", { class: "cls cls-" + cls, text: CLS_LETTER[cls] }), `${cls} ${wc[cls]}`, lead ? h("span", { class: "muted", text: lead }) : null);
       chip.addEventListener("click", () => { store.classFilter = store.classFilter === cls ? null : cls; this.draw(); syn.src.setClasses(sourceClasses(), new Set()); syn.dst.applyFilter(); fidelityTab.render(); });
       box.appendChild(chip);
     }
