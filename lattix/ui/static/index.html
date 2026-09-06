@@ -1743,13 +1743,25 @@ const validation = {
     for (let dec = lo; dec <= hi; dec += Math.max(1, Math.floor((hi - lo) / 8))) { const y = Y(10 ** dec); svgEl("line", { x1: ml, x2: W - mr, y1: y, y2: y }, g); const t = svgEl("text", { x: ml - 6, y: y + 4, "text-anchor": "end" }, svg); t.textContent = `1e${dec}`; }
     for (let k = 0; k <= 5; k++) { const s = x0 + (x1 - x0) * k / 5; const t = svgEl("text", { x: X(s), y: H - 22, "text-anchor": "middle" }, svg); t.textContent = fmt.num(s, 4); }
     const xl = svgEl("text", { x: (ml + W - mr) / 2, y: H - 6, "text-anchor": "middle" }, svg); xl.textContent = "s [m]";
+    // one curve per block of the 6×6 cumulative map: the largest |ΔR| of the block at each shared boundary.
+    // Blocks identical in both engines (zero everywhere — the RF blocks of a line without cavities) are listed,
+    // not drawn as a flat floor; blocks the verdict does not hold the pair to are dashed
+    const MEANING = { T4x4: "transverse 4×4 (x, x′, y, y′): focusing", disp: "dispersion column R16 R26 R36 R46",
+      path: "path-length row R51–R54 (transverse → time)", R56: "momentum compaction R56", R5x_z: "R55",
+      E_row: "energy row R61–R66 (RF kicks)", z_col: "z column R15 R25 R35 R45 (RF focusing)" };
+    const used = pc.verdict ? new Set(pc.verdict.blocks_used) : null;
+    const zero = [];
     let lx = ml;
     for (const b of blocks) {
+      if (pts.every(p => !(p.blocks[b] > 0))) { zero.push(b); continue; }
       const poly = svgEl("polyline", { points: pts.map(p => `${X(p.s)},${Y(p.blocks[b] ?? FLOOR)}`).join(" ") }, svg);
       poly.style.stroke = `var(--blk-${b})`;
-      const t = svgEl("text", { x: lx, y: mt - 4 }, svg); t.textContent = b; t.style.fill = `var(--blk-${b})`; lx += 60;
-      const title = svgEl("title", {}, poly); title.textContent = b;
+      if (used && !used.has(b)) poly.style.strokeDasharray = "5 4";
+      const t = svgEl("text", { x: lx, y: mt - 4 }, svg); t.textContent = b + (used && !used.has(b) ? " (info)" : ""); t.style.fill = `var(--blk-${b})`; lx += 74;
+      const tt = svgEl("title", {}, t); tt.textContent = MEANING[b] || b;
+      const title = svgEl("title", {}, poly); title.textContent = `${b}: ${MEANING[b] || ""}${used && !used.has(b) ? " — shown for information, not held to" : ""}`;
     }
+    if (zero.length) { const t = svgEl("text", { x: W - mr, y: mt - 4, "text-anchor": "end", class: "muted" }, svg); t.textContent = `identical, not drawn: ${zero.join(", ")}`; }
     return svg;
   },
 };
