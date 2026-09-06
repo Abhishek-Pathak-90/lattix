@@ -63,11 +63,13 @@ h1, h2, h3 { margin: 0; font-weight: 600; }
 .muted { color: var(--text-dim); }
 .num { font-variant-numeric: tabular-nums; }
 
-#app { display: grid; grid-template-rows: 44px 1fr; grid-template-columns: var(--panel-w) 1fr var(--insp-w); height: 100vh; }
-#topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--bg-1); border-bottom: 1px solid var(--line); overflow-x: auto; white-space: nowrap; }
+#app { display: grid; grid-template-rows: auto 1fr; grid-template-columns: var(--panel-w) 1fr var(--insp-w); height: 100vh; }
+#topbar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 44px; padding: 4px 10px; background: var(--bg-1); border-bottom: 1px solid var(--line); white-space: nowrap; }   /* wraps on narrow windows: nothing is ever scrolled out of view */
 #topbar .brand { font-weight: 700; font-size: var(--fs-2); color: var(--text-0); margin-right: 4px; }
 #topbar label { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); }
 #topbar input[type=text] { width: 22em; }
+#topbar label.src { flex: 1 1 24em; }
+#topbar label.src input { width: auto; flex: 1 1 12em; min-width: 8em; }
 #topbar .spacer { flex: 1; }
 .badge { display: inline-block; min-width: 1.4em; padding: 0 5px; border-radius: 9px; font-size: var(--fs-0); text-align: center; background: var(--bg-3); color: var(--text-2); }
 .badge.warn { background: var(--warn); color: #111; }
@@ -146,7 +148,8 @@ svg.band line { stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
 .toast { background: var(--bg-2); border: 1px solid var(--line-strong); border-left: 4px solid var(--info); border-radius: var(--radius); padding: 6px 10px; max-width: 420px; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
 .toast.err { border-left-color: var(--err); } .toast.ok { border-left-color: var(--ok); } .toast.warn { border-left-color: var(--warn); }
 .toast small { display: block; color: var(--text-2); white-space: pre-wrap; }
-#busy { position: fixed; top: 44px; left: 0; right: 0; height: 2px; background: var(--accent); display: none; z-index: 20; }
+#topbar { position: relative; }
+#busy { position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--accent); display: none; z-index: 20; }
 #busy.on { display: block; animation: busy 1s linear infinite; }
 @keyframes busy { from { opacity: .3 } 50% { opacity: 1 } to { opacity: .3 } }
 pre.deck { margin: 0; font-size: var(--fs-0); line-height: 1.35; }
@@ -172,7 +175,7 @@ svg.chart { display: block; width: 100%; height: 260px; background: var(--bg-1);
 svg.chart text { font: 10.5px var(--font-ui); fill: var(--text-2); }
 svg.chart .grid line { stroke: var(--line); }
 svg.chart polyline { fill: none; stroke-width: 1.5px; }
-@media (max-width: 1100px) { #app { grid-template-columns: 1fr; grid-template-rows: 44px auto 1fr auto; } #panel, #inspector { border: none; border-bottom: 1px solid var(--line); max-height: 40vh; } }
+@media (max-width: 1100px) { #app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto; } #panel, #inspector { border: none; border-bottom: 1px solid var(--line); max-height: 40vh; } }
 @media (prefers-reduced-motion: reduce) { #busy.on { animation: none; } }
 </style>
 </head>
@@ -180,7 +183,7 @@ svg.chart polyline { fill: none; stroke-width: 1.5px; }
 <div id="app">
   <header id="topbar">
     <span class="brand">lattix</span>
-    <label>Source
+    <label class="src">Source
       <input type="text" id="src-path" placeholder="path under the UI root, or pick a sample" list="sample-list" spellcheck="false">
       <datalist id="sample-list"></datalist>
     </label>
@@ -188,19 +191,19 @@ svg.chart polyline { fill: none; stroke-width: 1.5px; }
     <input type="file" id="file-input" multiple hidden>
     <input type="file" id="dir-input" webkitdirectory multiple hidden>
     <button id="btn-folder" title="Upload a folder (deck + field maps)">Folder…</button>
+    <button id="btn-read" class="primary">Read</button>
+    <span id="src-warn" class="badge hidden" title="warnings"></span>
     <label>Format <select id="src-format"><option value="">auto</option></select></label>
     <label>Species <select id="opt-species"><option value="">from deck</option></select></label>
     <label>KE <input type="number" id="opt-ke" step="any" placeholder="from deck" style="width:7em">
       <select id="opt-ke-unit"><option value="1">eV</option><option value="1e3">keV</option><option value="1e6" selected>MeV</option><option value="1e9">GeV</option></select></label>
     <label>f <input type="number" id="opt-freq" step="any" placeholder="from deck" style="width:6em"> MHz</label>
     <label>Line <input type="text" id="opt-line" placeholder="default" list="line-list" style="width:8em"><datalist id="line-list"></datalist></label>
-    <button id="btn-read" class="primary">Read</button>
-    <span id="src-warn" class="badge hidden" title="warnings"></span>
     <span class="spacer"></span>
     <label>Theme <select id="theme"><option value="auto">auto</option><option value="light">light</option><option value="dark">dark</option></select></label>
     <button id="btn-help" title="keyboard shortcuts">?</button>
+    <div id="busy"></div>
   </header>
-  <div id="busy"></div>
 
   <aside id="panel">
     <h2>Translate</h2>
