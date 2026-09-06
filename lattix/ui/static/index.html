@@ -977,7 +977,8 @@ const topbar = {
     $("#src-warn").addEventListener("click", () => { const w = store.source?.header.warnings || []; ui.toast("warn", `${w.length} warning(s)`, w.slice(0, 12).join("\n")); });
     $("#src-path").addEventListener("input", ev => {
       const s = store.samples.find(x => x.path === ev.target.value);
-      if (s) { $("#src-format").value = s.format; this.applyOptions(s.options); }
+      if (s) { $("#src-format").value = s.format; this.fmtFromSample = true; this.applyOptions(s.options); }
+      else if (this.fmtFromSample) { $("#src-format").value = ""; this.fmtFromSample = false; }   // another deck: detect
     });
   },
   applyOptions(opts) {
@@ -1008,6 +1009,7 @@ const topbar = {
       const r = await api.post("/api/read", body);
       store.session = r.session;
       loadSource(r.source);
+      $("#src-format option[value='']").textContent = `auto — detected: ${r.detected_format}`;
       ui.toast("ok", `read ${r.source.header.n_placed} elements (${r.detected_format})`);
     } catch (e) { ui.toast("err", "read failed", e.message); }
     finally { ui.busy(false, ""); }
@@ -1193,7 +1195,7 @@ function loadSource(vm) {
   syn.src.setLattice(vm); syn.src.setClasses(new Map(), new Set());
   syn.dst.setLattice(null);
   const hd = vm.header, ref = hd.reference;
-  $("#src-head").replaceChildren(h("b", { text: "SOURCE" }), h("span", { text: hd.file.split("/").pop() }), h("span", { text: hd.format }), h("span", { class: "num", text: `${hd.n_placed} elements` }), h("span", { class: "num", text: fmt.m(hd.total_length) }), h("span", { text: `${ref.species.name} ${fmt.si(ref.kinetic_energy_eV, "eV")}` + (ref.rf_frequency_Hz ? ` · ${fmt.num(ref.rf_frequency_Hz / 1e6, 6)} MHz` : "") }));
+  $("#src-head").replaceChildren(h("b", { text: "SOURCE" }), h("span", { text: hd.file.split("/").pop(), title: hd.file }), h("span", { class: "badge", text: hd.format, title: "format the deck was read as" }), h("span", { class: "num", text: `${hd.n_placed} elements` }), h("span", { class: "num", text: fmt.m(hd.total_length) }), h("span", { text: `${ref.species.name} ${fmt.si(ref.kinetic_energy_eV, "eV")}` + (ref.rf_frequency_Hz ? ` · ${fmt.num(ref.rf_frequency_Hz / 1e6, 6)} MHz` : "") }));
   $("#dst-head").replaceChildren(h("b", { text: "TARGET" }), h("span", { class: "muted", text: "translate to see the written deck read back" }));
   const wb = $("#src-warn"); const nw = hd.warnings.length; wb.textContent = nw ? `⚠ ${nw}` : ""; wb.classList.toggle("hidden", !nw); wb.classList.toggle("warn", nw > 0);
   const ll = $("#line-list"); ll.replaceChildren(); for (const n of hd.lines || []) ll.appendChild(h("option", { value: n }));
@@ -1215,7 +1217,7 @@ function loadTranslation(r) {
     const added = new Set(r.comparison ? r.comparison.alignment.targets.filter(t => !t.src.length).map(t => t.j) : []);
     syn.dst.setClasses(clsOf, added);
     const hd = r.target.header;
-    $("#dst-head").replaceChildren(h("b", { text: "TARGET" }), h("span", { text: r.deck.name }), h("span", { text: r.format }), h("span", { class: "num", text: `${hd.n_placed} elements` }), h("span", { class: "num", text: fmt.m(hd.total_length) }), h("span", { class: "cls cls-" + (r.tier === "exact" ? "EXACT" : r.tier === "equivalent" ? "EQUIVALENT" : "LOSSY"), text: r.tier }), r.comparison ? h("span", { text: r.comparison.ir.ok ? "IR round trip ok" : `IR round trip: ${r.comparison.ir.problems.length} problem(s)`, class: r.comparison.ir.ok ? "muted" : "cls-DIFF", title: (r.comparison.ir.problems || []).slice(0, 6).join("\n") }) : null);
+    $("#dst-head").replaceChildren(h("b", { text: "TARGET" }), h("span", { text: r.deck.name }), h("span", { class: "badge", text: r.format, title: "the target format the deck was written in and read back as" }), h("span", { class: "num", text: `${hd.n_placed} elements` }), h("span", { class: "num", text: fmt.m(hd.total_length) }), h("span", { class: "cls cls-" + (r.tier === "exact" ? "EXACT" : r.tier === "equivalent" ? "EQUIVALENT" : "LOSSY"), text: r.tier }), r.comparison ? h("span", { text: r.comparison.ir.ok ? "IR round trip ok" : `IR round trip: ${r.comparison.ir.problems.length} problem(s)`, class: r.comparison.ir.ok ? "muted" : "cls-DIFF", title: (r.comparison.ir.problems || []).slice(0, 6).join("\n") }) : null);
     const Lmax = Math.max(store.source.header.total_length, hd.total_length);
     store.limits = limitsFor(Lmax);
   } else {
