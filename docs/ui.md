@@ -5,7 +5,8 @@ translates it to any writable format and draws the written deck read back throug
 the source element by element — the fidelity ledger painted on the beam line, a per-element diff of the
 physical quantities in the inspector, and the engines a click away.  Everything runs on your machine:
 the server binds `127.0.0.1` only, the page is one self-contained HTML file (no CDN, works offline) and
-the URL carries a random access token.
+the URL carries an access token that is kept in `~/.config/lattix/ui-token` (mode 0600), so the link is the
+same on every start; `--new-token` issues a fresh one.
 
 ```
 $ lattix ui --root tests/data/public          # opens http://127.0.0.1:<port>/?token=…
@@ -118,7 +119,8 @@ for envelope engines.  Engines that need a local build (TraceWin, DYNAC, Synergi
 
 ## Security and limits
 
-Loopback only; a random token in the URL (kept by the page, sent as a header) and a `Host`/`Origin`
+Loopback only; an access token in the URL (kept by the page, sent as a header; stored per user in
+`~/.config/lattix/ui-token`, mode 0600, rotated with `--new-token`) and a `Host`/`Origin`
 check refuse other pages and DNS-rebinding; file access is confined to `--root` unless `--any-path`;
 request bodies are limited to 64 MiB; sessions live in a temporary directory removed on exit (16 kept);
 one engine job runs at a time with a 30 min limit.

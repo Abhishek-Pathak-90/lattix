@@ -7,6 +7,7 @@ import atexit
 import io
 import ipaddress
 import json
+import os
 import re
 import secrets
 import shutil
@@ -53,6 +54,48 @@ class ApiError(Exception):
 
 
 # ------------------------------------------------------------------------------------------------ state
+def token_file() -> Path:
+    """Where the access token persists between runs (``$LATTIX_CONFIG_DIR``, else ``$XDG_CONFIG_HOME/lattix``,
+    else ``~/.config/lattix``)."""
+    base = os.environ.get("LATTIX_CONFIG_DIR")
+    if base:
+        return Path(base) / "ui-token"
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    return (Path(xdg) if xdg else Path.home() / ".config") / "lattix" / "ui-token"
+
+
+def stable_token(path: Path | None = None, *, rotate: bool = False) -> str:
+    """The access token of this user's UI: kept in a private file (mode 0600) so the link ``lattix ui``
+    prints stays valid across restarts; ``rotate`` writes a fresh one.  Falls back to a random token when
+    the file cannot be used."""
+    path = path or token_file()
+    try:
+        if not rotate and path.is_file():
+            tok = path.read_text(encoding="utf-8").strip()
+            if re.fullmatch(r"[A-Za-z0-9_-]{16,}", tok):
+                return tok
+        tok = secrets.token_urlsafe(24)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(tok + "\n")
+        os.chmod(path, 0o600)
+        return tok
+    except OSError:
+        return secrets.token_urlsafe(24)
+
+
+_NEED_LINK_HTML = """<!doctype html><meta charset="utf-8"><title>lattix ui</title>
+<style>body{font:15px/1.5 system-ui,sans-serif;max-width:40em;margin:4em auto;padding:0 1em;color:#1e293b}
+code{background:#eef2f7;padding:1px 4px;border-radius:3px}</style>
+<h2>lattix ui: this page needs its access link</h2>
+<p>Open the link that <code>lattix ui</code> printed in the terminal — it carries the access token
+(<code>http://127.0.0.1:&lt;port&gt;/?token=…</code>).  A plain address without the token, or a link
+from a server started with <code>--new-token</code>, is refused.</p>
+<p>The link is the same each time you start <code>lattix ui</code> as this user; bookmark it once.</p>
+"""
+
+
 @dataclass
 class Settings:
     host: str = "127.0.0.1"
@@ -509,7 +552,7 @@ class Handler(BaseHTTPRequestHandler):
             raise ApiError(400, "bad_request", "the body must be a JSON object")
         return obj
 
-    def _authorised(self, query: dict) -> bool:
+    def _authorised(self, query: dict, path: str = "") -> bool:
         host = (self.headers.get("Host") or "").strip()
         port = self.server.server_address[1]  # type: ignore[attr-defined]
         if host not in {f"{h}:{port}" for h in _HOSTS} | set(_HOSTS):
@@ -517,7 +560,11 @@ class Handler(BaseHTTPRequestHandler):
             return False
         token = self.headers.get("X-Lattix-Token") or (query.get("token") or [None])[0]
         if not token or not secrets.compare_digest(token, self.app.settings.token):
-            self._error(403, "forbidden", "missing or wrong token (open the URL lattix ui printed)")
+            if self.command == "GET" and path in ("/", "/index.html"):
+                # a person typed the bare address or kept an old link: say so in words, not JSON
+                self._send(403, _NEED_LINK_HTML.encode("utf-8"), "text/html; charset=utf-8")
+            else:
+                self._error(403, "forbidden", "missing or wrong token (open the URL lattix ui printed)")
             return False
         origin = self.headers.get("Origin")
         if self.command in ("POST", "PUT", "DELETE") and origin:
@@ -532,7 +579,7 @@ class Handler(BaseHTTPRequestHandler):
         query = urllib.parse.parse_qs(parsed.query)
         path = parsed.path
         self._raw = None
-        if not self._authorised(query):
+        if not self._authorised(query, path):
             self.close_connection = True          # the body (if any) was not read
             return
         try:
@@ -805,7 +852,8 @@ def serve(settings: Settings, *, check: bool = False, deck: str | None = None) -
             print("lattix ui: self-test " + ("passed" if ok else "FAILED"), flush=True)
             return 0 if ok else 1
         print(f"lattix ui: {url}", flush=True)
-        print("lattix ui: Ctrl-C to stop", file=sys.stderr, flush=True)
+        print("lattix ui: the link stays the same on the next start (--new-token changes it); Ctrl-C to stop",
+              file=sys.stderr, flush=True)
         app.start_oracle_probe()
         if settings.open_browser:
             webbrowser.open(url)

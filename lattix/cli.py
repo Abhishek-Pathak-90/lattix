@@ -105,10 +105,11 @@ def cmd_validate(a) -> int:
 
 
 def cmd_ui(a) -> int:
-    from lattix.ui.server import Settings, serve
+    from lattix.ui.server import Settings, serve, stable_token
 
     root = Path(a.root).expanduser().resolve() if a.root else Path.cwd()
-    return serve(Settings(host=a.host, port=a.port, root=root, any_path=a.any_path, open_browser=not a.no_browser),
+    return serve(Settings(host=a.host, port=a.port, root=root, any_path=a.any_path, open_browser=not a.no_browser,
+                          token=stable_token(rotate=a.new_token)),
                  check=a.check, deck=a.deck)
 
 
@@ -226,6 +227,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--no-browser", action="store_true", help="do not open the browser")
     s.add_argument("--deck", default=None, help="deck to load on start")
     s.add_argument("--check", action="store_true", help="start, self-test the API and exit")
+    s.add_argument("--new-token", action="store_true",
+                   help="issue a new access token (the link changes; the old one is kept in ~/.config/lattix/ui-token)")
     s.set_defaults(func=cmd_ui)
     s = sub.add_parser("convert", help="translate a deck between formats")
     s.add_argument("src")

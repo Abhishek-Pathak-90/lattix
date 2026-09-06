@@ -235,3 +235,28 @@ def test_keep_alive_connection_survives_a_bodyless_route(server):
     r.read()
     assert r.status in (200, 404)              # the connection is still in sync
     conn.close()
+
+
+def test_stable_token_persists_in_a_private_file_and_rotates(tmp_path):
+    from lattix.ui.server import stable_token
+
+    f = tmp_path / "cfg" / "ui-token"
+    t1 = stable_token(f)
+    assert f.is_file() and (f.stat().st_mode & 0o777) == 0o600 and len(t1) >= 24
+    assert stable_token(f) == t1                       # the same link on the next start
+    t2 = stable_token(f, rotate=True)
+    assert t2 != t1 and stable_token(f) == t2
+    f.write_text("bad token!\n")
+    assert stable_token(f) not in (t1, t2, "bad token!")   # a corrupt file is replaced
+
+
+def test_page_without_a_token_explains_in_html(server):
+    conn = http.client.HTTPConnection("127.0.0.1", server["port"], timeout=60)
+    conn.request("GET", "/")
+    r = conn.getresponse()
+    body = r.read().decode("utf-8")
+    assert r.status == 403 and r.getheader("Content-Type", "").startswith("text/html")
+    assert "lattix ui" in body and "token" in body
+    conn.close()
+    status, payload, _ = api(server, "GET", "/api/ping", token=False)
+    assert status == 403 and payload["error"]["type"] == "forbidden"      # the API stays JSON
