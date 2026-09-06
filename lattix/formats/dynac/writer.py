@@ -388,7 +388,8 @@ class Writer:
             from lattix.formats.impactt.rfprofile import fourier_coefficients
 
             period = float(z[-1] - z[0])
-            zz = [v - z[0] for v in z]
+            mid = 0.5 * (z[0] + z[-1])
+            zz = [v - mid for v in z]                  # the profile integrator wants z about the centre
             coefs = fourier_coefficients(zz, ez, period, 60)
             scale, _theta = _calibrate(coefs, period, V, phase, freq, 0.0, ref.kinetic_energy_eV,
                                        ref.species.mass_eV, ref.species.charge)

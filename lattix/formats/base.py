@@ -99,6 +99,8 @@ FORMATS: dict[str, FormatSpec] = {
                         description="DYNAC V6 deck (cm, kG, MV type codes)"),
     "synergia": FormatSpec("synergia", (".synergia.json",), "lattix.formats.synergia",
                            description="Synergia 3 lattice JSON (Lattice.as_json)"),
+    "opal": FormatSpec("opal", (".opal.in", ".opal"), "lattix.formats.opal",
+                       description="OPAL-T input deck (ELEMEDGE placement, 1-D field-map files)"),
     # keep last: a bare .json is xtrack's unless the content says otherwise (sniffed below)
     "xtrack": FormatSpec("xtrack", (".json",), "lattix.formats.xtrack", description="xtrack Line/Environment JSON"),
 }

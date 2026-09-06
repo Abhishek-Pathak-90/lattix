@@ -138,9 +138,9 @@ Toolchain on this Mac (2026-09-04): cmake 4.3.2, Boost 1.92 (Homebrew), **no gfo
 - [x] Oracle: per-element maps from Synergia's own `Propagator` (single-element lattices, fresh probe bunches, cdt carried); fingerprint (cdt late-positive, `lag = φ/2π + ¼`, gain 4e-15); `fodo.madx` vs cpymad 4.5e-8 (Yoshida quadrupoles). The Booster MAD-X one-turn-map comparison is left to the private corpus (its `ring_code/MAD-X_BOOSTER` decks are not in the repo); the public gate is the FODO and the battery.
 - Measured: one design momentum with every strength scaled by `p_design/p_bunch` (writer default `energy_mode="constant"`, no phase slip), bends under-bent after acceleration (no `k0`: LOSSY), and an upstream bug in `ff_solenoid` (`ks`/`ksl` swapped) — solenoid pairs report-only.
 
-### 5.10 OPAL-T writer (1 week)
-- [ ] `lattix/formats/opal/` writer: `ELEMEDGE` positions from `s_in`, RFCAVITY `VOLT` MV / `FREQ` MHz / `LAG` rad (phase convention pinned against Tao's `write opal` output, then against OPAL itself when an engine exists), QUADRUPOLE `K1`, SBEND/RBEND, SOLENOID `KS`, KICKER, collimators, MONITOR/MARKER; field maps via `FMAPFN` for FieldMap elements (1DDynamic/T7 formats, *verify*).
-- [ ] Tests: structural + Tao `write opal` comparison on `fodo.bmad`; reader and engine deferred (OPAL build needs MPI + H5Hut; consider the OPAL Docker image later).
+### 5.10 OPAL-T writer (1 week) — done 2026-09-06 (writer + reader; engine deferred)
+- [x] `lattix/formats/opal/` writer: `ELEMEDGE` positions from `s_in`, RFCAVITY `VOLT` MV/m / `FREQ` MHz / `LAG` rad / `DESIGNENERGY` MeV with generated `1DDynamic` maps (phase convention pinned to the OPAL-X source — `CavityAutophaser` adds `LAG` to the crest — since Tao's `write opal` is unreachable: `tao_write_cmd.f90` dispatches on `opal_latice`), QUADRUPOLE `K1` over the BEAM's unsigned `P0/c`, SBEND with `DESIGNENERGY`, SOLENOID `KS` + `1DMagnetoStatic` map, KICKER, collimators, MONITOR/MARKER; FieldMap elements become their own `1DDynamic`/`1DMagnetoStatic` files.
+- [x] Reader (native decks: variables, inheritance, nested LINEs, ELEMEDGE gaps, voltages from `DESIGNENERGY` or the map integral); tests: rules coverage, source-derived conventions for a proton and an H⁻, map headers, a hand-written native deck, goldens; the battery runs OPAL as an engine-less format. Engine deferred (OPAL build needs MPI + H5hut; the OPAL Docker image is the candidate).
 
 ### 5.11 Cross-cutting
 - [ ] CI: new envs `lightwin` (py 3.12), `cheetah` (torch CPU), `pyorbit` (meson build) as separate jobs; `impact-t` added to `environment-ci.yml` (pinned); GPL packages are never imported at module level and never vendored; Bmad bridge tests run in the existing bmad env.
@@ -167,4 +167,4 @@ Toolchain on this Mac (2026-09-04): cmake 4.3.2, Boost 1.92 (Homebrew), **no gfo
 * Ocelot is electron-only: record it, do not silently scale.
 
 ## 6. Order and effort (~10 weeks)
-5.0 SciBmad (done) → 5.1 xsuite (done) → 5.2 LightWin (done) → 5.3 Cheetah (done) → 5.4 PyORBIT3 (done) → 5.5 IMPACT-T (done) → 5.6 Bmad bridge (done) → 5.7 Ocelot (done) → 5.8 DYNAC (done) → 5.9 Synergia2 (done) → 5.10 OPAL-T (1).
+5.0 SciBmad (done) → 5.1 xsuite (done) → 5.2 LightWin (done) → 5.3 Cheetah (done) → 5.4 PyORBIT3 (done) → 5.5 IMPACT-T (done) → 5.6 Bmad bridge (done) → 5.7 Ocelot (done) → 5.8 DYNAC (done) → 5.9 Synergia2 (done) → 5.10 OPAL-T (done).

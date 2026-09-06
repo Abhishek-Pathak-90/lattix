@@ -1,5 +1,5 @@
 """The ``lattix: reference …`` comment tag that carries the reference particle through formats
-that have no beam definition of their own (TraceWin ``.dat``, Elegant ``.lte``).
+that have no beam definition of their own (TraceWin ``.dat``, Elegant ``.lte``; OPAL's ``//`` leader too).
 
 Grammar (one line, any comment leader)::
 
@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 from lattix.ir.reference import Species
 
-_TAG = re.compile(r"^\s*[;!#]\s*lattix:\s*reference\s+(?P<body>.*)$")
+_TAG = re.compile(r"^\s*(?:[;!#]|//)\s*lattix:\s*reference\s+(?P<body>.*)$")
 _KV = re.compile(r'(\w+)=("([^"]*)"|\S+)')
 
 

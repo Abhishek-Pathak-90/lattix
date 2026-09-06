@@ -1,0 +1,27 @@
+// fodo - written by lattix 0.1.0 from madx
+// OPAL-T deck: elements placed by ELEMEDGE, strengths normalised by the BEAM's P0/c, cavity LAG relative to the autophased crest
+// lattix: reference species="proton" mass_eV=938272088.16 charge=1 kinetic_energy_eV=799999911.84
+// lattix: lattice name=fodo use=fodo
+Title, string="fodo";
+OPTION, AUTOPHASE=4, ECHO=FALSE, INFO=FALSE;
+
+qf: QUADRUPOLE, L=0.3, K1=0.6, ELEMEDGE=0;  // lattix: kind=Quadrupole
+drift_0: DRIFT, L=0.7, ELEMEDGE=0.3;  // lattix: kind=Drift
+b1: SBEND, L=1, ANGLE=0.1, E1=0.05, E2=0.05, DESIGNENERGY=799.99991184, FMAPFN="1DPROFILE1-DEFAULT", ELEMEDGE=1;  // lattix: kind=Bend
+drift_1: DRIFT, L=1, ELEMEDGE=2;  // lattix: kind=Drift
+qd: QUADRUPOLE, L=0.3, K1=-0.6, ELEMEDGE=3;  // lattix: kind=Quadrupole
+drift_2: DRIFT, L=1, ELEMEDGE=3.3;  // lattix: kind=Drift
+b1_2: SBEND, L=1, ANGLE=0.1, E1=0.05, E2=0.05, DESIGNENERGY=799.99991184, FMAPFN="1DPROFILE1-DEFAULT", ELEMEDGE=4.3;  // lattix: kind=Bend name=b1
+drift_3: DRIFT, L=1.3, ELEMEDGE=5.3;  // lattix: kind=Drift
+m1: MARKER, ELEMEDGE=6.6;  // lattix: kind=Marker
+
+fodo: LINE = (qf, drift_0, b1, drift_1, qd, drift_2, b1_2, drift_3, m1);
+
+lattix_beam: BEAM, PARTICLE=PROTON, MASS=0.93827208816, CHARGE=1, PC=1.46329594906973, NPART=1000;
+lattix_fs: FIELDSOLVER, FSTYPE=NONE, MX=8, MY=8, MT=8, PARFFTX=FALSE, PARFFTY=FALSE, PARFFTT=TRUE, BCFFTX=OPEN, BCFFTY=OPEN, BCFFTZ=OPEN, BBOXINCR=1;
+// the distribution is a placeholder (lattix carries no beam): edit before a real run
+lattix_dist: DISTRIBUTION, TYPE=GAUSS, SIGMAX=1.0e-3, SIGMAPX=1.0e-4, SIGMAY=1.0e-3, SIGMAPY=1.0e-4, SIGMAZ=1.0e-3, SIGMAPZ=1.0e-4;
+TRACK, LINE=fodo, BEAM=lattix_beam, MAXSTEPS=40228, DT=1e-12, ZSTOP=6.6;
+RUN, METHOD="PARALLEL-T", BEAM=lattix_beam, FIELDSOLVER=lattix_fs, DISTRIBUTION=lattix_dist;
+ENDTRACK;
+QUIT;

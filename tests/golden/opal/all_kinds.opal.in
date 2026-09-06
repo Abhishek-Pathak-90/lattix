@@ -1,0 +1,43 @@
+// all_kinds - written by lattix 0.1.0 from IR
+// OPAL-T deck: elements placed by ELEMEDGE, strengths normalised by the BEAM's P0/c, cavity LAG relative to the autophased crest
+// lattix: reference species="proton" mass_eV=938272088.16 charge=1 kinetic_energy_eV=2100000 rf_frequency_Hz=162500000
+// lattix: lattice name=all_kinds use=all_kinds
+Title, string="all_kinds";
+OPTION, AUTOPHASE=4, ECHO=FALSE, INFO=FALSE;
+
+d1: DRIFT, L=0.5, ELEMEDGE=0;  // lattix: kind=Drift
+q1: QUADRUPOLE, L=0.2, K1=5.72756512917956, DX=0.001, ELEMEDGE=0.5;  // lattix: kind=Quadrupole
+s1: SEXTUPOLE, L=0.1, K2=14.3189128229489, ELEMEDGE=0.7;  // lattix: kind=Sextupole
+o1: OCTUPOLE, L=0.1, K3=19.0918837639319, ELEMEDGE=0.8;  // lattix: kind=Octupole
+m1_k: KICKER, L=0.001, HKICK=-0.0477297094098296, VKICK=0.0954594188196593, DESIGNENERGY=2.1, ELEMEDGE=0.8995;  // lattix: kind=Multipole name=m1 L=0 role=dipole
+m1: MULTIPOLE, L=0.001, KN={0,95.4594188196593}, ELEMEDGE=0.8995;  // lattix: kind=Multipole L=0 role=higher
+b1: SBEND, L=1, ANGLE=0.1, E1=0.05, E2=0.05, HGAP=0.03, GAP=0.06, FINT=0.45, DESIGNENERGY=2.1, FMAPFN="1DPROFILE1-DEFAULT", ELEMEDGE=0.9;  // lattix: kind=Bend
+sol1: SOLENOID, L=0.32, KS=2.38648547049148, FMAPFN="lat_sol1.1dms", ELEMEDGE=1.89;  // lattix: kind=Solenoid L=0.3 pad=0.01
+d2: DRIFT, L=0.3, ELEMEDGE=2.2;  // lattix: kind=Drift
+c1: RFCAVITY, L=0.00773285233653072, VOLT=20.7435725370532, FREQ=162.5, LAG=-1.48352986419518, DESIGNENERGY=2.18, TYPE="STANDING", FMAPFN="lat_c1.1dd", ELEMEDGE=2.49613357383173;  // lattix: kind=RFCavity V=80000 phase=-1.48352986419518 L=0
+d3: DRIFT, L=0.3, ELEMEDGE=2.5;  // lattix: kind=Drift
+c2: RFCAVITY, L=0.2, VOLT=38.1789713893294, FREQ=162.5, LAG=-0.523598775598299, DESIGNENERGY=3.10697245941981, TYPE="STANDING", FMAPFN="lat_c2.1dd", ELEMEDGE=2.8;  // lattix: kind=RFCavity V=1000000 phase=-0.523598775598299 L=0.2 tw=1
+k1: KICKER, L=0.1, HKICK=0.001, VKICK=-0.002, DESIGNENERGY=2.97299786320425, ELEMEDGE=3;  // lattix: kind=Kicker
+col1: RCOLLIMATOR, L=0.05, XSIZE=0.01, YSIZE=0.02, ELEMEDGE=3.1;  // lattix: kind=Collimator
+mk1: MARKER, ELEMEDGE=3.15;  // lattix: kind=Marker
+bpm1: MONITOR, L=0, OUTFN="bpm1.h5", ELEMEDGE=3.15;  // lattix: kind=Instrument family=BPM
+scr1: MONITOR, L=0, OUTFN="scr1.h5", ELEMEDGE=3.15;  // lattix: kind=Instrument family=SCREEN
+f1: MARKER, ELEMEDGE=3.15;  // lattix: kind=Foil material=C thick=0.001
+t1: DRIFT, L=0.1, ELEMEDGE=3.15;  // lattix: kind=Taylor
+p1: MARKER, ELEMEDGE=3.25;  // lattix: kind=Patch x_offset=0.001
+rc1: MARKER, ELEMEDGE=3.25;  // lattix: kind=ReferenceChange dE=1000
+fq1: MARKER, ELEMEDGE=3.25;  // lattix: kind=Freq f=162500000
+// lattix: directive=1 name=dir1 format=tracewin card=LATTICE args="4 0" role=period_start s=3.25
+d4: DRIFT, L=0.2, APERTURE="CIRCLE(0.03)", ELEMEDGE=3.25;  // lattix: kind=Drift
+
+all_kinds: LINE = (d1, q1, s1, o1, m1_k, m1, b1, sol1, d2, c1, d3, c2, k1, col1, mk1, bpm1, scr1,
+    f1, t1, p1, rc1, fq1, d4);
+
+lattix_beam: BEAM, PARTICLE=PROTON, MASS=0.93827208816, CHARGE=1, PC=0.062810451122977, BFREQ=162.5, NPART=1000;
+lattix_fs: FIELDSOLVER, FSTYPE=NONE, MX=8, MY=8, MT=8, PARFFTX=FALSE, PARFFTY=FALSE, PARFFTT=TRUE, BCFFTX=OPEN, BCFFTY=OPEN, BCFFTZ=OPEN, BBOXINCR=1;
+// the distribution is a placeholder (lattix carries no beam): edit before a real run
+lattix_dist: DISTRIBUTION, TYPE=GAUSS, SIGMAX=1.0e-3, SIGMAPX=1.0e-4, SIGMAY=1.0e-3, SIGMAPY=1.0e-4, SIGMAZ=1.0e-3, SIGMAPZ=1.0e-4;
+TRACK, LINE=all_kinds, BEAM=lattix_beam, MAXSTEPS=259438, DT=1e-12, ZSTOP=3.45;
+RUN, METHOD="PARALLEL-T", BEAM=lattix_beam, FIELDSOLVER=lattix_fs, DISTRIBUTION=lattix_dist;
+ENDTRACK;
+QUIT;

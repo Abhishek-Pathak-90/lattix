@@ -68,7 +68,8 @@ RF pairs are Equivalent tier (the buncher's mid-gap kick, CAVNUM's own crest) an
 6-digit dump precision (`ENGINE_PRECISION`).  Synergia's lattice JSON is a battery format with Synergia as its
 engine where the clone is built (never in CI); it keeps one design momentum and scales every strength by
 `p_design/p_bunch` itself (the `"constant"` energy mode), and its solenoid body is wrong upstream
-(`ff_solenoid` swaps `ks`/`ksl`), so pairs with solenoids are report-only.  TraceWin decks
+(`ff_solenoid` swaps `ks`/`ksl`), so pairs with solenoids are report-only.  OPAL-T has no engine at all: its cases are fixed points and IR
+round trips only.  TraceWin decks
 are checked with HELIX where it exists and with LightWin's `Envelope3D` otherwise (CI); a pair whose
 LightWin run skipped or drift-substituted elements is report-only.
 

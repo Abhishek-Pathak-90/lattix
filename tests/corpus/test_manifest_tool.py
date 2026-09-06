@@ -199,6 +199,8 @@ PROSE = "Dear colleague,\nplease find the attached decks.\nRegards\n"
         ("import numpy as np\nprint(np.pi)\n", "script.py", "unknown"),   # a python file is not a lattice
         ('{"value0": {"name": "x", "reference_particle_value": {}, "elements": [{"lazy_double_attributes": []}]}}',
          "lat.json", "synergia"),
+        ('Title, string="t";\nq1: QUADRUPOLE, L=0.2, K1=1.0, ELEMEDGE=0.5;\nall: LINE = (q1);\n'
+         'TRACK, LINE=all, BEAM=b;\nRUN, METHOD="PARALLEL-T", BEAM=b;\n', "lat.in", "opal"),
         (PROSE, "notes.txt", "unknown"),
         ("", "empty.dat", "unknown"),
     ],

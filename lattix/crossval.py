@@ -88,7 +88,7 @@ DERIVATION_TIER = "_derivation_tier"
 
 
 #: formats whose decks come with data files next to them (IMPACT-T and IMPACT-Z's rfdataN, 1TN.T7)
-_SIDE_FILE_FORMATS = frozenset({"impactt", "impactz", "dynac"})
+_SIDE_FILE_FORMATS = frozenset({"impactt", "impactz", "dynac", "opal"})
 
 
 def derived_decks(workdir: Path, bases: list[tuple[str, str, dict]] | None = None) -> list[tuple[Path, str, dict]]:
@@ -130,7 +130,7 @@ ENGINE_FOR_FORMAT: dict[str, str | None] = {
     "madx": "madx", "xtrack": "xtrack", "bmad": "bmad", "elegant": "elegant", "impactx": "impactx",
     "impactz": "impactz", "flame": "flame", "tracewin": "helix", "mad8": None, "pals": None, "lattix": None,
     "scibmad": "scibmad", "cheetah": "cheetah", "pyorbit": "pyorbit", "impactt": "impactt", "ocelot": "ocelot",
-    "dynac": "dynac", "synergia": "synergia",
+    "dynac": "dynac", "synergia": "synergia", "opal": None,
 }
 #: fallback engines per format, tried in order when the primary one is unavailable (CI has no HELIX)
 ENGINE_CANDIDATES: dict[str, tuple[str, ...]] = {"tracewin": ("helix", "lightwin")}
@@ -206,6 +206,10 @@ AFFECTS: dict[str, set[str]] = {
     "CHANGREF_AS_PATCH": set(),
     "APERTURE_AS_ATTRIBUTE": set(), "CONST_P0_BEND_K0": set(), "TAYLOR_BASIS_SYNERGIA": set(),
     "RBEND_AS_SECTOR": set(), "TAYLOR_THIN_PLUS_DRIFT": set(), "CONST_P0_BEND_UNDERBENT": set(),
+    "MULTIPOLE_AS_SHORT": set(), "OPAL_BEND_DEFAULT_PROFILE": set(), "OPAL_SOLENOID_MAP": set(),
+    "OPAL_CAVITY_MAP": set(), "FM_AS_OPAL_MAP": set(), "OPAL_CAVITY_TO_DRIFT": {"gain", "volt", "energy"},
+    "SOLENOID_TO_MARKER": set(), "OPAL_GAP_DRIFT_INSERTED": set(), "OPAL_LAG_AS_SYNC_PHASE": set(),
+    "UNSUPPORTED_OPAL_ELEMENT": set(), "FM_STATIC_B_DROPPED": set(),
 }
 
 #: codes whose model moves an element boundary by up to this many metres (short cavities)
