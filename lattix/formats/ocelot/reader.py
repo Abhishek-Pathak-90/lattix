@@ -123,6 +123,16 @@ class _Eval:
         raise _Unsupported(f"expression {ast.unparse(node)}")
 
 
+def _param_value(v: str):
+    """An instrument parameter from the tag: an int stays an int, a float a float, else text."""
+    for cast in (int, float):
+        try:
+            return cast(v)
+        except ValueError:
+            pass
+    return v
+
+
 def _num(v, default: float = 0.0) -> float:
     if isinstance(v, list):
         v = v[0] if v else default
@@ -430,10 +440,7 @@ class Reader:
             for item in (tag.get("params") or "").split(";"):
                 if ":" in item:
                     k, v = item.split(":", 1)
-                    try:
-                        params[k] = float(v)
-                    except ValueError:
-                        params[k] = v
+                    params[k] = _param_value(v)
             el = Instrument(length=L, family=tag.get("family", "MONITOR"), params=params, **common)
         elif ctor == "Aperture":
             xm, ym = abs(_num(kw.get("xmax"), math.inf)), abs(_num(kw.get("ymax"), math.inf))

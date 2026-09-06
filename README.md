@@ -2,7 +2,7 @@
 
 Translate a lattice deck from one accelerator code's format to another's
 (TraceWin `.dat`, MAD-X, MAD8 flat, Elegant `.lte`, Bmad, PALS; later ImpactX,
-IMPACT-Z, IMPACT-T, FLAME, xtrack, SciBmad, Cheetah LatticeJSON, PyORBIT3 linac XML, Ocelot lattice modules, DYNAC decks, MAD-NG write-only; Astra, GPT, CSRtrack, Merlin++, SLICKTRACK, SAD, SXF and Accelerator Toolkit through Bmad's converters) through a code-neutral intermediate representation, with
+IMPACT-Z, IMPACT-T, FLAME, xtrack, SciBmad, Cheetah LatticeJSON, PyORBIT3 linac XML, Ocelot lattice modules, DYNAC decks, Synergia lattice JSON, MAD-NG write-only; Astra, GPT, CSRtrack, Merlin++, SLICKTRACK, SAD, SXF and Accelerator Toolkit through Bmad's converters) through a code-neutral intermediate representation, with
 a fidelity report on every conversion and validation against the real engines.
 
 **Status: Phase 5 in progress (0.1.0)** — SciBmad, the xsuite completion (every xtrack element class, knobs, environments, MAD-NG output) LightWin as a second TraceWin-semantics engine, Cheetah (LatticeJSON format + engine), PyORBIT3 (linac XML format + engine), IMPACT-T (`ImpactT.in` format + engine), Ocelot (lattice-module format + engine, electron machines), DYNAC (deck format + local engine) and the Bmad bridge (Astra, GPT, CSRtrack, Merlin++, SLICKTRACK, SAD, SXF, AT through Bmad's own converters) have landed; documentation, CI and a local release build are in place; HELIX GUI/MCP integration is deferred. Phase 3 delivered — readers and writers for TraceWin, MAD-X, MAD8 flat, Elegant, Bmad,

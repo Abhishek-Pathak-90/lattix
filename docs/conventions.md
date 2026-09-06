@@ -45,6 +45,7 @@ The IR is SI plus electron-volts everywhere: m, rad, T, T/m, T·m^(1−n), V, V/
 | IMPACT-T `ImpactT.in` | m, absolute `zedge` | rad (pole faces as lines `z = k·x + b`) | lab gradient T/m (type 1), `Bz0` T scaling an `(r, z)` table (type 3), `By` T (type 4) | type 104 `scale` V/m × Fourier `Ez` (`rfdataN`, period = card length) | Hz (card and header) | `theta0` deg, driven on the absolute time | eV (header; `fort.18`) |
 | Ocelot module | m | rad | normalized `k1 = Bn1/Bρ_signed`, `k = Bsol/(2Bρ_signed)`, `kn = [BnL_n/Bρ_signed]` (MAD's `knl`) | `Cavity.v` GV | `freq` Hz | `phi` deg (`phi = −φs`) | GeV total (`tws0.E`) |
 | DYNAC deck | cm | deg (`BMAGNET ANGL`, pole faces, `ZROT`, `TWQA`) | lab pole-tip field kG at radius `R` (`QUADRUPO`), `SOLENO` kG, `STEER` ∫B·dl T·m, `BMAGNET XN = −k1ρ²` | `BUNCHER V` MV; `CAVSC E0` MV/m × T × L; `FIELD` V/m | Hz (`GEBEAM`, `NEWF`) | deg, charge-signed for `BUNCHER` (`+180°` for a negative species), crest-relative for `CAVNUM` | MeV (`INPUT`; rest mass `UEM × ATM`) |
+| Synergia lattice JSON | m | rad | MAD-X's normalized `k1`, `k1s`, `knl`/`ksl`, `ks` — all with the design (start) rigidity, Synergia scales by `p_design/p_bunch` itself | `volt` MV | `freq` MHz | `lag` turns (`lag = φ/2π + ¼`, no slip) | GeV total (`four_momentum.energy`; one design momentum, `energy_mode=constant`) |
 | HELIX (adapter) | mm | deg | T, T/m | MV | MHz | deg | MeV |
 
 ## 3. Reference particle and rigidity
@@ -126,6 +127,7 @@ the reference particle and the charge sign is already folded in.  Invariant I-6 
 | IMPACT-T type 104 `theta0` | a driven phase on the absolute time (`scale·Ez·cos(2πf·t + θ0)`); lattix integrates the reference through the profile: `V` is the largest gain over θ0, the reference gains `V·cos φs`, the branch from the slope (a later particle gains more at φs < 0) | (writer/reader, `rfprofile.calibrate`) | IMPACT-T 3.1.5: proton and H⁻ thin gaps gain 866 025.7 eV at −30° (4e-7 of V·cos 30°), a 0.2 m cavity at 325 MHz 6.7e-7; the slope bunches |
 | Ocelot `Cavity.phi` | deg; gain `v·cos(phi)` GeV for any species (Ocelot has no charge); `R65 ∝ +sin(phi)` with τ late-positive, so the IR's bunching at φs < 0 needs `phi = −φs` | (writer/reader) | Ocelot 25.06.0: 866 025.4 eV and `R65_common = −0.51` at `phi = +30°` for the 1 MV fingerprint gap (a surrogate cavity: Ocelot's matrix divides by the length) |
 | DYNAC `BUNCHER PDP` | deg; gain `q·V·cos φ` (the TraceWin raw-phase rule: a negative species needs `φ + 180°`); a late particle gains more for `φ < 0`; `CAVSC`'s phase is not charge-signed; `CAVNUM DPHASE` is relative to DYNAC's own crest | (writer/reader) | DYNAC V6R16: +0.866 MeV for a proton at −30°, −0.433 for an H⁻ at −30° and +0.866 at +150°; `CAVSC` 43.5 keV at 0° for both species |
+| Synergia `rfcavity lag` | turns; `ff_rfcavity`: `E1 = E0 + volt·sin(2π·lag)` on the bunch reference — MAD-X's rule, so `lag = φ/2π + ¼`; no phase slip (the bunch's time is measured against its own accelerated reference) | (writer/reader) | Synergia 3 (2026-09-05): 866 025.4037844 eV at −30° (4e-15); a second gap at −30° gains the same with the plain lag |
 
 `energy_gain_eV(voltage_V, phase_rad)` is the one formula the walk uses.  Codes whose cavity model
 needs a length (IMPACT-T's field profile, Ocelot's Rosenzweig–Serafini matrix) get a thin gap as the
@@ -179,6 +181,7 @@ The IR bend stores arc `length`, `angle`, `e1`, `e2` (with rectangular flags), `
 | IMPACT-T | type 4 `By = Bρ_signed·θ/L` with the pole faces as lines in `rfdataN` (`k1 = tan e1`, `k4 = tan(|θ| − e2)`); the tracked dipole bends the whole bunch by the reference angle — no pole-face focusing, `R21 = R26 = 0` — so bend decks are report-only | fodo.madx bends 1e-2 vs cpymad (quads and drifts 1.2e-9) |
 | Ocelot | `SBend(l, angle, e1, e2, gap = 2·hgap, fint, fintx, tilt, k1, k2)` with sector-referenced faces; `RBend` adds `angle/2` to both faces itself; survey follows MAD8 | fodo.madx (1 GeV e⁻) vs cpymad 1.8e-15; XFEL S2E `.lte` vs Ocelot's own converter 2.9e-12 |
 | DYNAC | `BMAGNET ANGL RMO BAIM XN` with TRANSPORT's conventions: a positive angle bends towards −x, `PENT1/2` = e1/e2, `EK1` = fint with `APB` = hgap, `XN = −k1ρ²`; `BAIM = −|Bρ|/ρ` written for a negative species (the derived field would bend it the wrong way); `ZROT a` around it = MAD's tilt; a bend to the left is the right magnet inside `ZROT ±180` with `−e1/−e2` (MAD-X's own identity) | sector and wedge vs MAD-X 1e-5 (dump precision); `ZROT +90` bends down like `tilt = +π/2` |
+| Synergia | `sbend(l, angle, e1, e2, fint, fintx, hgap, k1, k2, tilt)` with MAD-X's sector faces; an `rbend` is read with `angle/2` added to its faces; the field comes from the design momentum and there is no `k0`: after acceleration the bunch is under-bent by `p_design/p_local` (LOSSY `CONST_P0_BEND_UNDERBENT`) | fodo.madx vs cpymad 4.5e-8; `θ_eff = 0.0823` for a 0.1 rad bend after a 1 MV gap at 2.1 MeV |
 
 Vertical bends are `tilt_ref = ±π/2`.  The PIP-II TraceWin export writes its two negative-angle
 vertical bends with the edge sign reversed; the MAD8 anchor test pins exactly those two.
@@ -225,6 +228,7 @@ the local `(β, γ, p0)` at every boundary.  The adapters' native pairs and the 
 | IMPACT-T | fixed-time dumps `(x m, γβx, y m, γβy, z m ahead-positive, γβz)`; the adapter drifts every particle to the reference plane and returns the common basis | +1 | follows |
 | Ocelot | `(x, px, y, py, τ = c·Δt late-positive [m], ΔE/(p0 c))` — MAD-X's set, every map with γ = E/m_e (electron only) | −1 | follows (`Cavity` gains `v·cos(phi)`) |
 | DYNAC | `(x cm, x′, y cm, y′, φ rad late-positive w.r.t. the master frequency, ΔW MeV)` from `WRBEAM` dumps (6 digits) | −1 (`d[4] = −βλ/2π`, `d[5] = 10⁶/(β²γmc²)`) | follows (the on-axis probe particle) |
+| Synergia | `(x, xp = px/p_ref, y, yp, cdt, dpop = Δp/p_ref)` (`Bunch::cdt`, `Bunch::dpop`); a 1 m drift gives `R56 = −L/(βγ²)` | −1 (`d[4] = −β`, `d[5] = 1`) | follows (the bunch reference; strengths scaled by `p_design/p_bunch`) |
 
 Each adapter is fingerprinted before use: a 1 m drift must give R56 = +0.9955387 for a
 2.1 MeV proton and a thin 1 MV cavity at φs = −30° must gain 866 025.4 eV in the

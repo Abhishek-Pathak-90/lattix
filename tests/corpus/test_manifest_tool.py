@@ -197,6 +197,8 @@ PROSE = "Dear colleague,\nplease find the attached decks.\nRegards\n"
         ("from ocelot import *\nd = Drift(l=1.0, eid='d')\ncell = (d,)\nlattice = MagneticLattice(cell)\n",
          "lattice.py", "ocelot"),
         ("import numpy as np\nprint(np.pi)\n", "script.py", "unknown"),   # a python file is not a lattice
+        ('{"value0": {"name": "x", "reference_particle_value": {}, "elements": [{"lazy_double_attributes": []}]}}',
+         "lat.json", "synergia"),
         (PROSE, "notes.txt", "unknown"),
         ("", "empty.dat", "unknown"),
     ],

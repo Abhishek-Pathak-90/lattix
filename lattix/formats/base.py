@@ -97,6 +97,8 @@ FORMATS: dict[str, FormatSpec] = {
                          description="Ocelot lattice module (MagneticLattice cell, python)"),
     "dynac": FormatSpec("dynac", (".dynac.in", ".dyn"), "lattix.formats.dynac",
                         description="DYNAC V6 deck (cm, kG, MV type codes)"),
+    "synergia": FormatSpec("synergia", (".synergia.json",), "lattix.formats.synergia",
+                           description="Synergia 3 lattice JSON (Lattice.as_json)"),
     # keep last: a bare .json is xtrack's unless the content says otherwise (sniffed below)
     "xtrack": FormatSpec("xtrack", (".json",), "lattix.formats.xtrack", description="xtrack Line/Environment JSON"),
 }
@@ -147,6 +149,9 @@ def guess_format(path: str | Path) -> str:
         if isinstance(head, dict) and "elements" in head and "lattices" in head and \
                 str(head.get("version", "")).startswith("cheetah"):
             return "cheetah"
+        if isinstance(head, dict) and isinstance(head.get("value0"), dict) and "elements" in head["value0"] \
+                and "reference_particle_value" in head["value0"]:
+            return "synergia"
     return fmt
 
 

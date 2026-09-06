@@ -1,0 +1,968 @@
+{
+    "value0": {
+        "name": "all_kinds",
+        "has_reference_particle": true,
+        "reference_particle_value": {
+            "charge": -1,
+            "four_momentum": {
+                "mass": 0.00051099895,
+                "energy": 0.00261099895,
+                "momentum": 0.0025605069009865993,
+                "gamma": 5.109597485474285,
+                "beta": 0.980661788847751
+            },
+            "state": {
+                "value0": 0.0,
+                "value1": 0.0,
+                "value2": 0.0,
+                "value3": 0.0,
+                "value4": 0.0,
+                "value5": 0.0
+            },
+            "repetition": 0,
+            "s": 0.0,
+            "s_n": 0.0,
+            "abs_time": 0.0,
+            "abs_offset": 0.0
+        },
+        "elements": [
+            {
+                "name": "d1",
+                "format": 1,
+                "stype": "drift",
+                "type": 1,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Drift"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.5"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "q1",
+                "format": 1,
+                "stype": "quadrupole",
+                "type": 4,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Quadrupole"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.2"
+                        }
+                    },
+                    {
+                        "key": "k1",
+                        "value": {
+                            "value0": "-140.49989455657507"
+                        }
+                    },
+                    {
+                        "key": "hoffset",
+                        "value": {
+                            "value0": "0.001"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "s1",
+                "format": 1,
+                "stype": "sextupole",
+                "type": 10,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Sextupole"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.1"
+                        }
+                    },
+                    {
+                        "key": "k2",
+                        "value": {
+                            "value0": "-351.2497363914377"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "o1",
+                "format": 1,
+                "stype": "octupole",
+                "type": 11,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Octupole"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.1"
+                        }
+                    },
+                    {
+                        "key": "k3",
+                        "value": {
+                            "value0": "-468.33298185525024"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "m1",
+                "format": 1,
+                "stype": "multipole",
+                "type": 5,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Multipole"
+                    }
+                ],
+                "lazy_double_attributes": [],
+                "lazy_vector_attributes": [
+                    {
+                        "key": "knl",
+                        "value": [
+                            {
+                                "value0": "-1.1708324546381257"
+                            },
+                            {
+                                "value0": "-2.3416649092762514"
+                            }
+                        ]
+                    },
+                    {
+                        "key": "ksl",
+                        "value": [
+                            {
+                                "value0": "-2.3416649092762514"
+                            },
+                            {
+                                "value0": "0"
+                            }
+                        ]
+                    }
+                ],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "b1",
+                "format": 1,
+                "stype": "sbend",
+                "type": 3,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Bend"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "1.0"
+                        }
+                    },
+                    {
+                        "key": "angle",
+                        "value": {
+                            "value0": "0.1"
+                        }
+                    },
+                    {
+                        "key": "e1",
+                        "value": {
+                            "value0": "0.05"
+                        }
+                    },
+                    {
+                        "key": "e2",
+                        "value": {
+                            "value0": "0.05"
+                        }
+                    },
+                    {
+                        "key": "fint",
+                        "value": {
+                            "value0": "0.45"
+                        }
+                    },
+                    {
+                        "key": "hgap",
+                        "value": {
+                            "value0": "0.03"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "sol1",
+                "format": 1,
+                "stype": "solenoid",
+                "type": 19,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Solenoid"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.3"
+                        }
+                    },
+                    {
+                        "key": "ks",
+                        "value": {
+                            "value0": "-58.54162273190628"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "d2",
+                "format": 1,
+                "stype": "drift",
+                "type": 1,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Drift"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.3"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "c1",
+                "format": 1,
+                "stype": "rfcavity",
+                "type": 6,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=RFCavity phase=-1.4835298641951802"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0"
+                        }
+                    },
+                    {
+                        "key": "volt",
+                        "value": {
+                            "value0": "0.08"
+                        }
+                    },
+                    {
+                        "key": "lag",
+                        "value": {
+                            "value0": "0.013888888888888867"
+                        }
+                    },
+                    {
+                        "key": "freq",
+                        "value": {
+                            "value0": "162.5"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "d3",
+                "format": 1,
+                "stype": "drift",
+                "type": 1,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Drift"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.3"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "c2",
+                "format": 1,
+                "stype": "rfcavity",
+                "type": 6,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=RFCavity phase=-0.5235987755982988 tw=1"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.2"
+                        }
+                    },
+                    {
+                        "key": "volt",
+                        "value": {
+                            "value0": "1.0"
+                        }
+                    },
+                    {
+                        "key": "lag",
+                        "value": {
+                            "value0": "0.16666666666666669"
+                        }
+                    },
+                    {
+                        "key": "freq",
+                        "value": {
+                            "value0": "162.5"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "k1",
+                "format": 1,
+                "stype": "kicker",
+                "type": 9,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Kicker"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.1"
+                        }
+                    },
+                    {
+                        "key": "hkick",
+                        "value": {
+                            "value0": "0.0013459518055515467"
+                        }
+                    },
+                    {
+                        "key": "vkick",
+                        "value": {
+                            "value0": "-0.0026919036111030933"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "col1",
+                "format": 1,
+                "stype": "rcollimator",
+                "type": 17,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "aperture_type",
+                        "value": "rectangular"
+                    },
+                    {
+                        "key": "lattix",
+                        "value": "kind=Collimator"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.05"
+                        }
+                    },
+                    {
+                        "key": "xsize",
+                        "value": {
+                            "value0": "0.01"
+                        }
+                    },
+                    {
+                        "key": "ysize",
+                        "value": {
+                            "value0": "0.02"
+                        }
+                    },
+                    {
+                        "key": "rectangular_aperture_width",
+                        "value": {
+                            "value0": "0.02"
+                        }
+                    },
+                    {
+                        "key": "rectangular_aperture_height",
+                        "value": {
+                            "value0": "0.04"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "mk1",
+                "format": 1,
+                "stype": "marker",
+                "type": 15,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Marker"
+                    }
+                ],
+                "lazy_double_attributes": [],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "bpm1",
+                "format": 1,
+                "stype": "monitor",
+                "type": 12,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Instrument family=BPM"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "scr1",
+                "format": 1,
+                "stype": "instrument",
+                "type": 16,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Instrument family=SCREEN"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "f1",
+                "format": 1,
+                "stype": "marker",
+                "type": 15,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Foil material=C thick=0.001"
+                    }
+                ],
+                "lazy_double_attributes": [],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "t1",
+                "format": 1,
+                "stype": "matrix",
+                "type": 23,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Taylor basis=synergia L=0.1"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0"
+                        }
+                    },
+                    {
+                        "key": "rm11",
+                        "value": {
+                            "value0": "1.0"
+                        }
+                    },
+                    {
+                        "key": "rm12",
+                        "value": {
+                            "value0": "-0.025703134698034896"
+                        }
+                    },
+                    {
+                        "key": "rm22",
+                        "value": {
+                            "value0": "1.0"
+                        }
+                    },
+                    {
+                        "key": "rm33",
+                        "value": {
+                            "value0": "1.0"
+                        }
+                    },
+                    {
+                        "key": "rm34",
+                        "value": {
+                            "value0": "-0.1"
+                        }
+                    },
+                    {
+                        "key": "rm44",
+                        "value": {
+                            "value0": "1.0"
+                        }
+                    },
+                    {
+                        "key": "rm55",
+                        "value": {
+                            "value0": "1.0"
+                        }
+                    },
+                    {
+                        "key": "rm56",
+                        "value": {
+                            "value0": "0.002174737315045758"
+                        }
+                    },
+                    {
+                        "key": "rm66",
+                        "value": {
+                            "value0": "1.0"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "t1_body",
+                "format": 1,
+                "stype": "drift",
+                "type": 1,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Taylor name=t1 role=body"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.1"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "p1",
+                "format": 1,
+                "stype": "marker",
+                "type": 15,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Patch x_offset=0.001"
+                    }
+                ],
+                "lazy_double_attributes": [],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "rc1",
+                "format": 1,
+                "stype": "marker",
+                "type": 15,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=ReferenceChange dE=1000.0"
+                    }
+                ],
+                "lazy_double_attributes": [],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "fq1",
+                "format": 1,
+                "stype": "marker",
+                "type": 15,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Freq f=162500000.0"
+                    }
+                ],
+                "lazy_double_attributes": [],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "dir1",
+                "format": 1,
+                "stype": "marker",
+                "type": 15,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Directive format=tracewin card=LATTICE args=\"4 0\" role=period_start"
+                    }
+                ],
+                "lazy_double_attributes": [],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "d4",
+                "format": 1,
+                "stype": "drift",
+                "type": 1,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "aperture_type",
+                        "value": "circular"
+                    },
+                    {
+                        "key": "lattix",
+                        "value": "kind=Drift"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.2"
+                        }
+                    },
+                    {
+                        "key": "circular_aperture_radius",
+                        "value": {
+                            "value0": "0.015"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            }
+        ],
+        "updated": {
+            "value0": true,
+            "value1": true,
+            "value2": true
+        },
+        "tree": {
+            "value0": ""
+        }
+    },
+    "lattix": {
+        "written_by": "lattix 0.1.0",
+        "source_format": "IR",
+        "energy_mode": "constant",
+        "species": "electron",
+        "mass_eV": 510998.95,
+        "charge": -1,
+        "kinetic_energy_eV": 2100000.0,
+        "rf_frequency_Hz": 162500000.0,
+        "use": "all_kinds"
+    }
+}

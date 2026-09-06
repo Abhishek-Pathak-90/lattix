@@ -32,6 +32,7 @@ _Z_SIGN: dict[Basis, float] = {
     Basis.PYORBIT: +1.0,   # MEASURED 2026-09-05 (PyORBIT3 drift R56 = +L/γ² · 1e9/(β²γ mc²)): z ahead-positive
     Basis.OCELOT: -1.0,    # MEASURED 2026-09-05 (Ocelot 25.06 drift R56 = −L/(β²γ²)): τ = c·Δt late-positive
     Basis.DYNAC: -1.0,     # MEASURED 2026-09-05 (DYNAC V6R16 drift R56 = −6.05 rad/MeV at 2.1 MeV): φ late-positive
+    Basis.SYNERGIA: -1.0,  # cdt = c·(t − t_ref): late-positive (to be pinned by the fingerprint)
 }
 
 
@@ -72,6 +73,9 @@ def transform_matrix(basis: Basis, kinetic_eV: float, mass_eV: float,
         d[0] = d[1] = d[2] = d[3] = 1e-3
         d[4] = zs * beta * lam / 360.0
         d[5] = 1e6 / (beta * beta * gamma * mass_eV)  # ΔW[MeV] -> δ = ΔW/(β²γ m c²)
+    elif basis is Basis.SYNERGIA:
+        # (x, xp = px/p0, y, yp, cdt, dpop): z = zs·β·cdt, δ = dpop
+        d[4] = zs * beta
     elif basis is Basis.DYNAC:
         # (x cm, x′ rad, y cm, y′ rad, φ rad late-positive w.r.t. the master frequency, ΔW MeV)
         if not rf_frequency_Hz:

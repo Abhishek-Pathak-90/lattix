@@ -130,12 +130,12 @@ ENGINE_FOR_FORMAT: dict[str, str | None] = {
     "madx": "madx", "xtrack": "xtrack", "bmad": "bmad", "elegant": "elegant", "impactx": "impactx",
     "impactz": "impactz", "flame": "flame", "tracewin": "helix", "mad8": None, "pals": None, "lattix": None,
     "scibmad": "scibmad", "cheetah": "cheetah", "pyorbit": "pyorbit", "impactt": "impactt", "ocelot": "ocelot",
-    "dynac": "dynac",
+    "dynac": "dynac", "synergia": "synergia",
 }
 #: fallback engines per format, tried in order when the primary one is unavailable (CI has no HELIX)
 ENGINE_CANDIDATES: dict[str, tuple[str, ...]] = {"tracewin": ("helix", "lightwin")}
 FOLLOWS_P0 = {"helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True, "lightwin": True,
-              "cheetah": True, "pyorbit": True, "impactt": True, "ocelot": True, "dynac": True,
+              "cheetah": True, "pyorbit": True, "impactt": True, "ocelot": True, "dynac": True, "synergia": True,
               "impactz": True, "flame": True, "madx": False, "xtrack": False, "scibmad": False}
 
 RTOL = 1e-9
@@ -204,6 +204,8 @@ AFFECTS: dict[str, set[str]] = {
     "RF_RAW_PHASE_AS_SYNC": set(), "DYNAC_DIRECTIVE_KEPT": set(),
     "CAVSC_AS_GAP": {"gain", "volt", "energy"}, "NCELLS_FROM_CAVNUM": set(), "FM_READ_AS_CAVITY": set(),
     "CHANGREF_AS_PATCH": set(),
+    "APERTURE_AS_ATTRIBUTE": set(), "CONST_P0_BEND_K0": set(), "TAYLOR_BASIS_SYNERGIA": set(),
+    "RBEND_AS_SECTOR": set(), "TAYLOR_THIN_PLUS_DRIFT": set(), "CONST_P0_BEND_UNDERBENT": set(),
 }
 
 #: codes whose model moves an element boundary by up to this many metres (short cavities)
@@ -534,13 +536,18 @@ def _normalised(raw: bytes) -> bytes:
     return "\n".join(lines).encode("latin-1")
 
 
-def _round_json(obj):
+def _round_json(obj, key: str | None = None):
     if isinstance(obj, float):
         return float(f"{obj:.12g}")
+    if isinstance(obj, str) and key == "value0":          # Synergia's lazy attributes are numbers in strings
+        try:
+            return f"{float(obj):.12g}"
+        except ValueError:
+            return obj
     if isinstance(obj, list):
         return [_round_json(x) for x in obj]
     if isinstance(obj, dict):
-        return {k: _round_json(v) for k, v in obj.items()}
+        return {k: _round_json(v, k) for k, v in obj.items()}
     return obj
 
 
@@ -676,6 +683,12 @@ def _engine_check(res: CaseResult, deck: Path, src: str, out: Path, dst: str, la
         # Ocelot's Cavity (Rosenzweig–Serafini edges + body) against the thin-gap or field-map models
         res.tier = "equivalent"
         res.engine_note = "Ocelot cavity model (RF focusing of its own): engine models differ; "
+    if "synergia" in (ea, eb) and res.tier != "lossy" and any(e.kind == "Solenoid" for e in lat.elements.values()):
+        # MEASURED (docs/oracles.md, Phase 5.9): Synergia's ff_solenoid passes (ksl, ks) to a body that takes
+        # (ks, ksl) — the rotation angle is ks and the displacement is divided by ks·L: solenoid decks are
+        # report only until the upstream fix
+        res.tier = "lossy"
+        res.engine_note = "Synergia solenoid body (ks/ksl swapped upstream, report only); "
     if "dynac" in (ea, eb) and res.tier == "exact" and has_rf:
         # MEASURED (docs/oracles.md, Phase 5.8): DYNAC's BUNCHER applies the RF defocusing with the mid-gap
         # velocity (TraceWin/HELIX: the entrance one) and CAVNUM integrates a generated profile against its

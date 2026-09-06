@@ -1,0 +1,370 @@
+{
+    "value0": {
+        "name": "fodo",
+        "has_reference_particle": true,
+        "reference_particle_value": {
+            "charge": 1,
+            "four_momentum": {
+                "mass": 0.9382720881600001,
+                "energy": 1.738272,
+                "momentum": 1.4632959490697273,
+                "gamma": 1.8526310458716098,
+                "beta": 0.8418106884709223
+            },
+            "state": {
+                "value0": 0.0,
+                "value1": 0.0,
+                "value2": 0.0,
+                "value3": 0.0,
+                "value4": 0.0,
+                "value5": 0.0
+            },
+            "repetition": 0,
+            "s": 0.0,
+            "s_n": 0.0,
+            "abs_time": 0.0,
+            "abs_offset": 0.0
+        },
+        "elements": [
+            {
+                "name": "qf",
+                "format": 1,
+                "stype": "quadrupole",
+                "type": 4,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Quadrupole"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.3"
+                        }
+                    },
+                    {
+                        "key": "k1",
+                        "value": {
+                            "value0": "0.6"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "drift_0",
+                "format": 1,
+                "stype": "drift",
+                "type": 1,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Drift"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.7"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "b1",
+                "format": 1,
+                "stype": "sbend",
+                "type": 3,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Bend"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "1.0"
+                        }
+                    },
+                    {
+                        "key": "angle",
+                        "value": {
+                            "value0": "0.1"
+                        }
+                    },
+                    {
+                        "key": "e1",
+                        "value": {
+                            "value0": "0.05"
+                        }
+                    },
+                    {
+                        "key": "e2",
+                        "value": {
+                            "value0": "0.05"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "drift_1",
+                "format": 1,
+                "stype": "drift",
+                "type": 1,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Drift"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "1.0"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "qd",
+                "format": 1,
+                "stype": "quadrupole",
+                "type": 4,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Quadrupole"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "0.3"
+                        }
+                    },
+                    {
+                        "key": "k1",
+                        "value": {
+                            "value0": "-0.6"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "drift_2",
+                "format": 1,
+                "stype": "drift",
+                "type": 1,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Drift"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "1.0"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "b1",
+                "format": 1,
+                "stype": "sbend",
+                "type": 3,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Bend"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "1.0"
+                        }
+                    },
+                    {
+                        "key": "angle",
+                        "value": {
+                            "value0": "0.1"
+                        }
+                    },
+                    {
+                        "key": "e1",
+                        "value": {
+                            "value0": "0.05"
+                        }
+                    },
+                    {
+                        "key": "e2",
+                        "value": {
+                            "value0": "0.05"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "drift_3",
+                "format": 1,
+                "stype": "drift",
+                "type": 1,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Drift"
+                    }
+                ],
+                "lazy_double_attributes": [
+                    {
+                        "key": "l",
+                        "value": {
+                            "value0": "1.2999999999999998"
+                        }
+                    }
+                ],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            },
+            {
+                "name": "m1",
+                "format": 1,
+                "stype": "marker",
+                "type": 15,
+                "ancestors": [],
+                "string_attributes": [
+                    {
+                        "key": "lattix",
+                        "value": "kind=Marker"
+                    }
+                ],
+                "lazy_double_attributes": [],
+                "lazy_vector_attributes": [],
+                "length_attribute_name": "l",
+                "bend_angle_attribute_name": "angle",
+                "revision": 0,
+                "markers": {
+                    "value0": false,
+                    "value1": false,
+                    "value2": false,
+                    "value3": false
+                }
+            }
+        ],
+        "updated": {
+            "value0": true,
+            "value1": true,
+            "value2": true
+        },
+        "tree": {
+            "value0": ""
+        }
+    },
+    "lattix": {
+        "written_by": "lattix 0.1.0",
+        "source_format": "madx",
+        "energy_mode": "constant",
+        "species": "proton",
+        "mass_eV": 938272088.16,
+        "charge": 1,
+        "kinetic_energy_eV": 799999911.84,
+        "rf_frequency_Hz": null,
+        "use": "fodo"
+    }
+}

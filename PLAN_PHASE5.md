@@ -133,9 +133,10 @@ Toolchain on this Mac (2026-09-04): cmake 4.3.2, Boost 1.92 (Homebrew), **no gfo
 - [x] Lockstep: TraceWin reader → DYNAC writer vs `tw2dyn` on HELIX's MEBT deck (filtered to tw2dyn's five cards, GAP padded): identical quadrupoles, drifts, bunchers and DYNAC maps. The SNS MEBT + DTL1 example (never in the repo) reads, re-writes and re-runs: MEBT maps 2.8e-4, end energy 0.3 %.
 - [x] Oracle: built DYNAC (gfortran 16, CMake policy override); no printed matrices — one job per card with a fresh RDBEAM probe and a WRBEAM dump, the map fitted from it (6-digit floor 5e-5; a single run's propagated probe loses conditioning, 1.6e5 on the chicane); marker `oracle_dynac`, local only (EULA). Gates: fodo.madx vs cpymad 3.5e-5, fodo_cell/solenoid_channel/bend_line vs HELIX ≤ 8e-5, mebt_line vs HELIX Equivalent (mid-gap RF kick), fingerprint drift 5e-7 and gain 866 030 eV; left bends = ZROT 180 + negated faces (MAD-X's own identity), PSB and chicane battery cases pass.
 
-### 5.9 Synergia2 (1 week, when a Booster study needs it)
-- [ ] pixi install of the clone (osx-arm64); reader/writer for the JSON lattice (schema from `as_json` of the MAD-X-loaded MI lattice); MAD-X path already exists.
-- [ ] Oracle: `Lattice_simulator.get_linear_one_turn_map` / `tune_linear_lattice` on the Booster MAD-X (`ring_code/MAD-X_BOOSTER`) vs cpymad/xtrack one-turn maps.
+### 5.9 Synergia2 (1 week, when a Booster study needs it) — done 2026-09-05
+- [x] pixi build of the clone (osx-arm64; submodules, duplicate-`LC_RPATH` fix for this macOS); reader/writer for the JSON lattice (`Lattice.as_json` cereal archive: MAD-X attribute names, `lazy_double_attributes` strings, Synergia's own aperture attributes; lattix's `lattix` block + per-element tag); MAD-X path already exists.
+- [x] Oracle: per-element maps from Synergia's own `Propagator` (single-element lattices, fresh probe bunches, cdt carried); fingerprint (cdt late-positive, `lag = φ/2π + ¼`, gain 4e-15); `fodo.madx` vs cpymad 4.5e-8 (Yoshida quadrupoles). The Booster MAD-X one-turn-map comparison is left to the private corpus (its `ring_code/MAD-X_BOOSTER` decks are not in the repo); the public gate is the FODO and the battery.
+- Measured: one design momentum with every strength scaled by `p_design/p_bunch` (writer default `energy_mode="constant"`, no phase slip), bends under-bent after acceleration (no `k0`: LOSSY), and an upstream bug in `ff_solenoid` (`ks`/`ksl` swapped) — solenoid pairs report-only.
 
 ### 5.10 OPAL-T writer (1 week)
 - [ ] `lattix/formats/opal/` writer: `ELEMEDGE` positions from `s_in`, RFCAVITY `VOLT` MV / `FREQ` MHz / `LAG` rad (phase convention pinned against Tao's `write opal` output, then against OPAL itself when an engine exists), QUADRUPOLE `K1`, SBEND/RBEND, SOLENOID `KS`, KICKER, collimators, MONITOR/MARKER; field maps via `FMAPFN` for FieldMap elements (1DDynamic/T7 formats, *verify*).
@@ -166,4 +167,4 @@ Toolchain on this Mac (2026-09-04): cmake 4.3.2, Boost 1.92 (Homebrew), **no gfo
 * Ocelot is electron-only: record it, do not silently scale.
 
 ## 6. Order and effort (~10 weeks)
-5.0 SciBmad (done) → 5.1 xsuite (done) → 5.2 LightWin (done) → 5.3 Cheetah (done) → 5.4 PyORBIT3 (done) → 5.5 IMPACT-T (done) → 5.6 Bmad bridge (done) → 5.7 Ocelot (done) → 5.8 DYNAC (done) → 5.9 Synergia2 (1) → 5.10 OPAL-T (1).
+5.0 SciBmad (done) → 5.1 xsuite (done) → 5.2 LightWin (done) → 5.3 Cheetah (done) → 5.4 PyORBIT3 (done) → 5.5 IMPACT-T (done) → 5.6 Bmad bridge (done) → 5.7 Ocelot (done) → 5.8 DYNAC (done) → 5.9 Synergia2 (done) → 5.10 OPAL-T (1).

@@ -19,6 +19,7 @@ recalled.  Re-run `lattix fingerprint` / `pytest tests/oracles` after any engine
 | IMPACT-T | conda-forge `impact-t` 3.1.5 (`ImpactTexe`, BSD) in env `lattix` | 3.1.5 | fixed-time `(x, γβx, y, γβy, z, γβz)` dumps drifted to the reference plane → the common basis | follows | `lattix/oracles/impactt.py`: `-2` dumps and `-4` step changes at every boundary, each element its own `dt = L/(N βc)` so the reference lands on the boundaries; 13-particle probes from `partcl.data` (`flagdist 16`); `R_elem = J_i·J_{i−1}⁻¹`; ≤ 90 controls per run (chunked, `theta0` shifted by `360·f·t`); dipoles re-base the frame one step past the face; **the dipole model has no pole-face focusing (report only)**. |
 | Ocelot | env `ocelot` (a venv from env `lattix`'s python 3.11 with `ocelot-desy` 25.6.0 → reports 25.06.0, GPL-3) | `lattix/oracles/ocelot.py` + `ocelot_worker.py` | (x, px, y, py, τ = cΔt late-positive [m], ΔE/(p0 c)) — MAD-X's set | follows the cavities (`v·cos(phi)`) | per-element `elem.R(E)` composed as `MagneticLattice.transfer_maps`; every map divides by m_e (electron only; the worker hands Ocelot the total energy giving lattix's γ); `Cavity` needs a length (thin gaps are surrogate cavities); Elegant `.lte` through Ocelot's own converter (`fmt="elegant"`). |
 | DYNAC | local build of the clone (V6R16, gfortran 16 from Homebrew gcc; `cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5`); EULA freeware, never in CI | `lattix/oracles/dynac.py` | (x cm, x′, y cm, y′, φ rad late-positive w.r.t. the master f, ΔW MeV) | follows | no matrix output: one DYNAC job per optics card with a fresh `RDBEAM` probe and a `WRBEAM` dump, the map fitted from the dump (6 digits → ~1e-5); `REFCOG 1`; thick cavities are centred bunchers, cell trains and maps `FIELD` + `CAVNUM`; left bends `ZROT 180` with negated faces. |
+| Synergia 3 | local pixi build of the clone (`17e691d`, 2026-03-27; python 3.12, Kokkos 4.7 OpenMP; duplicate `LC_RPATH`s stripped with `install_name_tool` for this macOS) — no conda-forge package, never in CI | `lattix/oracles/synergia.py` + `synergia_worker.py` | (x, xp = px/p_ref, y, yp, cdt late-positive [m], dpop) | the bunch reference follows the RF, the design reference does not | one single-element lattice per element with the design reference, a fresh 13-particle probe bunch at the energy reached so far (its cdt carried along), one `Propagator` pass; quadrupoles are a Yoshida-2 integrator (4.5e-8 on the FODO); solenoid body bug upstream. |
 | PyORBIT3 | env `pyorbit` (python 3.10, meson build of PyORBIT3 `22b45fa` 2026-05-14 with `USE_MPI=none`, MIT; `libfftw3` preloaded on macOS) | `lattix/oracles/pyorbit.py` + `pyorbit_worker.py` | (x [m], x′, y [m], y′, z [m] ahead-positive, dE [GeV]) | follows the gaps | `LinacTrMatricesController` maps at every node entrance, cumulated from the first node (per-node map `R[k+1]·R[k]⁻¹`, one extra node at the exit); 13-particle symmetric probes tracked at two amplitudes and Richardson-extrapolated; one `<Cavity>` per gap. |
 | ImpactX / IMPACT-Z | env `lattix` (`impactx` 26.08, `impact-z` 2.7.7, both osx-arm64 builds) | — | Phase 3 | follows | `ImpactZexe` on PATH in the env; `impactx` importable. |
 | SciBmad | `julia` (juliaup 1.10) with `SciBmad` 0.5.2 (Beamlines.jl + BeamTracking.jl) through `lattix/oracles/scibmad_worker.jl`; `LATTIX_JULIA` or PATH | 0.5.2 (2026-09-05) | (x, px, y, py, z, pz), z ahead-positive (drift R56 = +L/γ² measured) | constant (one reference momentum per `Beamline`; nesting and `Patch(dE_ref)` past the first element are refused) | `RFCavity` gain is **−V·cos(phi0)** with `phi0` in radians for protons and electrons alike (writer negates the voltage: `GAIN_SIGN`); a zero-length cavity and `edge1_int/edge2_int` cannot be tracked (worker substitutes 1 µm / 0 and says so); `g_ref` alone is a curved frame — the dipole field is `Kn0`; `LineElement(transport_map=f)` with `f(v, q, p=nothing)` works as a thin lens; `using Beamlines` fails in an environment that only has `SciBmad` (worker strips `using` lines). `Species("#1H-")` is H⁻ (m_p + 2 m_e); `Species("H-")` is the isotope-averaged anion. Startup ~13 s, a run ~8 s. |
@@ -38,6 +39,7 @@ reused instead), `flame-code` (Phase 3, pip).
 | elegant | 0 (path length; −0.9955387 after the adapter's −L/γ² term) | +0.9955387 | −0.288 (matrix; ≈ β·4.30 — ultra-relativistic phase slip) | 866 025.4 (`change_p0=1`, proton phase = φs − 90°) |
 | ocelot (electron, 2.1 MeV) | −0.0398280 (τ, ΔE/p0c) | +0.0383025 = L/γ² for the electron (exact, 0.0) | −0.510 (the 37 mm surrogate cavity at phi = +30°) | 866 025.4 (`v·cos(phi)`, 1e-15) |
 | dynac | −12.0997 rad/MeV (φ, ΔW) | +0.9955392 (5e-7: 6-digit dumps) | −4.305 (BUNCHER) | 866 020 (`q·V·cos φ`, 6-digit dumps) |
+| synergia | −14.9048 (cdt, dpop) | +0.9955387 (1.0e-8) | −4.305 (thin rfcavity) | 866 025.4037844 (`volt·sin(2π lag)`, 4e-15) |
 
 Why the cavity R65 differs between constant-p0 and p0-following engines at this energy:
 δ = ΔW/(β²γmc²) is normalised with the *exit* β²γ in p0-following codes and the *entry*
@@ -657,4 +659,49 @@ MAD-X gate therefore checks loading and reporting, the physics gate runs on Bmad
   writer and the same DYNAC maps; the SNS deck as shipped vs lattix's rewrite: the MEBT maps identical
   at the tank entrance, the end energy to 0.3 %; the battery's 39 DYNAC cases (fixed points, IR round
   trips and the HELIX/MAD-X engine pairs on the public decks) pass.
+
+## Phase 5.9 measurements (Synergia 3 clone `17e691d`, pixi build, 2026-09-05)
+
+* **Build.**  `brew install pixi`; `git submodule update --init --recursive` (eigen and kokkos are
+  submodules the clone lacked); `pixi install -e cpu`, `pixi run -e cpu cmake`, `build`, `install` →
+  `install_pixi/lib/python3.12/site-packages/synergia` (~25 min).  This macOS refuses Mach-O files with
+  a duplicate `LC_RPATH` (the conda-forge `libgfortran`/`openblas` and Synergia's own modules carry one):
+  `install_name_tool -delete_rpath` on every library of the pixi environment and the install fixes the
+  imports.  Synergia's `Bunch_simulator` destructor crashes the interpreter at finalization, so the worker
+  leaves with `os._exit` after writing its result; the worker runs with `python -P` (its own directory
+  would shadow the `synergia` package).
+* **Archive.**  `Lattice.as_json()` is a cereal 1.3 JSON archive (`value0` → name, reference particle with
+  `four_momentum`, `state`, `abs_time`/`abs_offset`, elements with `stype`, the `element_type` index,
+  `lazy_double_attributes` as `{"value0": "<number>"}` strings and `lazy_vector_attributes` as arrays of
+  them).  Synergia loads lattix's archive (extra top-level keys are ignored); its own older
+  `examples/normal_form/booster_init_lattice.json` no longer loads (`NVP (abs_time) not found`).
+* **Basis.**  `(x, xp, y, yp, cdt, dpop)`: a 1 m drift at 2.1 MeV gives `R56 = −L/(βγ²) = −14.905`,
+  i.e. `z_common = −β·cdt` (cdt late-positive; `Basis.SYNERGIA`, `d[4] = −β`, `d[5] = 1`): the common-basis
+  drift map matches the analytic one to 1.0e-8 (the Yoshida drift/quadrupole integration).
+* **Cavity.**  `ff_rfcavity`: `E1 = E0 + volt·sin(2π·lag)` on the *bunch* reference particle (its
+  `new_pref_b`), the design reference unchanged — `lag = φ/2π + ¼` gains 866 025.4037844 eV at −30°
+  (4e-15) for a proton and an H⁻ alike and bunches (`R65_common = −4.305`, the p0-following value).  No
+  phase slip: two 1 MV gaps at −30° with the plain lag both gain V·cos 30° — the bunch's time is measured
+  against its own accelerated reference, so the MAD-X writer's `"delta"` slip would make the second gap
+  *decelerate* (−935 keV measured).
+* **Strengths after acceleration.**  Every FF element scales its normalized strength by
+  `brho_design/brho_bunch` before acting (`ff_solenoid.h`, `ff_quadrupole`): a quadrupole written with
+  `k1 = G/Bρ_start` after two 1 MV gaps (2.1 → 3.83 MeV) shows `R21 = −0.82386` = the hard-edge map of the
+  lab gradient at the *local* momentum (8e-8), while `k1 = G/Bρ_local` comes out weaker by the same ratio.
+  So the writer's default is the `"constant"` policy (`CONST_P0_START_RIGIDITY`), kicks scale by
+  `Bρ_local/Bρ_start`, and a bend after acceleration is under-bent: with `angle = 0.1` after a 1 MV crest
+  gap the map has `R21 = −h·sin(θ·p_design/p_local)` (`θ_eff = 0.0823`) and Synergia's `sbend` reads no
+  `k0` (LOSSY `CONST_P0_BEND_UNDERBENT`).
+* **Solenoid bug.**  `ff_solenoid.h`'s `solenoid_unit_kicker` calls `FF_algorithm::solenoid_unit(p0 … p5,
+  ksl, ks, length, …)` while the function takes `(…, ks, ksl, length, …)`: the body rotates the momenta by
+  `ks` (whatever the length) and divides the displacement by `ks·L`.  Measured for `ks = 0.1`, `L = 0.3 m`:
+  `R12 = 3.3278 = sin(ks)/(ks·L)`, `R13 = 0.1664`, `R11 = 0.9917` — a symplectic (det = 1) but wrong map.
+  The writer keeps MAD-X's `ks = B/Bρ` (the code's intent); the battery treats Synergia pairs with
+  solenoids as report-only; to be reported upstream.
+* **Gates.**  HELIX's `fodo.madx` vs cpymad: 4.5e-8 on T4×4, dispersion and path, 1.7e-9 on R56 (8
+  boundaries — the second-order Yoshida quadrupole integration); a thick `Taylor` is a thin `matrix`
+  followed by a drift with the drift divided out (`TAYLOR_THIN_PLUS_DRIFT`, Synergia refuses a matrix
+  with a length); the fingerprint drift 1e-8 and gap 4e-15; lattix's archive of the FODO loaded by
+  Synergia, re-read and re-written gives the same maps to 1e-12; the battery's Synergia cases (fixed
+  points, IR round trips, HELIX/MAD-X engine pairs on the public decks) pass.
 

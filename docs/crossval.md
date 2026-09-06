@@ -65,7 +65,10 @@ format with Ocelot as its engine: every public deck is a proton or H⁻ one, so 
 `tests/oracles/test_ocelot_adapter.py`.  DYNAC's deck is a battery format with DYNAC as its engine where a
 built binary is at hand (never in CI): its `.fields.txt` side file gets a directory of its own like IMPACT-T's,
 RF pairs are Equivalent tier (the buncher's mid-gap kick, CAVNUM's own crest) and the exact tier is held at the
-6-digit dump precision (`ENGINE_PRECISION`).  TraceWin decks
+6-digit dump precision (`ENGINE_PRECISION`).  Synergia's lattice JSON is a battery format with Synergia as its
+engine where the clone is built (never in CI); it keeps one design momentum and scales every strength by
+`p_design/p_bunch` itself (the `"constant"` energy mode), and its solenoid body is wrong upstream
+(`ff_solenoid` swaps `ks`/`ksl`), so pairs with solenoids are report-only.  TraceWin decks
 are checked with HELIX where it exists and with LightWin's `Envelope3D` otherwise (CI); a pair whose
 LightWin run skipped or drift-substituted elements is report-only.
 

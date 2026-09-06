@@ -427,6 +427,8 @@ def sniff_text(text: str, path: str | os.PathLike[str] | None = None) -> str:
         return "tracewin_output"
     if re.search(r"\bMagneticLattice\s*\(", text) and re.search(r"^\s*(from|import)\s+ocelot\b", text, re.M):
         return "ocelot"                      # an Ocelot lattice module
+    if '"reference_particle_value"' in text and '"lazy_double_attributes"' in text:
+        return "synergia"                    # a Synergia 3 Lattice.as_json() archive
     if re.search(r"^\s*STOP\s*$", text, re.M) and re.search(r"^\s*(GEBEAM|RDBEAM|INPUT)\s*$", text, re.M) and \
             len(re.findall(r"^\s*(DRIFT|QUADRUPO|BUNCHER|CAVNUM|CAVSC|BMAGNET|SOLENO|NEWF)\s*$", text, re.M)) >= 1:
         return "dynac"                       # a DYNAC deck: type codes alone on their lines
