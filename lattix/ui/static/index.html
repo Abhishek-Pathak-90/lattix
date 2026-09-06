@@ -145,16 +145,18 @@ svg.band line { stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
 #minimap .viewport { position: absolute; top: 0; bottom: 0; background: var(--accent-glow); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); cursor: grab; }
 #tooltip { position: fixed; z-index: 30; pointer-events: none; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 5px 8px; font-size: var(--fs-0); box-shadow: 0 4px 16px rgba(0,0,0,.25); max-width: 340px; white-space: pre-line; }
 #toasts { position: fixed; right: 12px; bottom: 12px; z-index: 40; display: flex; flex-direction: column; gap: 6px; }
-#browser { position: fixed; inset: 0; z-index: 45; }
-#browser .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.35); }
-#browser .dialog { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); width: min(760px, 94vw); max-height: min(72vh, 680px); display: flex; flex-direction: column; gap: 6px; background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.35); }
-#browser .head { display: flex; align-items: center; gap: 6px; }
-#browser .head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-#browser .head .spacer { flex: 1; }
-#browser .body { overflow: auto; min-height: 0; }
-#browser .body table { width: 100%; }
-#browser tr.deck td:first-child { color: var(--text-0); font-weight: 600; }
-#browser tr.other td { color: var(--text-dim); }
+.modal { position: fixed; inset: 0; z-index: 45; }
+.modal .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.35); }
+.modal .dialog { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); width: min(760px, 94vw); max-height: min(72vh, 680px); display: flex; flex-direction: column; gap: 6px; background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.35); }
+.modal .head { display: flex; align-items: center; gap: 6px; }
+.modal .head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.modal .head .spacer { flex: 1; }
+.modal .body { overflow: auto; min-height: 0; }
+.modal .body table { width: 100%; }
+.modal tr.deck td:first-child { color: var(--text-0); font-weight: 600; }
+.modal tr.other td { color: var(--text-dim); }
+.modal .row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.modal p { margin: 2px 0; }
 .toast { background: var(--bg-2); border: 1px solid var(--line-strong); border-left: 4px solid var(--info); border-radius: var(--radius); padding: 6px 10px; max-width: 420px; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
 .toast.err { border-left-color: var(--err); } .toast.ok { border-left-color: var(--ok); } .toast.warn { border-left-color: var(--warn); }
 .toast small { display: block; color: var(--text-2); white-space: pre-wrap; }
@@ -217,7 +219,22 @@ svg.chart polyline { fill: none; stroke-width: 1.5px; }
     <button id="btn-help" title="keyboard shortcuts">?</button>
     <div id="busy"></div>
   </header>
-  <div id="browser" hidden>
+  <div id="beam" class="modal" hidden>
+    <div class="backdrop"></div>
+    <div class="dialog" role="dialog" aria-label="beam">
+      <div class="head"><b>This deck carries no beam</b></div>
+      <p id="beam-text" class="muted"></p>
+      <div class="row">
+        <label>Species <select id="beam-species"></select></label>
+        <label>KE <input type="number" id="beam-ke" step="any" style="width:7em">
+          <select id="beam-ke-unit"><option value="1">eV</option><option value="1e3">keV</option><option value="1e6" selected>MeV</option><option value="1e9">GeV</option></select></label>
+        <label>f <input type="number" id="beam-freq" step="any" style="width:6em"> MHz</label>
+      </div>
+      <div class="actions"><button id="beam-apply" class="primary">Read again with this beam</button><button id="beam-keep">Keep the assumed beam</button></div>
+      <div class="hint">TraceWin decks hold no beam; HELIX keeps it in a <code>.lgproj</code> next to the deck — open the deck in place (Browse… or a path) or upload both files together, and it is taken from there.</div>
+    </div>
+  </div>
+  <div id="browser" class="modal" hidden>
     <div class="backdrop"></div>
     <div class="dialog" role="dialog" aria-label="open a deck">
       <div class="head"><span class="muted">Open a deck under</span> <b id="browser-path" class="mono"></b><span class="spacer"></span>
@@ -972,6 +989,7 @@ const topbar = {
     $("#btn-upload").addEventListener("click", () => $("#file-input").click());
     $("#btn-folder").addEventListener("click", () => $("#dir-input").click());
     browser.bind();
+    beamPrompt.bind();
     $("#file-input").addEventListener("change", ev => this.upload(ev.target.files));
     $("#dir-input").addEventListener("change", ev => this.upload(ev.target.files));
     $("#theme").addEventListener("change", ev => ui.theme(ev.target.value));
@@ -1013,8 +1031,10 @@ const topbar = {
       loadSource(r.source);
       $("#src-format option[value='']").textContent = `auto — detected: ${r.detected_format}`;
       ui.toast("ok", `read ${r.source.header.n_placed} elements (${r.detected_format})`);
+      store.lastRead = sourceOverride || null;
       const w = r.source.header.warnings || [];
       if (w.length) ui.toast("warn", `${w.length} warning(s)`, w.slice(0, 3).join("\n"));
+      if (r.source.header.beam_assumed) beamPrompt.open(r.source);
     } catch (e) { ui.toast("err", "read failed", e.message); }
     finally { ui.busy(false, ""); }
   },
@@ -1044,6 +1064,33 @@ function guessLocal(name) {
   for (const [fmt, f] of Object.entries(store.formats.formats)) for (const suf of f.suffixes) if (n.endsWith(suf)) return fmt;
   return null;
 }
+// the beam prompt: a deck read with an assumed beam (TraceWin without a .lgproj/tag) is worth nothing until
+// the species and energy are right — ask, and read again
+const beamPrompt = {
+  bind() {
+    $("#beam-keep").addEventListener("click", () => this.close());
+    $("#beam .backdrop").addEventListener("click", () => this.close());
+    $("#beam").addEventListener("keydown", ev => { if (ev.key === "Escape") { this.close(); ev.preventDefault(); } ev.stopPropagation(); });
+    $("#beam-apply").addEventListener("click", () => this.apply());
+  },
+  close() { $("#beam").hidden = true; },
+  open(vm) {
+    const ref = vm.header.reference;
+    const sel = $("#beam-species"); sel.replaceChildren();
+    for (const o of $("#opt-species").options) if (o.value) sel.appendChild(h("option", { value: o.value, text: o.textContent }));
+    sel.value = ref.species.name;
+    $("#beam-ke").value = String(ref.kinetic_energy_eV / 1e6); $("#beam-ke-unit").value = "1e6";
+    $("#beam-freq").value = ref.rf_frequency_Hz ? String(ref.rf_frequency_Hz / 1e6) : "";
+    $("#beam-text").textContent = `${vm.header.file.split("/").pop()} was read as ${ref.species.name} at ${fmt.si(ref.kinetic_energy_eV, "eV")} — an assumption, not the deck's beam. Every normalised strength, the written deck and any engine run depend on it; a line read far from its energy is unstable and compares as astronomical numbers.`;
+    $("#beam").hidden = false; $("#beam-ke").focus(); $("#beam-ke").select();
+  },
+  apply() {
+    $("#opt-species").value = $("#beam-species").value; $("#opt-ke").value = $("#beam-ke").value;
+    $("#opt-ke-unit").value = $("#beam-ke-unit").value; $("#opt-freq").value = $("#beam-freq").value;
+    this.close(); topbar.read(store.lastRead);
+  },
+};
+
 // the server-side file browser: a dialog under the top bar listing the directory (readable decks in bold)
 const browser = {
   dir: null,
@@ -1199,7 +1246,9 @@ function loadSource(vm) {
   syn.src.setLattice(vm); syn.src.setClasses(new Map(), new Set());
   syn.dst.setLattice(null);
   const hd = vm.header, ref = hd.reference;
-  $("#src-head").replaceChildren(h("b", { text: "SOURCE" }), h("span", { text: hd.file.split("/").pop(), title: hd.file }), h("span", { class: "badge", text: hd.format, title: "format the deck was read as" }), h("span", { class: "num", text: `${hd.n_placed} elements` }), h("span", { class: "num", text: fmt.m(hd.total_length) }), h("span", { text: `${ref.species.name} ${fmt.si(ref.kinetic_energy_eV, "eV")}` + (ref.rf_frequency_Hz ? ` · ${fmt.num(ref.rf_frequency_Hz / 1e6, 6)} MHz` : "") }));
+  $("#src-head").replaceChildren(h("b", { text: "SOURCE" }), h("span", { text: hd.file.split("/").pop(), title: hd.file }), h("span", { class: "badge", text: hd.format, title: "format the deck was read as" }), h("span", { class: "num", text: `${hd.n_placed} elements` }), h("span", { class: "num", text: fmt.m(hd.total_length) }), hd.beam_assumed
+      ? h("span", { class: "badge warn clickable", title: "no beam in the deck: this was assumed — click to set it and read again", text: `${ref.species.name} ${fmt.si(ref.kinetic_energy_eV, "eV")} (assumed — click to set)`, onclick: () => beamPrompt.open(vm) })
+      : h("span", { text: `${ref.species.name} ${fmt.si(ref.kinetic_energy_eV, "eV")}` + (ref.rf_frequency_Hz ? ` · ${fmt.num(ref.rf_frequency_Hz / 1e6, 6)} MHz` : "") }));
   $("#dst-head").replaceChildren(h("b", { text: "TARGET" }), h("span", { class: "muted", text: "translate to see the written deck read back" }));
   const wb = $("#src-warn"); const nw = hd.warnings.length; wb.textContent = nw ? `⚠ ${nw}` : ""; wb.classList.toggle("hidden", !nw); wb.classList.toggle("warn", nw > 0);
   const ll = $("#line-list"); ll.replaceChildren(); for (const n of hd.lines || []) ll.appendChild(h("option", { value: n }));
@@ -1577,6 +1626,11 @@ const validation = {
     const box = $("#beam-form"); box.replaceChildren();
     const ref = store.source?.header.reference;
     const fields = [["species", ref?.species.name || "proton", "text"], ["kinetic_energy_eV", ref?.kinetic_energy_eV ?? 2.1e6, "number"], ["frequency_Hz", ref?.rf_frequency_Hz ?? "", "number"], ["betx", 10, "number"], ["alfx", 0, "number"], ["bety", 10, "number"], ["alfy", 0, "number"], ["dx", 0, "number"], ["dpx", 0, "number"]];
+    if (store.source?.header.beam_assumed) {
+      box.appendChild(h("div", { class: "verdict bad" }, h("b", { text: "the source deck was read with an assumed beam — engines would run an unstable line. " }),
+        h("button", { text: "set the beam and read again", onclick: () => beamPrompt.open(store.source) }),
+        h("div", { class: "muted", text: "the written deck depends on the beam too: translate again after the read" })));
+    }
     box.appendChild(h("span", { class: "muted", text: "beam (Twiss: envelope engines only)" }));
     for (const [k, v, t] of fields) box.appendChild(h("label", {}, k + " ", h("input", { type: t, id: "beam-" + k, value: v === "" ? null : String(v), step: "any", style: "width:7em" })));
   },

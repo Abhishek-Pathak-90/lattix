@@ -243,6 +243,7 @@ def lattice_view(lat: Lattice, report: FidelityReport | None, *, fmt: str, path:
         "n_placed": len(rows), "n_definitions": len(definitions), "total_length": total, "counts": counts,
         "reference": reference_view(ref0), "reference_out": reference_view(ref_out),
         "reference_state": {"in": reference_state(ref0), "out": reference_state(ref_out)},
+        "beam_assumed": any(e.code == "BEAM_ASSUMED" for e in (report.entries if report is not None else [])),
         "warnings": list(lat.warnings) + warnings, "energy_profile": energy_profile, "maxima": maxima(rows),
         "variables": {k: jsonable(v.value) for k, v in lat.variables.items()},
     }

@@ -117,3 +117,14 @@ def test_format_catalog_and_code_catalog():
     samples = sample_decks()
     assert any(s["path"] == "helix/fodo_cell.dat" and s["format"] == "tracewin" for s in samples)
     assert jsonable({"a": (1, 2), "n": float("nan")}) == {"a": [1, 2], "n": None}
+
+
+def test_header_flags_an_assumed_beam(tmp_path):
+    from lattix.formats import read
+
+    deck = tmp_path / "bare.dat"
+    deck.write_text("DRIFT 100 30\nQUAD 200 5 30\nEND\n")
+    lat, rep = read(deck)
+    assert lattice_view(lat, rep, fmt="tracewin", path=str(deck))["header"]["beam_assumed"] is True
+    lat, rep = read(deck, kinetic_energy_eV=800e6, species="h-")
+    assert lattice_view(lat, rep, fmt="tracewin", path=str(deck))["header"]["beam_assumed"] is False

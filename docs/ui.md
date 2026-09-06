@@ -29,8 +29,10 @@ with the public sample decks offered as completions; `Upload…` and `Upload fol
 own file picker and send the file(s) to the server — the folder form keeps its structure so a TraceWin
 deck's `FIELD_MAP_PATH` resolves.  A TraceWin deck carries no beam: set Species, KE and f in the top bar,
 or open the deck in place (Browse or a path) with its HELIX `.lgproj` beside it, which is read for the
-beam; otherwise 2.1 MeV proton is assumed and a warning toast says so — an 800 MeV line read at 2.1 MeV
-is unstable and any engine comparison of it shows astronomical numbers.  The format is detected from the suffix (and sniffed
+beam; otherwise 2.1 MeV proton is assumed and a dialog asks for the beam right away (species, kinetic
+energy, RF frequency: "Read again with this beam"); the header shows the beam as *assumed* until then and
+the Validation tab refuses to pretend — an 800 MeV line read at 2.1 MeV is unstable and any engine
+comparison of it shows astronomical numbers.  The format is detected from the suffix (and sniffed
 for `.lat`/`.json`); override it in the `Format` list.  Readers that carry no beam take the species, the
 kinetic energy and the RF frequency from the top bar (TraceWin, Elegant, MAD8 …); `Line` names the
 sequence/line/root to use (mapped to each reader's own option); the reader's other options sit under
