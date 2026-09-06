@@ -479,11 +479,23 @@ class Handler(BaseHTTPRequestHandler):
     def _error(self, status: int, type_: str, message: str, **extra) -> None:
         self._json(status, {"error": {"type": type_, "message": message, **extra}})
 
-    def _body(self) -> bytes:
+    def _read_body(self) -> bytes:
         n = int(self.headers.get("Content-Length") or 0)
         if n > self.app.settings.max_body:
+            # drain (bounded) so the client can finish sending and read the 413, then drop the connection
+            left = min(n, 4 * self.app.settings.max_body)
+            while left > 0:
+                chunk = self.rfile.read(min(left, 1 << 20))
+                if not chunk:
+                    break
+                left -= len(chunk)
+            self.close_connection = True
             raise ApiError(413, "too_large", f"body of {n} bytes exceeds the limit of {self.app.settings.max_body}")
         return self.rfile.read(n) if n else b""
+
+    def _body(self) -> bytes:
+        raw = getattr(self, "_raw", None)
+        return raw if raw is not None else self._read_body()
 
     def _json_body(self) -> dict:
         raw = self._body()
@@ -519,9 +531,14 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlsplit(self.path)
         query = urllib.parse.parse_qs(parsed.query)
         path = parsed.path
+        self._raw = None
         if not self._authorised(query):
+            self.close_connection = True          # the body (if any) was not read
             return
         try:
+            # the body is consumed here, once, whether or not the route wants it: on a keep-alive connection
+            # an unread body would be parsed as the start of the browser's next request
+            self._raw = self._read_body()
             for method, pattern, fn in ROUTES:
                 if method != self.command:
                     continue

@@ -213,3 +213,25 @@ def test_threads_do_not_leak(server):
     for _ in range(3):
         api(server, "GET", "/api/ping")
     assert threading.active_count() <= before + 3
+
+
+def test_keep_alive_connection_survives_a_bodyless_route(server):
+    """Browsers reuse one connection: a POST whose route ignores its body (creating a session) must not leave
+    the bytes on the wire, or the next request on that connection is read as ``{}PUT …`` (a 501)."""
+    conn = http.client.HTTPConnection("127.0.0.1", server["port"], timeout=60)
+    hdrs = {"X-Lattix-Token": server["token"], "Content-Type": "application/json"}
+    conn.request("POST", "/api/session", body=b"{}", headers=hdrs)
+    r = conn.getresponse()
+    sid = json.loads(r.read())["session"]
+    assert r.status == 201
+    conn.request("PUT", f"/api/session/{sid}/upload?path=deck.dat", body=b"DRIFT 100 30\nEND\n",
+                 headers={"X-Lattix-Token": server["token"]})
+    r = conn.getresponse()
+    body = json.loads(r.read())
+    assert r.status == 201, body
+    assert body["path"] == "deck.dat" and body["bytes"] == 17
+    conn.request("GET", f"/api/session/{sid}", headers={"X-Lattix-Token": server["token"]})
+    r = conn.getresponse()
+    r.read()
+    assert r.status in (200, 404)              # the connection is still in sync
+    conn.close()

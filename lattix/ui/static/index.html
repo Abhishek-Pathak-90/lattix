@@ -145,6 +145,16 @@ svg.band line { stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
 #minimap .viewport { position: absolute; top: 0; bottom: 0; background: var(--accent-glow); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); cursor: grab; }
 #tooltip { position: fixed; z-index: 30; pointer-events: none; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 5px 8px; font-size: var(--fs-0); box-shadow: 0 4px 16px rgba(0,0,0,.25); max-width: 340px; white-space: pre-line; }
 #toasts { position: fixed; right: 12px; bottom: 12px; z-index: 40; display: flex; flex-direction: column; gap: 6px; }
+#browser { position: fixed; inset: 0; z-index: 45; }
+#browser .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.35); }
+#browser .dialog { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); width: min(760px, 94vw); max-height: min(72vh, 680px); display: flex; flex-direction: column; gap: 6px; background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.35); }
+#browser .head { display: flex; align-items: center; gap: 6px; }
+#browser .head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+#browser .head .spacer { flex: 1; }
+#browser .body { overflow: auto; min-height: 0; }
+#browser .body table { width: 100%; }
+#browser tr.deck td:first-child { color: var(--text-0); font-weight: 600; }
+#browser tr.other td { color: var(--text-dim); }
 .toast { background: var(--bg-2); border: 1px solid var(--line-strong); border-left: 4px solid var(--info); border-radius: var(--radius); padding: 6px 10px; max-width: 420px; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
 .toast.err { border-left-color: var(--err); } .toast.ok { border-left-color: var(--ok); } .toast.warn { border-left-color: var(--warn); }
 .toast small { display: block; color: var(--text-2); white-space: pre-wrap; }
@@ -187,10 +197,11 @@ svg.chart polyline { fill: none; stroke-width: 1.5px; }
       <input type="text" id="src-path" placeholder="path under the UI root, or pick a sample" list="sample-list" spellcheck="false">
       <datalist id="sample-list"></datalist>
     </label>
-    <button id="btn-browse" title="Browse the file picker">Browse…</button>
+    <button id="btn-browse" title="list the decks under the UI root (on the server side)">Browse…</button>
     <input type="file" id="file-input" multiple hidden>
     <input type="file" id="dir-input" webkitdirectory multiple hidden>
-    <button id="btn-folder" title="Upload a folder (deck + field maps)">Folder…</button>
+    <button id="btn-upload" title="upload deck file(s) from this computer">Upload…</button>
+    <button id="btn-folder" title="upload a folder from this computer (deck + field maps)">Upload folder…</button>
     <button id="btn-read" class="primary">Read</button>
     <span id="src-warn" class="badge hidden" title="warnings"></span>
     <label>Format <select id="src-format"><option value="">auto</option></select></label>
@@ -204,6 +215,16 @@ svg.chart polyline { fill: none; stroke-width: 1.5px; }
     <button id="btn-help" title="keyboard shortcuts">?</button>
     <div id="busy"></div>
   </header>
+  <div id="browser" hidden>
+    <div class="backdrop"></div>
+    <div class="dialog" role="dialog" aria-label="open a deck">
+      <div class="head"><span class="muted">Open a deck under</span> <b id="browser-path" class="mono"></b><span class="spacer"></span>
+        <button id="browser-up" title="parent directory">↑ up</button><button id="browser-close">close</button></div>
+      <input type="text" id="browser-filter" placeholder="filter names…" spellcheck="false" autocomplete="off">
+      <div class="body"><table class="list" id="browser-list"></table></div>
+      <div class="hint">click a deck to read it · folders open in place · Esc closes</div>
+    </div>
+  </div>
 
   <aside id="panel">
     <h2>Translate</h2>
@@ -946,7 +967,9 @@ const topbar = {
     $("#btn-read").addEventListener("click", () => this.read());
     $("#src-path").addEventListener("keydown", ev => { if (ev.key === "Enter") this.read(); });
     $("#btn-browse").addEventListener("click", () => browser.open());
+    $("#btn-upload").addEventListener("click", () => $("#file-input").click());
     $("#btn-folder").addEventListener("click", () => $("#dir-input").click());
+    browser.bind();
     $("#file-input").addEventListener("change", ev => this.upload(ev.target.files));
     $("#dir-input").addEventListener("change", ev => this.upload(ev.target.files));
     $("#theme").addEventListener("change", ev => ui.theme(ev.target.value));
@@ -1004,6 +1027,7 @@ const topbar = {
       }
       if (!deck) deck = (list[0].webkitRelativePath || list[0].name);
       $("#src-path").value = deck;
+      $("#src-format").value = "";                   // uploaded decks are detected from their suffix
       await this.read({ path: deck });
     } catch (e) { ui.toast("err", "upload failed", e.message); }
     finally { ui.busy(false, ""); $("#file-input").value = ""; $("#dir-input").value = ""; }
@@ -1014,24 +1038,54 @@ function guessLocal(name) {
   for (const [fmt, f] of Object.entries(store.formats.formats)) for (const suf of f.suffixes) if (n.endsWith(suf)) return fmt;
   return null;
 }
-// simple file browser (dialog-less: a toast-like popover listing the directory)
+// the server-side file browser: a dialog under the top bar listing the directory (readable decks in bold)
 const browser = {
   dir: null,
+  close() { $("#browser").hidden = true; },
   async open(path) {
     try {
       const b = await api.get(`/api/browse?path=${encodeURIComponent(path || this.dir || ".")}`);
       this.dir = b.path;
-      const box = h("div", { class: "toast", style: "max-width:520px;max-height:60vh;overflow:auto" });
-      box.appendChild(h("div", {}, h("b", { text: b.path }), " ", h("button", { text: "close", onclick: () => box.remove() }), b.parent ? h("button", { text: "↑ up", onclick: () => { box.remove(); this.open(b.parent); } }) : null));
-      const t = h("table", { class: "list" });
+      const d = $("#browser");
+      d.hidden = false;
+      $("#browser-path").textContent = b.path;
+      $("#browser-path").title = b.path;
+      const up = $("#browser-up");
+      up.disabled = !b.parent;
+      up.onclick = () => this.open(b.parent);
+      const list = $("#browser-list");
+      list.replaceChildren();
+      const rows = [];
       for (const e of b.entries) {
-        const tr = h("tr", { class: "clickable" }, h("td", { text: e.dir ? "📁 " + e.name : e.name }), h("td", { text: e.dir ? "" : (e.format || "") }), h("td", { class: "num muted", text: e.dir ? "" : fmt.num(e.bytes / 1024, 4) + " kB" }));
-        tr.addEventListener("click", () => { if (e.dir) { box.remove(); this.open(b.path + "/" + e.name); } else { $("#src-path").value = b.path + "/" + e.name; $("#src-format").value = e.format || ""; box.remove(); topbar.read(); } });
-        t.appendChild(tr);
+        const cls = e.dir ? "dir" : (e.format ? "deck" : "other");
+        const tr = h("tr", { class: "clickable " + cls },
+          h("td", { text: e.dir ? "📁 " + e.name : e.name }),
+          h("td", { text: e.dir ? "" : (e.format || "") }),
+          h("td", { class: "num muted", text: e.dir ? "" : fmt.num(e.bytes / 1024, 4) + " kB" }));
+        tr.dataset.name = e.name.toLowerCase();
+        tr.addEventListener("click", () => {
+          if (e.dir) { this.open(b.path + "/" + e.name); return; }
+          $("#src-path").value = b.path + "/" + e.name;
+          $("#src-format").value = "";               // a new deck: let the server detect its format
+          this.close();
+          topbar.read();
+        });
+        list.appendChild(tr);
+        rows.push(tr);
       }
-      box.appendChild(t);
-      $("#toasts").appendChild(box);
+      const filter = $("#browser-filter");
+      filter.value = "";
+      filter.oninput = () => { const q = filter.value.trim().toLowerCase(); for (const tr of rows) tr.hidden = !!q && !tr.dataset.name.includes(q); };
+      filter.focus();
     } catch (e) { ui.toast("err", "browse failed", e.message); }
+  },
+  bind() {
+    $("#browser-close").addEventListener("click", () => this.close());
+    $("#browser .backdrop").addEventListener("click", () => this.close());
+    $("#browser").addEventListener("keydown", ev => {
+      if (ev.key === "Escape") { this.close(); ev.preventDefault(); }
+      ev.stopPropagation();                      // typing in the filter never reaches the page shortcuts
+    });
   },
 };
 // ------------------------------------------------------------------------------------------ options forms

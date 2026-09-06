@@ -21,9 +21,12 @@ written decks, side files) is removed.
 
 ## Load a deck
 
-Give a path under the root (or browse with `Browse…`), pick one of the public sample decks from the
-list, paste a path, or upload a folder with `Folder…` (a TraceWin deck with its field maps: the folder
-structure is kept so `FIELD_MAP_PATH` resolves).  The format is detected from the suffix (and sniffed
+There are three ways in.  `Browse…` opens a dialog listing the files under the UI root on the server
+side (readable decks in bold, folders open in place, a filter box, Esc closes) and reads the deck you
+click; the `Source` field takes a path under the root directly (absolute paths too with `--any-path`),
+with the public sample decks offered as completions; `Upload…` and `Upload folder…` open the browser's
+own file picker and send the file(s) to the server — the folder form keeps its structure so a TraceWin
+deck's `FIELD_MAP_PATH` resolves.  The format is detected from the suffix (and sniffed
 for `.lat`/`.json`); override it in the `Format` list.  Readers that carry no beam take the species, the
 kinetic energy and the RF frequency from the top bar (TraceWin, Elegant, MAD8 …); `Line` names the
 sequence/line/root to use (mapped to each reader's own option); the reader's other options sit under
