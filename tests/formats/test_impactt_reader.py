@@ -64,8 +64,8 @@ def test_sample1_reads_and_is_a_fixed_point(tmp_path):
     assert lat.reference.kinetic_energy_eV == 0.5 and lat.reference.rf_frequency_Hz == 1.3e9
     kinds = Counter(e.kind for e in lat.elements.values())
     assert kinds == {"RFCavity": 3, "NCells": 1, "Drift": 1}          # the overlaps leave one gap
-    assert rep.codes() == {"IMPACTT_RF_GAIN_UNKNOWN": 4, "IMPACTT_SOLRF_BZ_DROPPED": 3, "IMPACTT_OVERLAP": 4,
-                           "SIM_SETTINGS_KEPT_IN_META": 1, "IMPACTT_BEAM_CURRENT": 1}
+    assert rep.codes() == {"IMPACTT_RF_GAIN_UNKNOWN": 4, "IMPACTT_SOLRF_BZ_DROPPED": 3, "IMPACTT_OVERLAP": 3,
+                           "IMPACTT_DRIFT_OVERLAP": 1, "SIM_SETTINGS_KEPT_IN_META": 1, "IMPACTT_BEAM_CURRENT": 1}
     first = next(iter(lat.elements.values()))
     assert first.native["impactt"]["type"] == 105 and first.native["impactt"]["passthrough"] and first.length == 2.0
     out = tmp_path / "ImpactT.in"

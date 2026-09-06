@@ -123,3 +123,38 @@ def test_engine_check_uses_the_verdict(tmp_path, monkeypatch):
     assert not res.error, res.error
     assert res.engine_ok is not None and "fake_tw vs fake_lte" in res.engine_note
     assert isinstance(crossval.beam_from_lattice(read(DATA / "helix" / "fodo_cell.dat")[0]), BeamSpec)
+
+
+def test_contrib_of_static_magnetic_maps_matches_their_hard_edge_replacement():
+    """A solenoid (quadrupole) map integrated by the reader contributes ∫B (∫G): exactly what the hard-edge
+    replacement every mapless writer emits carries, so map → hard edge is 'equal', not a defect."""
+    from lattix.ir.fieldmap import replacement_for
+    from lattix.ir.lattice import Lattice
+    from tests.formats.test_fieldmap_writers import INT_B, INT_G, _lattice, _ref, quad_map, solenoid_map
+
+    for factory, q, want in ((solenoid_map, "BsolL", INT_B), (quad_map, "BnL1", INT_G)):
+        lat = _lattice(factory())
+        p = next(pp for pp in propagate(lat) if pp.element.kind == "FieldMap")
+        assert contrib(p)[q] == pytest.approx(want, rel=1e-12)
+        parts = replacement_for(p.element).parts
+        lat2 = Lattice.from_sequence("hard", list(parts), _ref())
+        assert sum(contrib(pp)[q] for pp in propagate(lat2)) == pytest.approx(want, rel=1e-9)
+        assert sum(pp.length for pp in propagate(lat2)) == pytest.approx(p.length, rel=1e-12)
+
+
+def test_contrib_of_a_superposition_counts_its_static_children():
+    """A PALS ``UnionEle`` (a TraceWin map cluster) places nothing itself: the hard-edge solenoid inside it
+    carries the ∫B the battery compares — with the lattice's definitions to look the children up."""
+    from lattix.crossval import profile
+    from lattix.ir.elements import Drift, Solenoid, SolenoidP, Superposition
+    from lattix.ir.lattice import Lattice
+    from tests.formats.test_fieldmap_writers import _ref
+
+    lat = Lattice.from_sequence("u", [Drift(name="d", length=0.1),
+                                      Superposition(name="u", length=0.3, children=[(0.07, "core")])], _ref())
+    lat.elements["core"] = Solenoid(name="core", length=0.16, solenoid=SolenoidP(Bsol_T=-1.5))
+    p = next(pp for pp in propagate(lat) if pp.element.kind == "Superposition")
+    assert contrib(p)["BsolL"] == 0.0                       # without the definitions the children are unknown
+    assert contrib(p, lat.elements)["BsolL"] == pytest.approx(-0.24)
+    assert contrib(p, lat.elements)["length"] == pytest.approx(0.3)
+    assert profile(lat).cum["BsolL"][-1] == pytest.approx(-0.24)

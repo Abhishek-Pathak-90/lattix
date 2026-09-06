@@ -192,7 +192,12 @@ class Writer:
             return
         out.cursor2 = exit2
         if kind == "Drift":
-            rep.exact(el.name, kind, message="implicit: the factory fills the gap")
+            if el.length < 0.0:
+                rep.equivalent("NEGATIVE_DRIFT_DROPPED", "PyORBIT places every element by its absolute position: "
+                               "a negative drift only moves what follows back (nothing written)",
+                               element=el.name, kind=kind, length_m=float(el.length))
+            else:
+                rep.exact(el.name, kind, message="implicit: the factory fills the gap")
             return
         if kind == "Quadrupole":
             mp = el.multipole

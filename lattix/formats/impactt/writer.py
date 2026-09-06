@@ -457,6 +457,11 @@ class Writer:
         return [c]
 
     def _w_drift(self, el, p, rule) -> list[_Card]:
+        if el.length < 0.0:
+            self.rep.equivalent("NEGATIVE_DRIFT_DROPPED", "IMPACT-T places every card by its absolute zedge: a "
+                                "negative drift only moves the following cards back and is not written",
+                                element=el.name, kind="Drift", length_m=float(el.length))
+            return []
         self._record(el, rule)
         return [self._drift_card(el, self._z(p))]
 

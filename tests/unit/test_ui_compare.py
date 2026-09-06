@@ -168,3 +168,60 @@ def test_element_diffs_handles_dropped_and_absent(tmp_path):
         assert d["worst"] != "DIFF" and d["position"]["class"] == "equal"
     assert element_diffs(propagate(lat), propagate(lat2), al, rep, rep2,
                          crossval.roundtrip_settings(rep, rep2), lat, lat2)
+
+
+@pytest.mark.parametrize("fmt", ["madx", "impactt", "pyorbit"])
+def test_sub_floor_and_negative_drifts_absorbed_by_position_writers_are_not_defects(fmt, tmp_path):
+    """TraceWin decks separate elements with 1e-23 m drifts and overlap them with negative drifts; a writer that
+    places elements by position keeps only the positions (NEGATIVE_DRIFT_DROPPED, EQUIVALENT).  Neither is a
+    translation defect."""
+    if fmt == "madx":
+        pytest.importorskip("cpymad")
+    lat = Lattice.from_sequence("t", [
+        Drift(name="d1", length=0.25),
+        Drift(name="tiny", length=1e-23),
+        Quadrupole(name="q", length=0.1, multipole=MP(Bn={1: 1.0})),
+        Drift(name="d2", length=0.3),
+        Drift(name="back", length=-0.2),
+        Drift(name="d3", length=0.5),
+        Quadrupole(name="p", length=0.1, multipole=MP(Bn={1: -1.0})),
+    ], ref_at(sp="proton"))
+    out = tmp_path / {"impactt": "ImpactT.in"}.get(fmt, "t" + _suffix(fmt))
+    rep = write(lat, out, fmt)
+    assert "NEGATIVE_DRIFT_DROPPED" in {e.code for e in rep.entries}
+    lat2, rep2 = read(out, fmt, **_read_options(fmt, "proton"))
+    c = compare_translation(lat, rep, lat2, rep2, src_fmt="lattix", dst_fmt=fmt)
+    al = {e["name"]: e for e in c["alignment"]["elements"]}
+    assert al["back"]["match"] == "none" and not al["back"]["dropped"]
+    d = {c["alignment"]["elements"][x["i"]]["name"]: x for x in c["diffs"]}
+    assert d["tiny"]["worst"] != "DIFF"
+    assert d["back"]["quantities"]["length"]["class"] == "explained"
+    assert d["back"]["quantities"]["length"]["codes"] == ["NEGATIVE_DRIFT_DROPPED"]
+    assert d["back"]["worst"] == "EQUIVALENT"
+    assert d["p"]["position"]["class"] == "equal" and d["d3"]["position"]["class"] == "equal"
+    assert c["summary"]["n_unexplained"] == 0, [n for n, x in d.items() if x["worst"] == "DIFF"]
+    if fmt == "madx":
+        assert al["tiny"]["absent"] and al["tiny"]["match"] == "none"
+
+
+def test_repeated_references_align_one_to_one_with_uniquified_targets():
+    """A definition placed several times (PALS ``drift1`` six times) meets ``drift1, drift1_2, drift1_3 …`` in
+    the target: consecutive repeats are whole occurrences, never one ladder cluster."""
+    from lattix.ir.lattice import Line, LineItem
+
+    ref = ref_at(sp="proton")
+    src = Lattice(name="s", reference=ref,
+                  elements={"d": Drift(name="d", length=0.25),
+                            "q": Quadrupole(name="q", length=0.2, multipole=MP(Bn={1: 1.0}))},
+                  lines={"l": Line(name="l", items=[LineItem(ref=n) for n in ("d", "q", "d", "d", "q", "d")])},
+                  use="l")
+    dst = Lattice.from_sequence("t", [
+        Drift(name="d", length=0.25), Quadrupole(name="q", length=0.2, multipole=MP(Bn={1: 1.0})),
+        Drift(name="d", length=0.25), Drift(name="d", length=0.25),
+        Quadrupole(name="q", length=0.2, multipole=MP(Bn={1: 1.0})), Drift(name="d", length=0.25),
+    ], ref)
+    assert [p.name for p in propagate(dst)] == ["d", "q", "d_2", "d_3", "q_2", "d_4"]
+    c = compare_translation(src, FidelityReport(target_format="x"), dst, FidelityReport(source_format="x"),
+                            src_fmt="a", dst_fmt="b")
+    assert [e["dst"] for e in c["alignment"]["elements"]] == [[0], [1], [2], [3], [4], [5]]
+    assert c["summary"]["n_unexplained"] == 0

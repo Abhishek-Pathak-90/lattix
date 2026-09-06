@@ -24,7 +24,9 @@ the engine as an oracle (`lattix/oracles/impactt.py`, conda-forge `impact-t` 3.1
   `native["impactt"]["implicit"]`, nothing is written for it on a rewrite); a card starting
   before the previous one ends is placed at the previous exit (`LOSSY IMPACTT_OVERLAP`,
   `native["impactt"]["pushed"]`; a rewrite keeps every card's own `zedge`,
-  `IMPACTT_NATIVE_POSITION`).  Zero-length cards inside a thick card split it
+  `IMPACTT_NATIVE_POSITION`) — except a drift card, which IMPACT-T ignores anyway: it keeps only its
+  uncovered part and moves nothing (`EQUIVALENT IMPACTT_DRIFT_OVERLAP`, the trace of a negative drift
+  upstream in the source, which the writer does not emit: `NEGATIVE_DRIFT_DROPPED`).  Zero-length cards inside a thick card split it
   (`IMPACTT_THIN_INSIDE_THICK`) — except RF cards, which are one field: such a card goes to the
   RF card's entrance or exit, whichever is nearer.  A drift card tagged `kind=Kicker` or
   `kind=Collimator` holding one `-1`/`-11` card of the same name is one thick element again.

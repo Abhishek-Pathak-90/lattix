@@ -442,8 +442,10 @@ class Writer:
             z, bz, info = nat
             pad = float(info.get("pad") or 0.0)
             origin = el.meta.get("opal_from")
-            tag = ({"file": info.get("file"), "L": L, "Bpeak": B} if origin == "FieldMap" else {"L": L, "pad": pad})
-            st = self._stmt(el, "SOLENOID", {"L": z[-1], "KS": B / self.brho0}, s=p.s_in - pad,
+            scale = float(info.get("scale_T") or B)        # the profile's own field scale (a hard edge read back)
+            tag = ({"file": info.get("file"), "L": L, "Bpeak": scale} if origin == "FieldMap"
+                   else {"L": L, "pad": pad})
+            st = self._stmt(el, "SOLENOID", {"L": z[-1], "KS": scale / self.brho0}, s=p.s_in - pad,
                             kind=origin or "Solenoid", tag=tag)
             fname = self._map_file(st.name, ".1dms", static_map_text(z, bz, r_max_m=self._radius(el)))
             st.attrs.insert(len(st.attrs) - 1, ("FMAPFN", f'"{fname}"'))

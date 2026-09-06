@@ -161,3 +161,37 @@ def test_strict_and_line_selection(tmp_path):
     from lattix.fidelity import TranslationError
     with pytest.raises(TranslationError):
         read(p, strict=True)
+
+
+def test_field_map_solenoid_reads_back_as_the_integral_preserving_hard_edge(tmp_path):
+    """A SOLENOID lattix wrote from a static map comes back as the hard edge preserving the profile's ∫B and
+    ∫B² (what every mapless target gets), centred in the map — and the OPAL → OPAL rewrite is a fixed point."""
+    from lattix.formats import read, write
+    from lattix.ir.walk import propagate
+    from tests.formats.test_fieldmap_data import write_1d
+
+    z = [k / 60 for k in range(61)]
+    write_1d(tmp_path / "t.bsz", [1.0 - abs(2 * zz - 1.0) for zz in z], zmax_m=0.3)      # triangle, peak 1 T
+    deck = tmp_path / "deck.dat"
+    deck.write_text("FIELD_MAP 10 300 0 16 -1.8 0 0 0 t\nEND\n")
+    lat, _ = read(deck, species="h-", kinetic_energy_eV=2.1e6)
+    fm = next(p for p in propagate(lat) if p.element.kind == "FieldMap")
+    s = fm.element.meta["map_summary"]
+    out = tmp_path / "o" / "deck.in"
+    out.parent.mkdir()
+    rep = write(lat, out, "opal")
+    assert "FM_AS_OPAL_MAP" in {e.code for e in rep.entries}
+    lat2, rep2 = read(out, "opal", species="h-")
+    sol = next(p for p in propagate(lat2) if p.element.kind == "Solenoid")
+    assert sol.element.solenoid.Bsol_T * sol.length == pytest.approx(s["int_Bz_Tm"], rel=1e-6)
+    assert sol.element.solenoid.Bsol_T ** 2 * sol.length == pytest.approx(s["int_Bz2_T2m"], rel=1e-6)
+    assert sol.length == pytest.approx(s["L_eff_m"], rel=1e-6) and sol.length < 0.3
+    assert sol.s_in == pytest.approx(fm.s_in + 0.5 * (fm.length - sol.length), abs=1e-9)
+    assert [e.code for e in rep2.entries if e.element == sol.name] == ["FM_READ_AS_CAVITY"]
+    out2 = tmp_path / "o2" / "deck.in"
+    out2.parent.mkdir()
+    write(lat2, out2, "opal")
+    lat3, _ = read(out2, "opal", species="h-")
+    sol3 = next(p for p in propagate(lat3) if p.element.kind == "Solenoid")
+    assert (sol3.length, sol3.element.solenoid.Bsol_T, sol3.s_in) == pytest.approx(
+        (sol.length, sol.element.solenoid.Bsol_T, sol.s_in), rel=1e-9)

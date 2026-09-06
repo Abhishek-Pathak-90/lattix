@@ -478,7 +478,19 @@ class Reader:
                 s = entrance
             prev_surrogate = surrogate or (prev_surrogate and c_length <= _TOL)
             pushed = gap < -1e-9
-            if pushed:
+            visible = None
+            if pushed and c.itype == 0 and c_length > _TOL and c.tag.get("kind", "Drift") == "Drift":
+                # a drift card overlapping the previous element (a negative drift upstream in the source):
+                # IMPACT-T places by zedge and ignores drift cards, so only its uncovered part is a drift
+                # here and nothing moves
+                visible = max(0.0, entrance + c_length - s)
+                self.rep.equivalent("IMPACTT_DRIFT_OVERLAP",
+                                    f"drift card at line {c.line} starts {-gap:.3g} m before the previous "
+                                    f"element ends; IMPACT-T places by zedge, so it keeps its uncovered "
+                                    f"{visible:.3g} m and nothing is moved",
+                                    kind=c.name, line=c.line, overlap_m=-gap)
+                entrance, c_length, pushed = s, visible, False
+            elif pushed:
                 entrance = s                      # the IR is a sequence: the card follows the previous element
                 self.rep.lossy("IMPACTT_OVERLAP",
                                f"card at line {c.line} (type {c.itype}) starts {-gap:.3g} m before the "
@@ -488,6 +500,8 @@ class Reader:
             el = self._element(c, ref)
             if el is None:
                 continue
+            if visible is not None:
+                el.length = round(visible, 12)
             if extend:
                 el.length = round(float(el.length) + extend, 12)
                 entrance -= extend

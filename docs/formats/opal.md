@@ -34,7 +34,7 @@ win over both.
 | `SEXTUPOLE K2`, `OCTUPOLE K3` | Sextupole, Octupole | `Bn = K · P0/c` |
 | `MULTIPOLE KN KS` | Multipole | `BnL[n] = KN[n] · L · P0/c` (a lattix-written pair `KICKER` + `MULTIPOLE` of the same name is one thin multipole again) |
 | `SBEND L ANGLE E1 E2 HGAP/GAP FINT K1 K2 PSI` | Bend | arc length, geometric angle, MAD's sector faces; `RBEND` gets `angle/2` added to its faces (EQUIVALENT `RBEND_AS_SECTOR`); `DESIGNENERGY` is not needed (the IR walk carries the energy) |
-| `SOLENOID KS FMAPFN` | Solenoid | `Bsol = KS · P0/c` times the map's peak (1 for a normalised map); the length is lattix's tag, else the map's extent |
+| `SOLENOID KS FMAPFN` | Solenoid | `Bsol = KS · P0/c` times the map's peak (1 for a normalised map); the length is lattix's tag, else the map's extent. A map lattix wrote from a field map (tag `kind=FieldMap`) comes back as the hard-edge solenoid preserving the profile's ∫B and ∫B² (`L_eff`, `B_eff`, centred in the map) |
 | `RFCAVITY`, `TRAVELINGWAVE VOLT FREQ LAG DESIGNENERGY FMAPFN` | RFCavity | voltage = lattix's tag, else `DESIGNENERGY − E_kin` (the crest energy, MeV), else the crest gain of the `1DDynamic` map at `VOLT` integrated by `lattix.formats.impactt.rfprofile` (LOSSY `RFCAVITY_GAIN_UNKNOWN` without a map); phase = `LAG` (EQUIVALENT `OPAL_LAG_AS_SYNC_PHASE`: OPAL adds it to the autophased crest); the map profile is kept in `native['opal']` |
 | `KICKER HKICK VKICK`, `HKICKER`/`VKICKER KICK`, `K0`/`K0S` | Kicker | deflections in rad; a field `K0` [T] over `L` gives `−K0·L/Bρ_signed` |
 | `RCOLLIMATOR`, `ECOLLIMATOR XSIZE YSIZE` | Collimator | half apertures |

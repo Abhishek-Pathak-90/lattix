@@ -4,6 +4,7 @@ summarise the translation the way the battery does (:func:`lattix.crossval.ir_ro
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from lattix.crossval import (
@@ -15,10 +16,14 @@ from lattix.crossval import (
     profile,
 )
 from lattix.fidelity import FidelityReport
+from lattix.ir.elements import Element
 from lattix.ir.lattice import Lattice, Placed
 from lattix.ir.walk import propagate
 
 CLASS_RANK = {"EXACT": 0, "EQUIVALENT": 1, "LOSSY": 2, "DROPPED": 3, "DIFF": 4}
+#: EQUIVALENT codes after which the element itself is gone from the target while its effect survives in the
+#: positions of what follows (a negative drift in a MAD-X sequence): nothing to align, nothing unexplained.
+_GONE_CODES = {"NEGATIVE_DRIFT_DROPPED"}
 _DERIVED = [r"_rfdefocus$", r"_D[12]$", r"_gap$", r"_body$", r"_aper_(?:in|out)\d*$", r"_(?:in|out|rf)$", r"_k$"]
 _UNIQ = r"_\d+$"
 _KIND_CLASS = {
@@ -120,7 +125,7 @@ def _compatible(a: Placed, b: Placed) -> bool:
 
 
 def align(src: list[Placed], dst: list[Placed], rep_w: FidelityReport, rep_r: FidelityReport | None,
-          settings: RoundTripSettings) -> dict:
+          settings: RoundTripSettings, *, elements: Mapping[str, Element] | None = None) -> dict:
     """Source elements → clusters of target elements by resolved name, then by s (see the module doc)."""
     res = _Resolver(src)
     keys = [_target_key(q, res) for q in dst]
@@ -152,6 +157,7 @@ def align(src: list[Placed], dst: list[Placed], rep_w: FidelityReport, rep_r: Fi
         counts_occ[p.name] = counts_occ.get(p.name, 0) + 1
         out[p.index] = Aligned(p.index, p.name, p.element.kind, p.s_in, p.s_out, counts_occ[p.name])
     claimed: set[int] = set()
+    named_src: dict[int, int] = {}      # target index → the source element it is the named counterpart of
 
     def tol_s(p: Placed) -> float:
         return max(1e-9, settings.fuzzy.get(p.name, 0.0))
@@ -163,9 +169,30 @@ def align(src: list[Placed], dst: list[Placed], rep_w: FidelityReport, rep_r: Fi
         for jj in run:
             a.roles[jj] = roles.get(jj, "primary")
             claimed.add(jj)
+            if match == "name":
+                named_src[jj] = i
+
+    def shareable(q: Placed, p: Placed) -> bool:
+        """May target drift ``q`` carry part of source element ``p``'s length?  Not when it is the named
+        counterpart of another source element of the same length — unless that element overlaps ``p`` in the
+        source itself (a negative drift upstream), where one target span legitimately covers both."""
+        m = named_src.get(q.index)
+        if m is None or q.length > src[m].length + tol_s(src[m]):
+            return True
+        return min(p.s_out, src[m].s_out) - max(p.s_in, src[m].s_in) > tol_s(p)
+
+    def whole_occurrences(cs: list[list[int]], key: str) -> bool:
+        """Every member is the element itself or a uniquified repeat (``key``, ``key_2`` …): consecutive
+        repeats of one definition, not the parts of a ladder."""
+        k = re.escape(_sanitize(key))
+        return all(re.fullmatch(k + r"(_\d+)?", _sanitize(dst[jj].name)) for c in cs for jj in c)
 
     for name, S in occ.items():
         C = [c for c in clusters.get(name, []) if not any(jj in claimed for jj in c)]
+        if len(S) != len(C) and whole_occurrences(C, name):
+            singles = [[jj] for c in C for jj in c]
+            if len(singles) == len(S):
+                C = singles
         if len(S) == len(C):
             for i, c in zip(S, C, strict=True):
                 claim(i, c, "name")
@@ -202,9 +229,9 @@ def align(src: list[Placed], dst: list[Placed], rep_w: FidelityReport, rep_r: Fi
             # neutralised cavity …): it may share the merged drift the reader created over several of them
             drop = settings.neutral.get(p.name, set())
             drift = p.element.kind == "Drift" or all(
-                v == 0.0 for q, v in contrib(p).items() if q != "length" and not ("*" in drop or q in drop))
+                v == 0.0 for q, v in contrib(p, elements).items() if q != "length" and not ("*" in drop or q in drop))
             js = [q.index for q in dst
-                  if (q.index not in claimed or (drift and q.element.kind == "Drift"))
+                  if (q.index not in claimed or (drift and q.element.kind == "Drift" and shareable(q, p)))
                   and (_compatible(p, q) or (drift and q.element.kind == "Drift"))
                   and min(p.s_out, q.s_out) - max(p.s_in, q.s_in) > tol]
             if js:
@@ -217,22 +244,29 @@ def align(src: list[Placed], dst: list[Placed], rep_w: FidelityReport, rep_r: Fi
                 claim(p.index, [min(js, key=lambda jj: abs(dst[jj].s_in - p.s_in))], "nearest")
                 continue
         a.dropped = p.name in dropped_names
-        c = contrib(p)
+        c = contrib(p, elements)
         # nothing to align: a zero-length element without any physical contribution (a directive, a marker,
         # a diagnostic, an empty multipole or kicker, …)
-        a.absent = p.length <= 1e-12 and all(v == 0.0 for v in c.values()) and p.element.kind != "ReferenceChange"
+        # (a sub-floor separator drift — TraceWin decks use 1e-23 m drifts as markers — counts as nothing too)
+        a.absent = all(_within(q, v, 0.0) for q, v in c.items()) and p.element.kind != "ReferenceChange"
     # a thick element without physics of its own (a drift, a limit-less collimator, a zero-angle bend, a
-    # neutralised cavity …) written thin or merged: the target drifts overlapping its span carry its length
+    # neutralised cavity …) written thin or merged, or one whose counterpart is shorter than itself (a field
+    # map replaced by a centred hard-edge magnet): the target drifts overlapping its span carry its length
     for p in src:
         a = out[p.index]
         if p.length <= 1e-12:
             continue
-        drop = settings.neutral.get(p.name, set())
-        if not all(v == 0.0 for q, v in contrib(p).items() if q != "length" and not ("*" in drop or q in drop)):
-            continue
         tol = tol_s(p)
+        carried = sum(dst[jj].length for jj in a.dst)
+        if a.dst and abs(carried - p.length) <= tol:
+            continue                      # its own counterpart(s) already carry the whole length
+        drop = settings.neutral.get(p.name, set())
+        passive = all(v == 0.0 for q, v in contrib(p, elements).items()
+                      if q != "length" and not ("*" in drop or q in drop))
+        if not passive and not (a.dst and carried < p.length - tol):
+            continue
         for q in dst:
-            if q.element.kind == "Drift" and q.index not in a.dst \
+            if q.element.kind == "Drift" and q.index not in a.dst and shareable(q, p) \
                     and min(p.s_out, q.s_out) - max(p.s_in, q.s_in) > tol:
                 a.dst.append(q.index)
                 a.roles[q.index] = "padding"
@@ -291,8 +325,8 @@ def element_diffs(src: list[Placed], dst: list[Placed], alignment: dict, rep_w: 
     with the aligned cluster, classified equal | explained | unexplained | suspended, plus the ledger."""
     pr_s = profile(lat, settings.neutral)
     pr_d = profile(lat2, settings.neutral)
-    csrc = [contrib(p) for p in src]
-    cdst = [contrib(q) for q in dst]
+    csrc = [contrib(p, lat.elements) for p in src]
+    cdst = [contrib(q, lat2.elements) for q in dst]
     src_of: dict[int, list[int]] = {}
     for a in alignment["elements"]:
         for j in a["dst"]:
@@ -308,8 +342,9 @@ def element_diffs(src: list[Placed], dst: list[Placed], alignment: dict, rep_w: 
         explained_q: set[str] = set(settings.neutral.get(p.name, set()))
         for j in cluster:
             explained_q |= settings.neutral.get(dst[j].name, set())
-        lossy_codes = [e for e in ledger if e["cls"] in ("LOSSY", "DROPPED")]
-        gone = a["match"] == "none" and (a["dropped"] or a.get("absent"))     # nothing to compare with
+        lossy_codes = [e for e in ledger if e["cls"] in ("LOSSY", "DROPPED") or e["code"] in _GONE_CODES]
+        gone = a["match"] == "none" and (a["dropped"] or a.get("absent")
+                                         or any(e["code"] in _GONE_CODES for e in ledger))   # nothing to compare with
         quantities: dict[str, dict] = {}
         target = {q: sum(cdst[j][q] for j in cluster) for q in QUANTITIES if q != "energy"}
         if any(len(src_of.get(j, [])) > 1 for j in cluster):
@@ -417,7 +452,7 @@ def compare_translation(lat: Lattice, rep_w: FidelityReport, lat2: Lattice, rep_
     src = placed if placed is not None else propagate(lat)
     dst = placed2 if placed2 is not None else propagate(lat2)
     rt = ir_roundtrip(lat, rep_w, lat2, rep_r)
-    alignment = align(src, dst, rep_w, rep_r, rt.settings)
+    alignment = align(src, dst, rep_w, rep_r, rt.settings, elements=lat.elements)
     diffs = element_diffs(src, dst, alignment, rep_w, rep_r, rt.settings, lat, lat2)
     worst_counts = {k: 0 for k in CLASS_RANK}
     for d in diffs:

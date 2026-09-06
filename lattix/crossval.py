@@ -27,6 +27,7 @@ import inspect
 import json
 import math
 import time
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -34,6 +35,7 @@ import numpy as np
 
 from lattix.fidelity import FidelityReport
 from lattix.formats.base import FORMATS, read, write
+from lattix.ir.elements import Element
 from lattix.ir.lattice import Lattice, Placed
 from lattix.ir.walk import energy_gain_eV, propagate
 
@@ -231,11 +233,9 @@ def rotated(bn: dict, bs: dict, tilt: dict, base_tilt: float = 0.0) -> tuple[dic
     return n_out, s_out
 
 
-def contrib(p: Placed) -> dict[str, float]:
-    """This placed element's additive contribution to every cumulative quantity (energy is a state)."""
-    e = p.element
-    c = dict.fromkeys(QUANTITIES, 0.0)
-    c["length"] = p.length
+def _static_contrib(e: Element, length: float, c: dict[str, float]) -> None:
+    """Add one element's static fields over ``length`` to ``c`` (multipoles, bends, solenoids, kickers and the
+    integrals a static map's hard-edge replacement preserves)."""
     k = e.kind
     mp = getattr(e, "multipole", None)
     if mp is not None:
@@ -243,10 +243,10 @@ def contrib(p: Placed) -> dict[str, float]:
         bn, bs = rotated(mp.Bn, mp.Bs, mp.tilt, base)        # thick: field × length
         for n, v in bn.items():
             if n < 6:
-                c[f"BnL{n}"] += v * p.length
+                c[f"BnL{n}"] += v * length
         for n, v in bs.items():
             if n < 6:
-                c[f"BsL{n}"] += v * p.length
+                c[f"BsL{n}"] += v * length
         bnl, bsl = rotated(mp.BnL, mp.BsL, mp.tilt, base)    # thin: integrated already
         for n, v in bnl.items():
             if n < 6:
@@ -256,12 +256,39 @@ def contrib(p: Placed) -> dict[str, float]:
                 c[f"BsL{n}"] += v
     if k == "Bend":
         b = e.bend
-        c["angle_h"] = b.angle * math.cos(b.tilt_ref)
-        c["angle_v"] = b.angle * math.sin(b.tilt_ref)
+        c["angle_h"] += b.angle * math.cos(b.tilt_ref)
+        c["angle_v"] += b.angle * math.sin(b.tilt_ref)
     elif k == "Solenoid":
-        c["BsolL"] = e.solenoid.Bsol_T * p.length
+        c["BsolL"] += e.solenoid.Bsol_T * length
     elif k == "Kicker":
-        c["hkick"], c["vkick"] = e.hkick, e.vkick
+        c["hkick"] += e.hkick
+        c["vkick"] += e.vkick
+    elif k == "FieldMap":
+        # a static magnetic map integrated by the reader: the quantities its hard-edge replacement
+        # preserves (lattix.ir.fieldmap.replacement_for: ∫B for a solenoid map, ∫G for a quadrupole map)
+        s = ((e.meta or {}).get("map_summary") or {})
+        if s.get("kind") == "solenoid":
+            c["BsolL"] += float(s.get("int_Bz_Tm") or 0.0)
+        elif s.get("kind") == "quad":
+            c["BnL1"] += float(s.get("int_Gz_Tm_per_m") or 0.0)
+
+
+def contrib(p: Placed, elements: Mapping[str, Element] | None = None) -> dict[str, float]:
+    """This placed element's additive contribution to every cumulative quantity (energy is a state).
+
+    ``elements`` (the lattice's definitions) lets a ``Superposition`` count the static fields of its
+    unplaced children (a PALS ``UnionEle`` holding a hard-edge solenoid, a TraceWin map cluster).
+    """
+    e = p.element
+    c = dict.fromkeys(QUANTITIES, 0.0)
+    c["length"] = p.length
+    k = e.kind
+    _static_contrib(e, p.length, c)
+    if k == "Superposition" and elements:
+        for _offset, name in e.children:
+            child = elements.get(name)
+            if child is not None:
+                _static_contrib(child, float(child.length), c)
     if k in ("RFCavity", "FieldMap", "NCells", "RFQCell", "Superposition"):
         c["gain"] = energy_gain_eV(e, p.ref_in) if p.ref_in is not None else 0.0
         volt = float(getattr(getattr(e, "rf", None), "voltage_V", 0.0) or 0.0)
@@ -305,7 +332,7 @@ def profile(lat: Lattice, neutral: dict[str, set[str]] | None = None) -> Profile
     e_dropped = np.zeros(n)
     drift_like: list[bool] = []
     for i, p in enumerate(placed):
-        c = contrib(p)
+        c = contrib(p, lat.elements)
         drop = neutral.get(p.name, set())
         drift_like.append(all(v == 0.0 for q, v in c.items() if q != "length" and not ("*" in drop or q in drop)))
         for q in cum:

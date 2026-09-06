@@ -498,18 +498,33 @@ class Reader:
         elif etype == "SOLENOID":
             data = self._map(attrs)
             peak = 1.0 if (data is None or data.normalized) else (data.peak or 1.0)
-            B = self._num(attrs.get("KS")) * b0 * peak
+            scale = self._num(attrs.get("KS")) * b0            # B(z) = KS · P0/c · map(z)
+            B = scale * peak
             length = float(tag["L"]) if "L" in tag else (data.length_m - 2.0 * pad if data is not None else L)
+            shift = pad
+            if kind == "FieldMap" and data is not None and len(data.z_m) > 1:
+                # lattix wrote the map from a field map: read it back as the hard-edge solenoid preserving the
+                # profile's ∫B and ∫B² (what lattix.ir.fieldmap.replacement_for gives a mapless target),
+                # centred in the map — not the peak field over the map's extent
+                z = [float(v) for v in data.z_m]
+                bz = [scale * float(v) for v in data.values]
+                int1 = sum(0.5 * (bz[i] + bz[i + 1]) * (z[i + 1] - z[i]) for i in range(len(z) - 1))
+                int2 = sum(0.5 * (bz[i] ** 2 + bz[i + 1] ** 2) * (z[i + 1] - z[i]) for i in range(len(z) - 1))
+                if int1 and int2 > 0.0:
+                    length, B = int1 * int1 / int2, int2 / int1
+                    shift = 0.5 * (data.length_m - length)
             el = Solenoid(length=length, solenoid=SolenoidP(Bsol_T=B), **common)
             if data is not None:
                 el.native["opal"] = {"kind": STATIC, "z": list(data.z_m), "values": list(data.values),
-                                     "map": self._str(attrs.get("FMAPFN")), "pad": pad, "file": tag.get("file")}
+                                     "map": self._str(attrs.get("FMAPFN")), "pad": shift, "file": tag.get("file"),
+                                     "scale_T": scale}
             if s is not None:
-                s += pad
+                s += shift
             if kind == "FieldMap":
                 el.meta["opal_from"] = "FieldMap"
-                self.rep.equivalent("FM_READ_AS_CAVITY", "a solenoid written from a field map is read as a hard-"
-                                    "edge solenoid carrying the map profile", element=name, kind="Solenoid")
+                self.rep.equivalent("FM_READ_AS_CAVITY", "a solenoid written from a field map is read as the hard-"
+                                    "edge solenoid preserving the map's ∫B and ∫B² (L_eff, B_eff, centred in the "
+                                    "map); the profile is kept in native['opal']", element=name, kind="Solenoid")
         elif etype in ("RFCAVITY", "TRAVELINGWAVE", "VARIABLE_RF_CAVITY"):
             el, length = self._cavity(etype, attrs, tag, common, ref, L, thin, pad)
             if s is not None:
