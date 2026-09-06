@@ -92,7 +92,10 @@ code{background:#eef2f7;padding:1px 4px;border-radius:3px}</style>
 <p>Open the link that <code>lattix ui</code> printed in the terminal — it carries the access token
 (<code>http://127.0.0.1:&lt;port&gt;/?token=…</code>).  A plain address without the token, or a link
 from a server started with <code>--new-token</code>, is refused.</p>
-<p>The link is the same each time you start <code>lattix ui</code> as this user; bookmark it once.</p>
+<p>The link is the same each time you start <code>lattix ui</code> as this user; bookmark it once.
+If the terminal is gone, rebuild it: the token is the content of <code>~/.config/lattix/ui-token</code>
+(<code>cat ~/.config/lattix/ui-token</code>), so the address is
+<code>http://127.0.0.1:PORT/?token=</code> followed by that value.</p>
 """
 
 
@@ -568,7 +571,8 @@ class Handler(BaseHTTPRequestHandler):
         if not token or not secrets.compare_digest(token, self.app.settings.token):
             if self.command == "GET" and path in ("/", "/index.html"):
                 # a person typed the bare address or kept an old link: say so in words, not JSON
-                self._send(403, _NEED_LINK_HTML.encode("utf-8"), "text/html; charset=utf-8")
+                page = _NEED_LINK_HTML.replace("PORT", str(port))
+                self._send(403, page.encode("utf-8"), "text/html; charset=utf-8")
             else:
                 self._error(403, "forbidden", "missing or wrong token (open the URL lattix ui printed)")
             return False
