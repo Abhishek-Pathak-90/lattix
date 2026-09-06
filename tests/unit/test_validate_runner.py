@@ -96,3 +96,15 @@ def test_cmd_validate_prints_rows_and_json(tmp_path, capsys):
     assert main(["validate", "--deck", f"tracewin={DATA / 'helix' / 'fodo_cell.dat'}", "--oracles", "vfake_a"]) == 2
     with pytest.raises(SystemExit):
         main(["validate"])
+
+
+def test_cmd_validate_verdict_with_tier_and_codes(tmp_path, capsys):
+    out = tmp_path / "v.json"
+    rc = main(["validate", "--deck", f"tracewin={DATA / 'helix' / 'fodo_cell.dat'}", "--oracles", "vfake_a,vfake_b",
+               "--json", str(out), "--tier", "equivalent", "--codes", "APERTURE_DROPPED"])
+    assert rc == 0
+    cap = capsys.readouterr()
+    assert "verdict: ok" in cap.out and "tier equivalent" in cap.out and "blocks compared:" in cap.out
+    v = json.loads(out.read_text())["comparisons"][0]["verdict"]
+    assert v["tier"] == "equivalent" and v["ok"] is True and "T4x4" in v["blocks_used"]
+    assert v["map_tol"] is not None and v["metric_rel"] is not None

@@ -87,7 +87,7 @@ def run_validation(decks: dict[str, Path], engines: list[str | tuple[str, str | 
         try:
             r = o.run(decks[fmt], fmt=fmt, beam=beam, workdir=wd)
         except Exception as exc:  # noqa: BLE001 - one engine's failure must not hide the others
-            run.error = f"{type(exc).__name__}: {exc}"[:400]
+            run.error = f"{type(exc).__name__}: {exc}"[:6000]
             run.seconds = time.perf_counter() - t0
             _say(log, f"{name:8s} failed: {run.error}")
             continue
@@ -162,3 +162,52 @@ def outcome_to_dict(o: ValidationOutcome, *, decks: dict[str, Path], beam: BeamS
                      "frequency_Hz": beam.frequency_Hz, "betx": beam.betx, "alfx": beam.alfx, "bety": beam.bety,
                      "alfy": beam.alfy, "dx": beam.dx, "dpx": beam.dpx},
             "engines": engines, "comparisons": comps, "worst": _num(o.worst), "blocks": list(BLOCKS)}
+
+
+def read_lattice(decks: dict[str, Path], beam: BeamSpec | None = None):
+    """The IR of the first deck that reads (the source deck comes first), with the beam the engines were
+    given where the reader takes it — what the battery's verdict looks at (element kinds, species)."""
+    import inspect
+
+    from lattix.formats.base import FORMATS, read
+
+    for fmt, path in decks.items():
+        spec = FORMATS.get(fmt)
+        if spec is None or spec.reader() is None:
+            continue
+        try:
+            params = inspect.signature(spec.reader().read).parameters
+        except (TypeError, ValueError):
+            params = {}
+        opts = {}
+        if beam is not None:
+            for key, val in (("species", beam.species), ("kinetic_energy_eV", beam.kinetic_energy_eV),
+                             ("frequency_Hz", beam.frequency_Hz)):
+                if key in params and val is not None:
+                    opts[key] = val
+        try:
+            lat, _rep = read(path, fmt, **opts)
+        except Exception:  # noqa: BLE001 - a deck an engine could run but lattix cannot read: no verdict
+            continue
+        return lat
+    return None
+
+
+def verdicts_for(outcome: ValidationOutcome, lat, tier: str = "lossy", codes=()) -> dict:
+    """The battery's verdict for every comparison (``lattix.crossval.engine_verdict``): which map blocks the
+    pair can be held to (a HELIX bend map has no path row, a field-map cavity no shared longitudinal model …),
+    the tier's tolerance and the caveats.  ``tier`` and ``codes`` are the translation's (report only when
+    unknown)."""
+    from lattix.crossval import engine_verdict
+
+    if lat is None:
+        return {}
+    code_counts = {str(c): 1 for c in codes}
+    out = {}
+    for pc in outcome.comparisons:
+        ra = outcome.runs.get(pc.a).result if pc.a in outcome.runs else None
+        rb = outcome.runs.get(pc.b).result if pc.b in outcome.runs else None
+        if ra is None or rb is None:
+            continue
+        out[(pc.a, pc.b)] = engine_verdict(pc, pc.a, pc.b, lat, tier, code_counts, ra, rb)
+    return out

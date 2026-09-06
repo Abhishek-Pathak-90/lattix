@@ -152,13 +152,27 @@ def _collect(tao, pytao, deck: str, wrapper: str, species: str | None, probe: st
     # matrices / floor / twiss BEFORE any particle_start change (see module doc)
     mat6, floor = [], []
     twiss: dict[str, list[float]] = {k: [] for k, _ in _TWISS_KEYS}
+    n_unreadable = 0
     for i in range(1, n_all):
-        mat6.append(_mat6(tao, i))
+        try:
+            mat6.append(_mat6(tao, i))
+        except Exception as e:  # noqa: BLE001 - Fortran prints an overflowed exponent as "2.77+100"
+            raise RuntimeError(f"transfer matrix of element {i} ({names[i]}) unreadable ({e}): the line is "
+                               "unstable at this reference — check the species and energy the deck was "
+                               "written for") from None
         ref = np.asarray(tao.ele_floor(i, where="end")["Reference"], dtype=float)
         floor.append([float(ref[0]), float(ref[1]), float(ref[2]), float(ref[3])])
-        tw = tao.ele_twiss(i)
+        try:
+            tw = tao.ele_twiss(i)
+        except Exception:  # noqa: BLE001 - Twiss beyond 1e100 (an unstable line): the maps still compare
+            tw = {}
+            n_unreadable += 1
         for k, bk in _TWISS_KEYS:
             twiss[k].append(float(tw[bk]) if bk in tw else float("nan"))
+    if n_unreadable:
+        warnings.append(f"Twiss parameters unreadable at {n_unreadable} element(s) (values beyond 1e100: the "
+                        "line is unstable at this reference — check the species and energy the deck was "
+                        "written for)")
     if all(math.isnan(v) for v in twiss["betx"]):
         warnings.append("ele_twiss returned no Twiss parameters (open line without a valid "
                         "beginning[...] setting?)")

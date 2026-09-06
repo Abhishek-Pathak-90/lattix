@@ -732,6 +732,8 @@ def engine_verdict(pc, ea: str, eb: str, lat: Lattice, tier: str, codes: dict[st
     has_rf = any(e.kind in ("RFCavity", "FieldMap", "NCells", "RFQCell") for e in lat.elements.values())
     if "helix" in (ea, eb) and has_bends:
         blocks -= {"path", "R56"}
+        caveat("HELIX bend map has no path-length row (R51/R52) and no dispersive R56 (known HELIX limit): "
+               "path/R56 not compared; ", append=True)
         if any(e.kind == "Bend" and e.bend.angle < 0 for e in lat.elements.values()) and tier != "lossy":
             # measured 2026-09-04 (docs/oracles.md): HELIX's BEND body evaluates the sector map at the
             # signed angle with rho > 0, so a negative-angle bend gets R12 < 0 and R21 > 0 (TraceWin
@@ -775,7 +777,7 @@ def engine_verdict(pc, ea: str, eb: str, lat: Lattice, tier: str, codes: dict[st
         tier = "equivalent"
         caveat("DYNAC buncher / CAVNUM models: engine models differ; ")
     fm_derived = any(c.startswith("FM_") for c in codes)
-    if has_rf and (FOLLOWS_P0[ea] != FOLLOWS_P0[eb] or "elegant" in (ea, eb) or fm_derived):
+    if has_rf and (FOLLOWS_P0.get(ea, True) != FOLLOWS_P0.get(eb, True) or "elegant" in (ea, eb) or fm_derived):
         # a field map integrated by one engine and a cavity element in the other agree on the
         # transverse block and the dispersion, never on the longitudinal model
         blocks = {"T4x4", "disp"}
@@ -809,7 +811,7 @@ def engine_verdict(pc, ea: str, eb: str, lat: Lattice, tier: str, codes: dict[st
         tier = "equivalent"
         caveat("fringe-integral bends: engine models differ; ")
     floor = max(ENGINE_PRECISION.get(ea, 0.0), ENGINE_PRECISION.get(eb, 0.0))
-    energy_checked = bool(FOLLOWS_P0[ea] and FOLLOWS_P0[eb])
+    energy_checked = bool(FOLLOWS_P0.get(ea, True) and FOLLOWS_P0.get(eb, True))
     map_tol: float | None
     energy_tol: float | None
     if tier == "exact":

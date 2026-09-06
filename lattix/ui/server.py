@@ -400,6 +400,10 @@ def _subprocess_validation(job: Job, spec: dict) -> dict:
            "--oracles", ",".join(spec["engines"])]
     for fmt, path in spec["decks"].items():
         cmd += ["--deck", f"{fmt}={path}"]
+    if spec.get("tier"):
+        cmd += ["--tier", str(spec["tier"])]
+    if spec.get("codes"):
+        cmd += ["--codes", ",".join(spec["codes"])]
     beam = spec.get("beam") or {}
     for key, flag in (("species", "--species"), ("kinetic_energy_eV", "--ke"), ("frequency_Hz", "--freq"),
                       ("betx", "--betx"), ("alfx", "--alfx"), ("bety", "--bety"), ("alfy", "--alfy"),
@@ -470,7 +474,9 @@ def start_validation(app: App, session: Session, body: dict) -> Job:
         beam = {"species": b.species, "kinetic_energy_eV": b.kinetic_energy_eV, "frequency_Hz": b.frequency_Hz}
     wd = (tr.dir if tr is not None else session.dir) / "validate"
     wd.mkdir(parents=True, exist_ok=True)
-    spec = {"decks": decks, "engines": engines, "beam": beam, "workdir": str(wd)}
+    spec = {"decks": decks, "engines": engines, "beam": beam, "workdir": str(wd),
+            "tier": tr.tier if tr is not None else "exact",          # two engines on one deck: exact
+            "codes": sorted({e.code for e in tr.report.entries if e.cls.value != "EXACT"}) if tr is not None else []}
 
     def run(job: Job) -> dict:
         job.set_progress(0, len(engines), engines[0])

@@ -155,6 +155,8 @@ $ lattix oracles                                         # which adapters can ru
 $ lattix fingerprint --oracles madx,bmad                 # each engine's longitudinal conventions
 $ lattix validate --deck madx=fodo.madx --deck bmad=fodo.bmad --deck elegant=fodo.lte \
       --oracles madx,bmad,elegant --tol 1e-8 --json fodo.validate.json
+$ lattix validate --deck tracewin=btl.dat --deck madx=btl.madx --oracles helix,madx \
+      --species h- --ke 800e6 --tier lossy      # the verdict: blocks the pair is held to, caveats
 ```
 
 `validate` runs the same lattice through several engines, transforms every map into the

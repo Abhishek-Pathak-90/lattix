@@ -158,6 +158,8 @@ svg.band line { stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
 .toast { background: var(--bg-2); border: 1px solid var(--line-strong); border-left: 4px solid var(--info); border-radius: var(--radius); padding: 6px 10px; max-width: 420px; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
 .toast.err { border-left-color: var(--err); } .toast.ok { border-left-color: var(--ok); } .toast.warn { border-left-color: var(--warn); }
 .toast small { display: block; color: var(--text-2); white-space: pre-wrap; }
+.verdict { margin: 4px 0 6px; padding: 6px 8px; border-left: 4px solid var(--ok); background: var(--bg-2); border-radius: var(--radius); }
+.verdict.bad { border-left-color: var(--err); }
 #topbar { position: relative; }
 #busy { position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--accent); display: none; z-index: 20; }
 #busy.on { display: block; animation: busy 1s linear infinite; }
@@ -1641,12 +1643,22 @@ const validation = {
     const frag = document.createDocumentFragment();
     frag.appendChild($("#val-log") || h("div"));
     const eng = h("table", { class: "list" }, h("tr", {}, h("th", { text: "engine" }), h("th", { text: "deck" }), h("th", { text: "elements" }), h("th", { text: "L [m]" }), h("th", { text: "W_end [eV]" }), h("th", { text: "s" }), h("th", { text: "" })));
-    for (const [name, e] of Object.entries(res.engines)) eng.appendChild(h("tr", {}, h("td", { text: name }), h("td", { text: e.format || "" }), h("td", { class: "num", text: e.n ?? "" }), h("td", { class: "num", text: e.total_length != null ? fmt.num(e.total_length, 8) : "" }), h("td", { class: "num", text: e.W_end != null ? fmt.num(e.W_end, 8) : "" }), h("td", { class: "num", text: e.seconds != null ? fmt.num(e.seconds, 3) : "" }), h("td", { class: "muted", text: e.skipped ? "skipped: " + e.skipped : e.error ? "failed: " + e.error : (e.warnings || []).length ? `${e.warnings.length} warning(s)` : "" })));
+    for (const [name, e] of Object.entries(res.engines)) eng.appendChild(h("tr", {}, h("td", { text: name }), h("td", { text: e.format || "" }), h("td", { class: "num", text: e.n ?? "" }), h("td", { class: "num", text: e.total_length != null ? fmt.num(e.total_length, 8) : "" }), h("td", { class: "num", text: e.W_end != null ? fmt.num(e.W_end, 8) : "" }), h("td", { class: "num", text: e.seconds != null ? fmt.num(e.seconds, 3) : "" }), h("td", { class: "muted", text: e.skipped ? "skipped: " + e.skipped : e.error ? "failed: " + e.error.split("\n")[0] : (e.warnings || []).length ? `${e.warnings.length} warning(s)` : "" })));
     frag.appendChild(eng);
     for (const pc of res.comparisons) {
       const s = h("section", {}, h("h3", { text: `${pc.a} vs ${pc.b}` }));
       s.appendChild(h("pre", { class: "deck", text: pc.row + (pc.notes.length ? "\n" + pc.notes.join("; ") : "") }));
-      if (pc.verdict) s.appendChild(h("div", { class: "muted", text: `verdict: ${pc.verdict.ok ? "ok" : "not ok"} (${pc.verdict.tier}; blocks ${pc.verdict.blocks_used.join(", ")}; ${pc.verdict.note})` }));
+      if (pc.verdict) {
+        const v = pc.verdict;
+        const tol = v.map_tol != null ? `tolerance ${Number(v.map_tol).toExponential(0)}` : "report only";
+        const rel = v.metric_rel != null ? Number(v.metric_rel).toExponential(2) : "n/a";
+        const box = h("div", { class: "verdict " + (v.ok ? "ok" : "bad") },
+          h("b", { text: `${v.ok ? "✓ within the tier" : "✗ outside the tier"} — tier ${v.tier} (${tol}); blocks compared: ${v.blocks_used.join(", ")}; max over them ${rel} (relative)` }));
+        for (const n of v.notes || []) box.appendChild(h("div", { class: "muted", text: "· " + n }));
+        const skipped = ["T4x4", "disp", "path", "R56", "R5x_z", "E_row", "z_col"].filter(b => !v.blocks_used.includes(b));
+        if (skipped.length) box.appendChild(h("div", { class: "muted", text: `· not held to: ${skipped.join(", ")} (shown in the chart for information)` }));
+        s.appendChild(box);
+      }
       s.appendChild(this.chart(pc, res.blocks));
       frag.appendChild(s);
     }

@@ -73,7 +73,7 @@ def cmd_fingerprint(a) -> int:
 
 def cmd_validate(a) -> int:
     from lattix.oracles import guess_format
-    from lattix.oracles.validate import outcome_to_dict, run_validation
+    from lattix.oracles.validate import outcome_to_dict, read_lattice, run_validation, verdicts_for
 
     decks: dict[str, Path] = {}
     for spec in a.deck:
@@ -88,11 +88,19 @@ def cmd_validate(a) -> int:
     if len(outcome.results) < 2:
         print("need at least two engines to compare", file=sys.stderr)
         return 2
+    codes = [c for c in (a.codes or "").split(",") if c]
+    verdicts = verdicts_for(outcome, read_lattice(decks, beam), a.tier or "lossy", codes)
     for pc in outcome.comparisons:
         print(pc.row() + ("  " + "; ".join(pc.notes) if pc.notes else ""))
+        v = verdicts.get((pc.a, pc.b))
+        if v is not None:
+            tol = f"tolerance {v.map_tol:.1e}" if v.map_tol is not None else "report only"
+            print(f"{'':21s}verdict: {'ok' if v.ok else 'NOT ok'} — tier {v.tier} ({tol}); blocks compared: "
+                  f"{', '.join(sorted(v.blocks_used))}; max over them {v.metric_rel:.2e} (relative)"
+                  + ("".join(f"\n{'':21s}  · {n}" for n in v.notes)))
     worst = outcome.worst
     if a.json:
-        payload = outcome_to_dict(outcome, decks=decks, beam=beam, full=True)
+        payload = outcome_to_dict(outcome, decks=decks, beam=beam, verdicts=verdicts, full=True)
         Path(a.json).write_text(json.dumps(payload) + "\n")
     if a.html:
         from lattix.report_html import write_validate_html
@@ -216,6 +224,10 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--html", default=None, help="write an HTML report: per-boundary map differences vs s")
     s.add_argument("--workdir", default=None)
     s.add_argument("--json", default=None)
+    s.add_argument("--tier", choices=("exact", "equivalent", "lossy"), default=None,
+                   help="the translation's fidelity tier the pairs are held to (default: report only)")
+    s.add_argument("--codes", default=None, help="comma list of the translation's ledger codes (FM_* selects "
+                                                  "the field-map comparison rules)")
     _add_beam_args(s)
     s.set_defaults(func=cmd_validate)
 

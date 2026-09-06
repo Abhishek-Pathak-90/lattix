@@ -25,6 +25,8 @@ def _fake_runner(job, spec):
     """An in-thread stand-in for the `lattix validate` subprocess: two fake engines, one comparison."""
     from lattix.oracles.validate import outcome_to_dict, run_validation
 
+    assert spec["tier"] in ("exact", "equivalent", "lossy") and isinstance(spec["codes"], list)
+
     class _A:
         name, formats = "srv_fake_a", ("tracewin", "elegant")
 

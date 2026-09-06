@@ -115,7 +115,8 @@ elements concerned and the catalogue meaning of each code (`docs/fidelity.md`).
 The Validation tab lists the engine adapters lattix found (`lattix oracles`), pre-selects the ones that
 read the source and the written deck, and runs `lattix validate` **in a separate process** (an
 in-process engine such as HELIX or ImpactX never shares the server): the job log streams in, the per-pair
-summary rows, the battery's verdict (which map blocks the pair can be held to, the tier's tolerance, the
+summary rows, the battery's verdict — the translation's tier and ledger codes travel with the job as
+`--tier`/`--codes` — (which map blocks the pair can be held to, the tier's tolerance, the
 engine-precision floor, the measured caveats of `docs/oracles.md`) and the per-block error-versus-`s`
 chart appear when it finishes.  The beam form is prefilled from the deck; the Twiss values only matter
 for envelope engines.  Engines that need a local build (TraceWin, DYNAC, Synergia, HELIX) are marked.
