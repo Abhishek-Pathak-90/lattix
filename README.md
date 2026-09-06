@@ -15,6 +15,7 @@ self-hosted runner registration, and a PyPI upload (the 0.1.0 wheel and sdist ar
 
 ```bash
 # translate a deck (fidelity summary on stderr; --strict fails on the first LOSSY/DROPPED element)
+PYTHONPATH=. python3 -m lattix.cli ui --root tests/data/public   # browser UI: translate and compare the beam line
 PYTHONPATH=. python3 -m lattix.cli convert examples/mebt.dat mebt.madx --read-option species=h- \
     --read-option kinetic_energy_eV=2.1e6 --write-option energy_mode=constant --report mebt.fidelity.json
 PYTHONPATH=. python3 -m lattix.cli inspect mebt.dat --read-option species=h- --elements

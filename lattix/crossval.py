@@ -218,7 +218,7 @@ FUZZY_S: dict[str, float] = {"THIN_GAP_AS_SHORT_CAVITY": 2e-2, "THICK_CAVITY_AS_
 _THIN_BENDLESS = ("Marker", "Instrument", "Directive", "Freq", "Patch", "ReferenceChange")
 
 
-def _rotated(bn: dict, bs: dict, tilt: dict, base_tilt: float = 0.0) -> tuple[dict, dict]:
+def rotated(bn: dict, bs: dict, tilt: dict, base_tilt: float = 0.0) -> tuple[dict, dict]:
     """Normal/skew components in the lab frame: a 2(k+1)-pole tilted by t rotates by (k+1)·t."""
     n_out: dict[int, float] = {}
     s_out: dict[int, float] = {}
@@ -231,7 +231,7 @@ def _rotated(bn: dict, bs: dict, tilt: dict, base_tilt: float = 0.0) -> tuple[di
     return n_out, s_out
 
 
-def _contrib(p: Placed) -> dict[str, float]:
+def contrib(p: Placed) -> dict[str, float]:
     """This placed element's additive contribution to every cumulative quantity (energy is a state)."""
     e = p.element
     c = dict.fromkeys(QUANTITIES, 0.0)
@@ -240,14 +240,14 @@ def _contrib(p: Placed) -> dict[str, float]:
     mp = getattr(e, "multipole", None)
     if mp is not None:
         base = (e.bend.tilt_ref if k == "Bend" else 0.0) + (e.shift.tilt if e.shift is not None else 0.0)
-        bn, bs = _rotated(mp.Bn, mp.Bs, mp.tilt, base)       # thick: field × length
+        bn, bs = rotated(mp.Bn, mp.Bs, mp.tilt, base)        # thick: field × length
         for n, v in bn.items():
             if n < 6:
                 c[f"BnL{n}"] += v * p.length
         for n, v in bs.items():
             if n < 6:
                 c[f"BsL{n}"] += v * p.length
-        bnl, bsl = _rotated(mp.BnL, mp.BsL, mp.tilt, base)   # thin: integrated already
+        bnl, bsl = rotated(mp.BnL, mp.BsL, mp.tilt, base)    # thin: integrated already
         for n, v in bnl.items():
             if n < 6:
                 c[f"BnL{n}"] += v
@@ -274,6 +274,10 @@ def _contrib(p: Placed) -> dict[str, float]:
     return c
 
 
+_contrib = contrib          # the names the battery used before they became public
+_rotated = rotated
+
+
 @dataclass
 class Profile:
     names: list[str]
@@ -282,6 +286,7 @@ class Profile:
     cum: dict[str, np.ndarray]          # cumulative at each exit
     energy: np.ndarray                  # reference kinetic energy at each exit
     drift_like: list[bool] = field(default_factory=list)   # contributes nothing but length (may coalesce)
+    e_dropped: np.ndarray | None = None  # neutralised reference gain accumulated up to each exit [eV]
 
 
 def profile(lat: Lattice, neutral: dict[str, set[str]] | None = None) -> Profile:
@@ -297,9 +302,10 @@ def profile(lat: Lattice, neutral: dict[str, set[str]] | None = None) -> Profile
     energy = np.zeros(n)
     run = dict.fromkeys(cum, 0.0)
     e_drop = 0.0
+    e_dropped = np.zeros(n)
     drift_like: list[bool] = []
     for i, p in enumerate(placed):
-        c = _contrib(p)
+        c = contrib(p)
         drop = neutral.get(p.name, set())
         drift_like.append(all(v == 0.0 for q, v in c.items() if q != "length" and not ("*" in drop or q in drop)))
         for q in cum:
@@ -309,8 +315,9 @@ def profile(lat: Lattice, neutral: dict[str, set[str]] | None = None) -> Profile
         if ("*" in drop or "gain" in drop) and p.ref_out is not None and p.ref_in is not None:
             e_drop += p.ref_out.kinetic_energy_eV - p.ref_in.kinetic_energy_eV
         energy[i] = (p.ref_out.kinetic_energy_eV if p.ref_out else float("nan")) - e_drop
+        e_dropped[i] = e_drop
     return Profile([p.name for p in placed], [p.element.kind for p in placed],
-                   np.array([p.s_out for p in placed]), cum, energy, drift_like)
+                   np.array([p.s_out for p in placed]), cum, energy, drift_like, e_dropped)
 
 
 def neutral_set(report: FidelityReport) -> dict[str, set[str]]:
@@ -454,6 +461,60 @@ def tier_of(report: FidelityReport) -> str:
     return "exact"
 
 
+@dataclass
+class RoundTripSettings:
+    """What the ledgers say the IR round trip may not be held to (the battery's step (a) rules)."""
+
+    neutral: dict[str, set[str]] = field(default_factory=dict)   # element -> quantities the ledgers lost
+    skip: set[str] = field(default_factory=set)                   # strengths suspended by a species loss
+    skip_energy: bool = False                                     # CONST_P0 / REFCHANGE_DROPPED / species loss
+    fuzzy: dict[str, float] = field(default_factory=dict)         # element -> boundary tolerance [m]
+    species_loss: bool = False
+
+
+def roundtrip_settings(rep_write: FidelityReport, rep_read: FidelityReport | None = None) -> RoundTripSettings:
+    """The neutral set, suspended quantities, energy skip and fuzzy boundaries for a written deck read
+    back (writer ledger ``rep_write``, read-back ledger ``rep_read``)."""
+    codes = rep_write.codes()
+    neutral = neutral_set(rep_write)
+    read_codes: dict[str, int] = {}
+    if rep_read is not None:
+        read_codes = rep_read.codes()
+        # LOSSY reader entries on the way back also neutralise (what the target format cannot say)
+        for e in rep_read.entries:
+            if e.cls.value in ("LOSSY", "DROPPED") and e.element:
+                neutral.setdefault(e.element, set()).update(AFFECTS.get(e.code, {"*"}))
+    skip_energy = any(c in codes for c in ("CONST_P0", "REFCHANGE_DROPPED"))
+    skip: set[str] = set()
+    species_loss = any(c in codes for c in _SPECIES_LOSS) or any(c in read_codes for c in _SPECIES_LOSS[:-1])
+    if species_loss:
+        # the target cannot name this species: every normalized strength changes meaning
+        skip = {q for q in QUANTITIES if q not in ("length", "angle_h", "angle_v", "hkick", "vkick")}
+        skip_energy = True
+    fuzzy = {e.element: FUZZY_S[e.code] for e in rep_write.entries if e.code in FUZZY_S and e.element}
+    return RoundTripSettings(neutral, skip, skip_energy, fuzzy, species_loss)
+
+
+@dataclass
+class RoundTrip:
+    diff: IRDiff
+    tier: str
+    settings: RoundTripSettings
+
+
+def ir_roundtrip(lat: Lattice, rep_write: FidelityReport, lat2: Lattice, rep_read: FidelityReport, *,
+                 derivation_tier: str | None = None) -> RoundTrip:
+    """The battery's IR round-trip verdict for ``lat`` written (``rep_write``) and read back as ``lat2``
+    (``rep_read``): the same neutralisation, suspension and fuzzy boundaries as :func:`run_case`."""
+    st = roundtrip_settings(rep_write, rep_read)
+    tier = _cap_tier(tier_of(rep_write), derivation_tier)
+    if st.species_loss:
+        tier = "lossy"
+    diff = compare_profiles(profile(lat, st.neutral), profile(lat2, st.neutral), skip_energy=st.skip_energy,
+                            skip=st.skip, fuzzy=st.fuzzy)
+    return RoundTrip(diff, tier, st)
+
+
 def run_case(deck: Path, src: str, dst: str, workdir: Path, *, engines: bool = False,
              engine_cache: dict | None = None, read_options: dict | None = None) -> CaseResult:
     t0 = time.perf_counter()
@@ -469,22 +530,9 @@ def run_case(deck: Path, src: str, dst: str, workdir: Path, *, engines: bool = F
         res.ledger, res.codes, res.tier = rep.counts, rep.codes(), _cap_tier(tier_of(rep), derivation_tier)
         # (a) IR round trip
         lat2, rep2 = read(out, dst, **_read_options(dst, species))
-        neutral = neutral_set(rep)
-        # LOSSY reader entries on the way back also neutralise (what the target format cannot say)
-        for e in rep2.entries:
-            if e.cls.value in ("LOSSY", "DROPPED") and e.element:
-                neutral.setdefault(e.element, set()).update(AFFECTS.get(e.code, {"*"}))
-        skip_energy = any(c in res.codes for c in ("CONST_P0", "REFCHANGE_DROPPED"))
-        skip: set[str] = set()
-        if any(c in res.codes for c in _SPECIES_LOSS) or any(c in rep2.codes() for c in _SPECIES_LOSS[:-1]):
-            # the target cannot name this species: every normalized strength changes meaning
-            skip = {q for q in QUANTITIES if q not in ("length", "angle_h", "angle_v", "hkick", "vkick")}
-            skip_energy = True
-            res.tier = "lossy"
-        fuzzy = {e.element: FUZZY_S[e.code] for e in rep.entries if e.code in FUZZY_S and e.element}
-        diff = compare_profiles(profile(lat, neutral), profile(lat2, neutral), skip_energy=skip_energy, skip=skip,
-                                fuzzy=fuzzy)
-        res.ir_ok, res.ir_worst, res.ir_problems = diff.ok, diff.worst, diff.problems
+        rt = ir_roundtrip(lat, rep, lat2, rep2, derivation_tier=derivation_tier)
+        res.tier = rt.tier
+        res.ir_ok, res.ir_worst, res.ir_problems = rt.diff.ok, rt.diff.worst, rt.diff.problems
         # (c) fixed point
         out2 = workdir / f"{deck.stem}.{src}.to.{dst}.again{_suffix(dst)}"
         write(lat2, out2, dst, strict=False)
@@ -571,7 +619,8 @@ def _suffix(fmt: str) -> str:
     return s if s.startswith(".") else ""
 
 
-def _beam(lat: Lattice):
+def beam_from_lattice(lat: Lattice):
+    """A :class:`BeamSpec` for the engines (named species only)."""
     from lattix.oracles.base import SPECIES, BeamSpec
 
     sp = lat.reference.species
@@ -579,6 +628,9 @@ def _beam(lat: Lattice):
     if name is None:
         raise RuntimeError(f"species {sp.name!r} not known to the engines")
     return BeamSpec(name, lat.reference.kinetic_energy_eV, lat.reference.rf_frequency_Hz)
+
+
+_beam = beam_from_lattice
 
 
 def _has_relative_phase_maps(lat: Lattice) -> bool:
@@ -596,7 +648,7 @@ def _has_fringe_bends(lat: Lattice) -> bool:
     return False
 
 
-def _pick_engine(fmt: str) -> str | None:
+def pick_engine(fmt: str) -> str | None:
     """The format's engine, or the first available fallback from :data:`ENGINE_CANDIDATES`."""
     from lattix.oracles import get_oracle
 
@@ -607,12 +659,162 @@ def _pick_engine(fmt: str) -> str | None:
     return primary
 
 
+_pick_engine = pick_engine
+
+
+@dataclass
+class EngineVerdict:
+    """What the battery concludes from one engine pair on one deck (:func:`engine_verdict`)."""
+
+    ok: bool
+    tier: str
+    metric: float                       # max |ΔR̂cum| over the blocks the pair is held to
+    metric_rel: float
+    energy_rel: float
+    blocks_used: set[str]
+    map_tol: float | None
+    energy_tol: float | None
+    energy_checked: bool
+    floor: float
+    note: str                           # the battery's engine_note text (caveats + the comparison row)
+    notes: list[str] = field(default_factory=list)   # the caveats one by one
+
+
+def engine_verdict(pc, ea: str, eb: str, lat: Lattice, tier: str, codes: dict[str, int], ra, rb, *,
+                   note: str = "") -> EngineVerdict:
+    """The battery's verdict on ``compare_pair(ra, rb)``: which map blocks the pair can be held to, the
+    measured engine limits that cap the tier (docs/oracles.md), the tolerances of the tier and the
+    engine-precision floor.  ``note`` is any caveat recorded before the engines ran."""
+    if pc.n_shared == 0:
+        return EngineVerdict(False, tier, pc.max_rcum_rel, pc.max_rcum_rel, pc.energy_rel, set(), None, None,
+                             False, 0.0, "no shared boundaries", ["no shared boundaries"])
+    notes: list[str] = []
+
+    def caveat(text: str, *, append: bool = False) -> None:
+        nonlocal note
+        note = ((note or "") + text) if append else text
+        notes.append(text.strip("; ").strip())
+
+    # which blocks the pair can be held to (measured engine limits, docs/oracles.md):
+    # * HELIX's bend map has no path-length coupling (R51/R52 = 0) and its own R56;
+    # * the thin-cavity longitudinal row differs between constant-p0 and p0-following engines and
+    #   Elegant's RFCA matrix (its ultra-relativistic phase slip), so with RF only the transverse
+    #   block and the dispersion column are compared across such pairs
+    blocks = {"T4x4", "disp", "path", "R56", "R5x_z", "E_row", "z_col"}
+    has_bends = any(e.kind == "Bend" for e in lat.elements.values())
+    has_rf = any(e.kind in ("RFCavity", "FieldMap", "NCells", "RFQCell") for e in lat.elements.values())
+    if "helix" in (ea, eb) and has_bends:
+        blocks -= {"path", "R56"}
+        if any(e.kind == "Bend" and e.bend.angle < 0 for e in lat.elements.values()) and tier != "lossy":
+            # measured 2026-09-04 (docs/oracles.md): HELIX's BEND body evaluates the sector map at the
+            # signed angle with rho > 0, so a negative-angle bend gets R12 < 0 and R21 > 0 (TraceWin
+            # itself gives the positive-bend block with R16/R26 flipped) — report only for such decks
+            tier = "lossy"
+            caveat("HELIX negative-angle bend body (known HELIX limit, report only); ")
+    if "impactt" in (ea, eb):
+        # MEASURED (docs/oracles.md, Phase 5.5): IMPACT-T's dipole (getfldt_Dipole) bends the whole
+        # bunch by the reference angle — no pole-face focusing, R21 = R26 = 0 — so bend decks are report
+        # only; its solenoid is a generated (r, z) table (9e-7 at a 1 ps step) and its thin gaps are
+        # short profile cavities with the profile's own RF focusing (mebt_line 8.1e-3) — Equivalent tier
+        if has_bends and tier != "lossy":
+            tier = "lossy"
+            caveat("IMPACT-T dipole model (no pole-face focusing, report only); ")
+        elif tier == "exact" and any(e.kind in ("Solenoid", "RFCavity", "FieldMap", "NCells")
+                                     for e in lat.elements.values()):
+            tier = "equivalent"
+            caveat("IMPACT-T solenoid table / RF profile: engine models differ; ")
+    if "ocelot" in (ea, eb) and lat.reference.species.name.lower() not in ("electron", "positron") \
+            and tier != "lossy":
+        # MEASURED (docs/oracles.md, Phase 5.7): every Ocelot map divides by the electron mass — the
+        # transverse blocks of a proton deck are right (normalized strengths), the longitudinal ones and
+        # the cavity model are an electron's: report only for any other species
+        tier = "lossy"
+        caveat(f"Ocelot is electron-only ({lat.reference.species.name} deck, report only); ")
+    elif "ocelot" in (ea, eb) and tier == "exact" and any(
+            e.kind in ("RFCavity", "FieldMap", "NCells") for e in lat.elements.values()):
+        # Ocelot's Cavity (Rosenzweig–Serafini edges + body) against the thin-gap or field-map models
+        tier = "equivalent"
+        caveat("Ocelot cavity model (RF focusing of its own): engine models differ; ")
+    if "synergia" in (ea, eb) and tier != "lossy" and any(e.kind == "Solenoid" for e in lat.elements.values()):
+        # MEASURED (docs/oracles.md, Phase 5.9): Synergia's ff_solenoid passes (ksl, ks) to a body that takes
+        # (ks, ksl) — the rotation angle is ks and the displacement is divided by ks·L: solenoid decks are
+        # report only until the upstream fix
+        tier = "lossy"
+        caveat("Synergia solenoid body (ks/ksl swapped upstream, report only); ")
+    if "dynac" in (ea, eb) and tier == "exact" and has_rf:
+        # MEASURED (docs/oracles.md, Phase 5.8): DYNAC's BUNCHER applies the RF defocusing with the mid-gap
+        # velocity (TraceWin/HELIX: the entrance one) and CAVNUM integrates a generated profile against its
+        # own crest (7e-4): engine models differ on every RF element
+        tier = "equivalent"
+        caveat("DYNAC buncher / CAVNUM models: engine models differ; ")
+    fm_derived = any(c.startswith("FM_") for c in codes)
+    if has_rf and (FOLLOWS_P0[ea] != FOLLOWS_P0[eb] or "elegant" in (ea, eb) or fm_derived):
+        # a field map integrated by one engine and a cavity element in the other agree on the
+        # transverse block and the dispersion, never on the longitudinal model
+        blocks = {"T4x4", "disp"}
+    metric = max(pc.blocks[b] for b in blocks if b in pc.blocks)
+    scale = max(1.0, pc.max_rcum_abs / max(pc.max_rcum_rel, 1e-300)) if pc.max_rcum_rel else 1.0
+    metric_rel = metric / scale
+    for r_ in (ra, rb):
+        missing = (len(r_.meta.get("substituted", [])) + len(r_.meta.get("dropped", []))
+                   + int(r_.meta.get("solenoids_as_drifts", 0) or 0))
+        if r_.engine == "lightwin" and missing and tier != "lossy":
+            # LightWin propagates elements without an Envelope3D model (EDGE, THIN_STEERING …) as
+            # drifts of their length and skips keywords it does not implement (GAP, NCELLS …): the
+            # comparison cannot be held to any tier — report only
+            tier = "lossy"
+            caveat(f"LightWin has no model for {missing} element(s) (report only); ")
+    if "scibmad" in (ea, eb) and tier == "exact" and any(
+            e.kind == "RFCavity" and e.length > 0 and (e.rf.voltage_V or e.rf.gradient_V_per_m)
+            for e in lat.elements.values()):
+        # SciBmad's thick RFCavity applies its own transverse RF focusing (measured, docs/oracles.md);
+        # MAD-X, xtrack and Elegant kick at the centre only
+        tier = "equivalent"
+        caveat("SciBmad thick-cavity RF focusing: engine models differ; ")
+    if "scibmad" in (ea, eb) and _has_fringe_bends(lat) and tier != "lossy":
+        # BeamTracking 0.5 stores edge1_int/edge2_int but cannot track them (the worker zeroes them):
+        # the fringe correction is missing entirely, not modelled differently — report only
+        tier = "lossy"
+        caveat("SciBmad 0.5 does not track fringe integrals (report only); ")
+    if tier == "exact" and _has_fringe_bends(lat) and ea != eb:
+        # the codes agree on the parameters but not on the fringe-field model: MAD-X and Bmad
+        # differ at O(ψ²) in the fint·hgap correction (8.6e-4 on ELENA's 60° bend, 0 without it)
+        tier = "equivalent"
+        caveat("fringe-integral bends: engine models differ; ")
+    floor = max(ENGINE_PRECISION.get(ea, 0.0), ENGINE_PRECISION.get(eb, 0.0))
+    energy_checked = bool(FOLLOWS_P0[ea] and FOLLOWS_P0[eb])
+    map_tol: float | None
+    energy_tol: float | None
+    if tier == "exact":
+        map_tol, energy_tol = max(EXACT_MAP_TOL, floor), max(EXACT_ENERGY_TOL, floor)
+        map_ok = metric_rel <= map_tol
+        e_ok = (not energy_checked) or pc.energy_rel <= energy_tol
+    elif tier == "equivalent":
+        map_tol, energy_tol = EQUIV_MAP_TOL, EQUIV_ENERGY_TOL
+        map_ok = metric_rel <= map_tol
+        e_ok = (not energy_checked) or pc.energy_rel <= energy_tol
+        if fm_derived and not map_ok:
+            # a field map integrated by one engine against a derived cavity element in the other:
+            # the transverse RF focusing is modelled differently by every code (and not at all by
+            # some), so over a linac of cavities the transverse map is reported, not asserted; the
+            # reference energy still is (measured on LightWin's ADS deck, docs/oracles.md)
+            map_ok = True
+            caveat("field-map cavities: transverse RF focusing differs by engine (map report only); ",
+                   append=True)
+    else:
+        map_tol = energy_tol = None
+        map_ok = e_ok = True          # lossy: report only
+    row = pc.row().splitlines()[0].strip()
+    return EngineVerdict(bool(map_ok and e_ok), tier, metric, metric_rel, pc.energy_rel, blocks, map_tol,
+                         energy_tol, energy_checked, floor, (note or "") + row, notes)
+
+
 def _engine_check(res: CaseResult, deck: Path, src: str, out: Path, dst: str, lat: Lattice,
                   workdir: Path, cache: dict) -> None:
     from lattix.oracles import get_oracle
     from lattix.oracles.compare import compare_pair
 
-    ea, eb = _pick_engine(src), _pick_engine(dst)
+    ea, eb = pick_engine(src), pick_engine(dst)
     if not ea or not eb:
         res.engine_note = "no engine pair"
         return
@@ -632,7 +834,7 @@ def _engine_check(res: CaseResult, deck: Path, src: str, out: Path, dst: str, la
             res.engine_note = f"{name} unavailable: {why[:60]}"
             return
     try:
-        beam = _beam(lat)
+        beam = beam_from_lattice(lat)
     except RuntimeError as exc:
         res.engine_note = f"skipped: {exc}"          # custom ion species: the adapters take named species only
         return
@@ -647,112 +849,8 @@ def _engine_check(res: CaseResult, deck: Path, src: str, out: Path, dst: str, la
     if pc.n_shared == 0:
         res.engine_ok, res.engine_note = False, "no shared boundaries"
         return
-    # which blocks the pair can be held to (measured engine limits, docs/oracles.md):
-    # * HELIX's bend map has no path-length coupling (R51/R52 = 0) and its own R56;
-    # * the thin-cavity longitudinal row differs between constant-p0 and p0-following engines and
-    #   Elegant's RFCA matrix (its ultra-relativistic phase slip), so with RF only the transverse
-    #   block and the dispersion column are compared across such pairs
-    blocks = {"T4x4", "disp", "path", "R56", "R5x_z", "E_row", "z_col"}
-    has_bends = any(e.kind == "Bend" for e in lat.elements.values())
-    has_rf = any(e.kind in ("RFCavity", "FieldMap", "NCells", "RFQCell") for e in lat.elements.values())
-    if "helix" in (ea, eb) and has_bends:
-        blocks -= {"path", "R56"}
-        if any(e.kind == "Bend" and e.bend.angle < 0 for e in lat.elements.values()) and res.tier != "lossy":
-            # measured 2026-09-04 (docs/oracles.md): HELIX's BEND body evaluates the sector map at the
-            # signed angle with rho > 0, so a negative-angle bend gets R12 < 0 and R21 > 0 (TraceWin
-            # itself gives the positive-bend block with R16/R26 flipped) — report only for such decks
-            res.tier = "lossy"
-            res.engine_note = "HELIX negative-angle bend body (known HELIX limit, report only); "
-    if "impactt" in (ea, eb):
-        # MEASURED (docs/oracles.md, Phase 5.5): IMPACT-T's dipole (getfldt_Dipole) bends the whole
-        # bunch by the reference angle — no pole-face focusing, R21 = R26 = 0 — so bend decks are report
-        # only; its solenoid is a generated (r, z) table (9e-7 at a 1 ps step) and its thin gaps are
-        # short profile cavities with the profile's own RF focusing (mebt_line 8.1e-3) — Equivalent tier
-        if has_bends and res.tier != "lossy":
-            res.tier = "lossy"
-            res.engine_note = "IMPACT-T dipole model (no pole-face focusing, report only); "
-        elif res.tier == "exact" and any(e.kind in ("Solenoid", "RFCavity", "FieldMap", "NCells")
-                                         for e in lat.elements.values()):
-            res.tier = "equivalent"
-            res.engine_note = "IMPACT-T solenoid table / RF profile: engine models differ; "
-    if "ocelot" in (ea, eb) and lat.reference.species.name.lower() not in ("electron", "positron") \
-            and res.tier != "lossy":
-        # MEASURED (docs/oracles.md, Phase 5.7): every Ocelot map divides by the electron mass — the
-        # transverse blocks of a proton deck are right (normalized strengths), the longitudinal ones and
-        # the cavity model are an electron's: report only for any other species
-        res.tier = "lossy"
-        res.engine_note = f"Ocelot is electron-only ({lat.reference.species.name} deck, report only); "
-    elif "ocelot" in (ea, eb) and res.tier == "exact" and any(
-            e.kind in ("RFCavity", "FieldMap", "NCells") for e in lat.elements.values()):
-        # Ocelot's Cavity (Rosenzweig–Serafini edges + body) against the thin-gap or field-map models
-        res.tier = "equivalent"
-        res.engine_note = "Ocelot cavity model (RF focusing of its own): engine models differ; "
-    if "synergia" in (ea, eb) and res.tier != "lossy" and any(e.kind == "Solenoid" for e in lat.elements.values()):
-        # MEASURED (docs/oracles.md, Phase 5.9): Synergia's ff_solenoid passes (ksl, ks) to a body that takes
-        # (ks, ksl) — the rotation angle is ks and the displacement is divided by ks·L: solenoid decks are
-        # report only until the upstream fix
-        res.tier = "lossy"
-        res.engine_note = "Synergia solenoid body (ks/ksl swapped upstream, report only); "
-    if "dynac" in (ea, eb) and res.tier == "exact" and has_rf:
-        # MEASURED (docs/oracles.md, Phase 5.8): DYNAC's BUNCHER applies the RF defocusing with the mid-gap
-        # velocity (TraceWin/HELIX: the entrance one) and CAVNUM integrates a generated profile against its
-        # own crest (7e-4): engine models differ on every RF element
-        res.tier = "equivalent"
-        res.engine_note = "DYNAC buncher / CAVNUM models: engine models differ; "
-    fm_derived = any(c.startswith("FM_") for c in res.codes)
-    if has_rf and (FOLLOWS_P0[ea] != FOLLOWS_P0[eb] or "elegant" in (ea, eb) or fm_derived):
-        # a field map integrated by one engine and a cavity element in the other agree on the
-        # transverse block and the dispersion, never on the longitudinal model
-        blocks = {"T4x4", "disp"}
-    metric = max(pc.blocks[b] for b in blocks if b in pc.blocks)
-    res.engine_metric = metric
-    scale = max(1.0, pc.max_rcum_abs / max(pc.max_rcum_rel, 1e-300)) if pc.max_rcum_rel else 1.0
-    metric_rel = metric / scale
-    for r_ in (ra, rb):
-        missing = (len(r_.meta.get("substituted", [])) + len(r_.meta.get("dropped", []))
-                   + int(r_.meta.get("solenoids_as_drifts", 0) or 0))
-        if r_.engine == "lightwin" and missing and res.tier != "lossy":
-            # LightWin propagates elements without an Envelope3D model (EDGE, THIN_STEERING …) as
-            # drifts of their length and skips keywords it does not implement (GAP, NCELLS …): the
-            # comparison cannot be held to any tier — report only
-            res.tier = "lossy"
-            res.engine_note = f"LightWin has no model for {missing} element(s) (report only); "
-    if "scibmad" in (ea, eb) and res.tier == "exact" and any(
-            e.kind == "RFCavity" and e.length > 0 and (e.rf.voltage_V or e.rf.gradient_V_per_m)
-            for e in lat.elements.values()):
-        # SciBmad's thick RFCavity applies its own transverse RF focusing (measured, docs/oracles.md);
-        # MAD-X, xtrack and Elegant kick at the centre only
-        res.tier = "equivalent"
-        res.engine_note = "SciBmad thick-cavity RF focusing: engine models differ; "
-    if "scibmad" in (ea, eb) and _has_fringe_bends(lat) and res.tier != "lossy":
-        # BeamTracking 0.5 stores edge1_int/edge2_int but cannot track them (the worker zeroes them):
-        # the fringe correction is missing entirely, not modelled differently — report only
-        res.tier = "lossy"
-        res.engine_note = "SciBmad 0.5 does not track fringe integrals (report only); "
-    if res.tier == "exact" and _has_fringe_bends(lat) and ea != eb:
-        # the codes agree on the parameters but not on the fringe-field model: MAD-X and Bmad
-        # differ at O(ψ²) in the fint·hgap correction (8.6e-4 on ELENA's 60° bend, 0 without it)
-        res.tier = "equivalent"
-        res.engine_note = "fringe-integral bends: engine models differ; "
-    floor = max(ENGINE_PRECISION.get(ea, 0.0), ENGINE_PRECISION.get(eb, 0.0))
-    if res.tier == "exact":
-        map_ok = metric_rel <= max(EXACT_MAP_TOL, floor)
-        e_ok = (not (FOLLOWS_P0[ea] and FOLLOWS_P0[eb])) or pc.energy_rel <= max(EXACT_ENERGY_TOL, floor)
-    elif res.tier == "equivalent":
-        map_ok = metric_rel <= EQUIV_MAP_TOL
-        e_ok = (not (FOLLOWS_P0[ea] and FOLLOWS_P0[eb])) or pc.energy_rel <= EQUIV_ENERGY_TOL
-        if fm_derived and not map_ok:
-            # a field map integrated by one engine against a derived cavity element in the other:
-            # the transverse RF focusing is modelled differently by every code (and not at all by
-            # some), so over a linac of cavities the transverse map is reported, not asserted; the
-            # reference energy still is (measured on LightWin's ADS deck, docs/oracles.md)
-            map_ok = True
-            res.engine_note = ((res.engine_note or "")
-                               + "field-map cavities: transverse RF focusing differs by engine (map report only); ")
-    else:
-        map_ok = e_ok = True          # lossy: report only
-    res.engine_ok = bool(map_ok and e_ok)
-    res.engine_note = (res.engine_note or "") + pc.row().splitlines()[0].strip()
+    v = engine_verdict(pc, ea, eb, lat, res.tier, res.codes, ra, rb, note=res.engine_note)
+    res.tier, res.engine_metric, res.engine_ok, res.engine_note = v.tier, v.metric, v.ok, v.note
 
 
 # ---------------------------------------------------------------------------

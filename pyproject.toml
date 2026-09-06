@@ -63,4 +63,4 @@ target-version = "py311"
 select = ["E", "F", "W", "I", "B", "UP"]
 
 [tool.setuptools.package-data]
-lattix = ["oracles/data/*"]
+lattix = ["oracles/data/*", "ui/static/*"]

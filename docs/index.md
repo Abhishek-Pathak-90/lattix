@@ -13,6 +13,7 @@ the real engines.
 | [oracles.md](oracles.md) | The engines lattix runs, how each adapter works, and every measured convention with its number |
 | [corpus.md](corpus.md) | The private and public deck corpus, the manifest, the golden dozen |
 | formats/ | One page per format: [TraceWin](formats/tracewin.md), [MAD-X](formats/madx.md), [MAD8](formats/mad8.md), [Elegant](formats/elegant.md), [Bmad](formats/bmad.md), [PALS](formats/pals.md), [ImpactX](formats/impactx.md), [IMPACT-Z](formats/impactz.md), [FLAME](formats/flame.md), [xtrack](formats/xtrack.md), [MAD-NG](formats/madng.md), [SciBmad](formats/scibmad.md), [Cheetah](formats/cheetah.md), [PyORBIT3](formats/pyorbit.md), [IMPACT-T](formats/impactt.md), [Ocelot](formats/ocelot.md), [DYNAC](formats/dynac.md), [Synergia](formats/synergia.md), [OPAL-T](formats/opal.md), [Bmad bridge (Astra, GPT, CSRtrack, Merlin++, SLICKTRACK, SAD, SXF, AT)](formats/bmad_bridge.md), [lattix JSON](formats/lattix.md), [HELIX adapter](formats/helix.md) |
+| [ui.md](ui.md) | The browser UI (`lattix ui`): load a deck, translate it, compare the beam line before and after element by element, validate with the engines |
 
 The design and phase plan is in [../PLAN.md](../PLAN.md).  `tests/docs/test_docs_consistency.py`
 keeps these pages in step with the source: the fidelity catalogue is regenerated from the

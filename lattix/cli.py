@@ -72,8 +72,8 @@ def cmd_fingerprint(a) -> int:
 
 
 def cmd_validate(a) -> int:
-    from lattix.oracles import get_oracle, guess_format
-    from lattix.oracles.compare import compare_all
+    from lattix.oracles import guess_format
+    from lattix.oracles.validate import outcome_to_dict, run_validation
 
     decks: dict[str, Path] = {}
     for spec in a.deck:
@@ -83,43 +83,33 @@ def cmd_validate(a) -> int:
         decks[fmt] = Path(path)
     engines = a.oracles.split(",")
     beam = _beam_from_args(a)
-    results = {}
-    for e in engines:
-        o = get_oracle(e)
-        ok, why = o.available()
-        if not ok:
-            print(f"{e:8s} skipped: {why}", file=sys.stderr)
-            continue
-        fmt = next((f for f in o.formats if f in decks), None)
-        if fmt is None:
-            print(f"{e:8s} skipped: no deck in a format it reads ({o.formats})", file=sys.stderr)
-            continue
-        wd = Path(a.workdir) / e if a.workdir else None
-        results[e] = o.run(decks[fmt], fmt=fmt, beam=beam, workdir=wd)
-        r = results[e]
-        print(f"{e:8s} {fmt:8s} n={r.n:5d} L={r.total_length:.9g} m  "
-              f"W_end={r.ref_kinetic_eV_out[-1]:.6e} eV  warnings={len(r.warnings)}")
-    if len(results) < 2:
+    outcome = run_validation(decks, engines, beam, workdir=Path(a.workdir) if a.workdir else None,
+                             log=lambda line: print(line, file=sys.stderr if "skipped" in line else sys.stdout))
+    if len(outcome.results) < 2:
         print("need at least two engines to compare", file=sys.stderr)
         return 2
-    worst = 0.0
-    comparisons = compare_all(results)
-    for pc in comparisons:
+    for pc in outcome.comparisons:
         print(pc.row() + ("  " + "; ".join(pc.notes) if pc.notes else ""))
-        worst = max(worst, pc.max_rcum_abs)
+    worst = outcome.worst
     if a.json:
-        payload = {e: {"names": r.names, "s_out": r.s_out.tolist(),
-                       "R_cum_common": r.to_common().R_cum.tolist(),
-                       "ke_out": r.ref_kinetic_eV_out.tolist()} for e, r in results.items()}
+        payload = outcome_to_dict(outcome, decks=decks, beam=beam, full=True)
         Path(a.json).write_text(json.dumps(payload) + "\n")
     if a.html:
         from lattix.report_html import write_validate_html
 
-        write_validate_html(a.html, comparisons, title=", ".join(str(p) for p in decks.values()))
+        write_validate_html(a.html, outcome.comparisons, title=", ".join(str(p) for p in decks.values()))
     if a.tol is not None and worst > a.tol:
         print(f"FAIL: max cumulative-map difference {worst:.3e} > tol {a.tol:.1e}")
         return 1
     return 0
+
+
+def cmd_ui(a) -> int:
+    from lattix.ui.server import Settings, serve
+
+    root = Path(a.root).expanduser().resolve() if a.root else Path.cwd()
+    return serve(Settings(host=a.host, port=a.port, root=root, any_path=a.any_path, open_browser=not a.no_browser),
+                 check=a.check, deck=a.deck)
 
 
 def cmd_convert(a) -> int:
@@ -228,6 +218,15 @@ def main(argv: list[str] | None = None) -> int:
     _add_beam_args(s)
     s.set_defaults(func=cmd_validate)
 
+    s = sub.add_parser("ui", help="browser UI: translate a deck and compare the beam line before and after")
+    s.add_argument("--host", default="127.0.0.1", help="loopback address to bind (127.0.0.1 or localhost)")
+    s.add_argument("--port", type=int, default=0, help="TCP port (0 = any free port)")
+    s.add_argument("--root", default=None, help="directory the file picker may browse (default: the current one)")
+    s.add_argument("--any-path", action="store_true", help="allow absolute paths outside --root")
+    s.add_argument("--no-browser", action="store_true", help="do not open the browser")
+    s.add_argument("--deck", default=None, help="deck to load on start")
+    s.add_argument("--check", action="store_true", help="start, self-test the API and exit")
+    s.set_defaults(func=cmd_ui)
     s = sub.add_parser("convert", help="translate a deck between formats")
     s.add_argument("src")
     s.add_argument("dst")

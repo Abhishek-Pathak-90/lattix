@@ -162,3 +162,15 @@ common basis and compares the cumulative maps block by block at the boundaries t
 agree on; `--tol` makes it fail when the largest normalized transverse difference exceeds
 the tolerance.  How the bases are aligned and which numbers were measured is in
 [conventions.md](conventions.md) and [oracles.md](oracles.md).
+
+## 8. The browser UI
+
+```
+$ lattix ui --root tests/data/public
+```
+
+opens a page on `127.0.0.1` that reads a deck (a sample, a path under the root, an uploaded folder with
+its field maps), draws the beam line, translates it to any format with the writer's options and draws
+the written deck read back, aligned element by element with the source: click an element for its
+parameters in SI and native units, the reference energy at its ends, the ledger entries and the
+statement in the written deck; the *Validation* tab runs the engines on both decks.  See `docs/ui.md`.

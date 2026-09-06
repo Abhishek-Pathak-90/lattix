@@ -63,7 +63,7 @@ brho_abs    = pc / (|q| c)
 brho_signed = sign(q) · brho_abs
 k1  = G / brho_signed          (lattix.ir.normalize.k1_from_gradient)
 ks  = Bsol / brho_signed       (ks_from_field)
-knl = BnL / brho_signed · n!   (kn_from_bn, MAD convention)
+knl = BnL / brho_signed        (kn_from_bn: MAD's k_n L, no factorial)
 kick = ∫B·dl / brho_signed     (kick_from_bl)
 ```
 

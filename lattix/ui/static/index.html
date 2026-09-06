@@ -1,0 +1,1684 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lattix</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --fs-0: 11px; --fs-1: 12.5px; --fs-2: 14px; --fs-3: 18px; --radius: 4px;
+  --syn-h: 120px; --insp-w: 360px; --panel-w: 300px;
+  --bg-0:#eef1f5; --bg-1:#f8fafc; --bg-2:#ffffff; --bg-3:#e2e8f0; --bg-inset:#e9edf2; --line:#cbd5e1; --line-strong:#94a3b8;
+  --text-0:#0f172a; --text-1:#1e293b; --text-2:#475569; --text-dim:#94a3b8;
+  --accent:#0e7490; --accent-2:#0891b2; --accent-dim:#155e75; --accent-glow:rgba(14,116,144,.16); --sel-outline:#0f172a;
+  --ok:#15803d; --warn:#b45309; --err:#b91c1c; --info:#1d4ed8;
+  --cls-exact:#15803d; --cls-equiv:#d97706; --cls-lossy:#b91c1c; --cls-dropped:#6b7280; --cls-diff:#a21caf;
+  --k-Drift:#64748b; --k-Quadrupole:#0891b2; --k-Sextupole:#4d7c0f; --k-Octupole:#3f6212; --k-Multipole:#047857;
+  --k-Bend:#ea580c; --k-Solenoid:#7c3aed; --k-RFCavity:#15803d; --k-FieldMap:#15803d; --k-NCells:#15803d; --k-RFQCell:#0e7490;
+  --k-Kicker:#db2777; --k-Collimator:#991b1b; --k-Marker:#475569; --k-Instrument:#db2777; --k-Foil:#9f1239; --k-Taylor:#1d4ed8;
+  --k-Patch:#b45309; --k-ReferenceChange:#b45309; --k-Freq:#b45309; --k-Directive:#6b7280; --k-Superposition:#15803d;
+  --blk-T4x4:#2a78d6; --blk-disp:#eb6834; --blk-path:#1baf7a; --blk-R56:#eda100; --blk-R5x_z:#e87ba4; --blk-E_row:#008300; --blk-z_col:#4a3aa7;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg-0:#0b0f15; --bg-1:#11161f; --bg-2:#1a2230; --bg-3:#222d3d; --bg-inset:#0c1119; --line:#1f2a3a; --line-strong:#2c394c;
+  --text-0:#f8fafc; --text-1:#dbe2eb; --text-2:#b3becc; --text-dim:#6f7d92;
+  --accent:#22d3ee; --accent-2:#67e8f9; --accent-dim:#0e7490; --accent-glow:rgba(34,211,238,.18); --sel-outline:#ffffff;
+  --ok:#4ade80; --warn:#fbbf24; --err:#f87171; --info:#60a5fa;
+  --cls-exact:#4ade80; --cls-equiv:#fbbf24; --cls-lossy:#f87171; --cls-dropped:#9ca3af; --cls-diff:#e879f9;
+  --k-Drift:#6b7280; --k-Quadrupole:#22d3ee; --k-Sextupole:#84cc16; --k-Octupole:#65a30d; --k-Multipole:#34d399;
+  --k-Bend:#fb923c; --k-Solenoid:#a78bfa; --k-RFCavity:#a3e635; --k-FieldMap:#a3e635; --k-NCells:#a3e635; --k-RFQCell:#67e8f9;
+  --k-Kicker:#f472b6; --k-Collimator:#f87171; --k-Marker:#e5e7eb; --k-Instrument:#f472b6; --k-Foil:#e94f37; --k-Taylor:#60a5fa;
+  --k-Patch:#fbbf24; --k-ReferenceChange:#fbbf24; --k-Freq:#fbbf24; --k-Directive:#9ca3af; --k-Superposition:#a3e635;
+  --blk-T4x4:#3987e5; --blk-disp:#d95926; --blk-path:#199e70; --blk-R56:#c98500; --blk-R5x_z:#d55181; --blk-E_row:#3ddc84; --blk-z_col:#9085e9;
+} }
+:root[data-theme="dark"] {
+  --bg-0:#0b0f15; --bg-1:#11161f; --bg-2:#1a2230; --bg-3:#222d3d; --bg-inset:#0c1119; --line:#1f2a3a; --line-strong:#2c394c;
+  --text-0:#f8fafc; --text-1:#dbe2eb; --text-2:#b3becc; --text-dim:#6f7d92;
+  --accent:#22d3ee; --accent-2:#67e8f9; --accent-dim:#0e7490; --accent-glow:rgba(34,211,238,.18); --sel-outline:#ffffff;
+  --ok:#4ade80; --warn:#fbbf24; --err:#f87171; --info:#60a5fa;
+  --cls-exact:#4ade80; --cls-equiv:#fbbf24; --cls-lossy:#f87171; --cls-dropped:#9ca3af; --cls-diff:#e879f9;
+  --k-Drift:#6b7280; --k-Quadrupole:#22d3ee; --k-Sextupole:#84cc16; --k-Octupole:#65a30d; --k-Multipole:#34d399;
+  --k-Bend:#fb923c; --k-Solenoid:#a78bfa; --k-RFCavity:#a3e635; --k-FieldMap:#a3e635; --k-NCells:#a3e635; --k-RFQCell:#67e8f9;
+  --k-Kicker:#f472b6; --k-Collimator:#f87171; --k-Marker:#e5e7eb; --k-Instrument:#f472b6; --k-Foil:#e94f37; --k-Taylor:#60a5fa;
+  --k-Patch:#fbbf24; --k-ReferenceChange:#fbbf24; --k-Freq:#fbbf24; --k-Directive:#9ca3af; --k-Superposition:#a3e635;
+  --blk-T4x4:#3987e5; --blk-disp:#d95926; --blk-path:#199e70; --blk-R56:#c98500; --blk-R5x_z:#d55181; --blk-E_row:#3ddc84; --blk-z_col:#9085e9;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; font: var(--fs-1)/1.45 var(--font-ui); color: var(--text-1); background: var(--bg-0); overflow: hidden; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--radius); padding: 3px 10px; cursor: pointer; }
+button:hover { border-color: var(--line-strong); }
+button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.primary:disabled, button:disabled { opacity: .5; cursor: default; }
+input[type=text], input[type=number], select, textarea { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 3px 6px; min-width: 0; }
+input[type=number] { width: 8em; }
+a { color: var(--accent); }
+code, pre, .mono { font-family: var(--font-mono); }
+h1, h2, h3 { margin: 0; font-weight: 600; }
+.hidden { display: none !important; }
+.muted { color: var(--text-dim); }
+.num { font-variant-numeric: tabular-nums; }
+
+#app { display: grid; grid-template-rows: 44px 1fr; grid-template-columns: var(--panel-w) 1fr var(--insp-w); height: 100vh; }
+#topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--bg-1); border-bottom: 1px solid var(--line); overflow-x: auto; white-space: nowrap; }
+#topbar .brand { font-weight: 700; font-size: var(--fs-2); color: var(--text-0); margin-right: 4px; }
+#topbar label { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); }
+#topbar input[type=text] { width: 22em; }
+#topbar .spacer { flex: 1; }
+.badge { display: inline-block; min-width: 1.4em; padding: 0 5px; border-radius: 9px; font-size: var(--fs-0); text-align: center; background: var(--bg-3); color: var(--text-2); }
+.badge.warn { background: var(--warn); color: #111; }
+#panel { background: var(--bg-1); border-right: 1px solid var(--line); overflow: auto; padding: 10px; }
+#panel h2 { font-size: var(--fs-2); margin-bottom: 8px; }
+#panel .field { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px; margin: 4px 0; }
+#panel .field label { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
+#panel .hint { color: var(--text-dim); font-size: var(--fs-0); margin: -2px 0 6px; }
+#panel details { margin-top: 8px; }
+#panel details summary { cursor: pointer; color: var(--text-2); }
+#panel .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+#status { margin-top: 8px; color: var(--text-2); min-height: 1.4em; }
+#main { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg-0); }
+#tabs { display: flex; gap: 2px; padding: 6px 10px 0; border-bottom: 1px solid var(--line); background: var(--bg-1); }
+#tabs button { border: 1px solid transparent; border-bottom: none; background: transparent; color: var(--text-2); border-radius: var(--radius) var(--radius) 0 0; padding: 4px 12px; }
+#tabs button[aria-selected="true"] { background: var(--bg-0); border-color: var(--line); color: var(--text-0); margin-bottom: -1px; }
+.tabpanel { flex: 1; min-height: 0; overflow: auto; padding: 8px 10px; }
+#inspector { background: var(--bg-1); border-left: 1px solid var(--line); overflow: auto; position: relative; padding: 10px 12px; }
+#inspector .grip { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; cursor: col-resize; }
+#inspector .grip:hover { background: var(--accent-glow); }
+#inspector h2 { font-size: var(--fs-3); color: var(--text-0); display: flex; align-items: center; gap: 8px; word-break: break-all; }
+#inspector .swatch { width: 14px; height: 14px; border-radius: 3px; flex: none; }
+#inspector .sub { color: var(--text-2); margin: 2px 0 8px; }
+#inspector section { margin-top: 12px; }
+#inspector section > h3 { font-size: var(--fs-1); color: var(--text-2); text-transform: none; border-bottom: 1px solid var(--line); padding-bottom: 3px; margin-bottom: 4px; }
+.props { display: grid; grid-template-columns: minmax(7em, auto) 1fr; gap: 1px 10px; }
+.props .k { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
+.props .v { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.props .v .u { color: var(--text-dim); margin-left: 4px; }
+.props .native { grid-column: 1 / -1; color: var(--text-dim); font-family: var(--font-mono); font-size: var(--fs-0); text-align: right; }
+table.diff { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+table.diff th, table.diff td { text-align: right; padding: 2px 4px; border-bottom: 1px solid var(--line); }
+table.diff th:first-child, table.diff td:first-child { text-align: left; }
+table.diff tr.explained td { color: var(--text-2); }
+table.diff tr.unexplained td { color: var(--cls-diff); font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 4px 0; }
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-2); cursor: pointer; font-size: var(--fs-0); }
+.chip.off { opacity: .45; }
+.chip i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; background: currentColor; }
+.cls { display: inline-block; font-weight: 700; min-width: 1.2em; text-align: center; }
+.cls-EXACT { color: var(--cls-exact); } .cls-EQUIVALENT { color: var(--cls-equiv); } .cls-LOSSY { color: var(--cls-lossy); }
+.cls-DROPPED { color: var(--cls-dropped); } .cls-DIFF { color: var(--cls-diff); }
+.row-head { display: flex; align-items: baseline; gap: 10px; color: var(--text-2); font-size: var(--fs-0); padding: 6px 0 2px; }
+.row-head b { color: var(--text-0); font-size: var(--fs-1); }
+.synwrap { position: relative; border: 1px solid var(--line); background: var(--bg-1); }
+svg.syn { display: block; width: 100%; height: var(--syn-h); touch-action: none; user-select: none; outline: none; }
+svg.syn:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+svg.syn * { pointer-events: none; }
+svg.syn .px { transform: scale(var(--isx), 1); transform-box: view-box; transform-origin: 0 0; }
+svg.syn .el { fill: currentColor; stroke: currentColor; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+svg.syn .el.hollow { fill: none; }
+svg.syn .hatch { fill: none; stroke: currentColor; stroke-width: 1px; vector-effect: non-scaling-stroke; opacity: .7; }
+svg.syn .baseline { stroke: var(--line-strong); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+svg.syn .grid line { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+svg.syn text { font: 10.5px var(--font-ui); fill: var(--text-2); }
+svg.syn .d text { fill: var(--text-1); }
+svg.syn .cls-EQUIVALENT { stroke: var(--cls-equiv); stroke-width: 1.5px; } svg.syn .cls-LOSSY { stroke: var(--cls-lossy); stroke-width: 1.5px; }
+svg.syn .cls-DROPPED { stroke: var(--cls-dropped); stroke-width: 1.5px; } svg.syn .cls-DIFF { stroke: var(--cls-diff); stroke-width: 2px; }
+svg.syn .added { stroke-dasharray: 3 2; }
+svg.syn .halo { fill: var(--accent); opacity: .22; }
+svg.syn .outline { fill: none; stroke: var(--sel-outline); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+svg.syn .linked { stroke: var(--accent-2); stroke-width: 1.5px; vector-effect: non-scaling-stroke; fill: none; }
+svg.syn .scursor { stroke: var(--accent); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+svg.syn.filtered .el:not(.on), svg.syn.filtered .d:not(.on), svg.syn.filtered .hatch:not(.on) { opacity: .18; }
+svg.syn.lod-low .hatch, svg.syn.lod-low .cellticks, svg.syn.lod-low .labels { display: none; }
+svg.axis { display: block; width: 100%; height: 26px; }
+svg.axis text { font: 10.5px var(--font-ui); fill: var(--text-2); }
+svg.axis line { stroke: var(--line-strong); }
+svg.band { display: block; width: 100%; height: 28px; }
+svg.band line { stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+#minimap { position: relative; height: 28px; border: 1px solid var(--line); background: var(--bg-inset); margin-top: 4px; cursor: crosshair; }
+#minimap canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#minimap .viewport { position: absolute; top: 0; bottom: 0; background: var(--accent-glow); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); cursor: grab; }
+#tooltip { position: fixed; z-index: 30; pointer-events: none; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 5px 8px; font-size: var(--fs-0); box-shadow: 0 4px 16px rgba(0,0,0,.25); max-width: 340px; white-space: pre-line; }
+#toasts { position: fixed; right: 12px; bottom: 12px; z-index: 40; display: flex; flex-direction: column; gap: 6px; }
+.toast { background: var(--bg-2); border: 1px solid var(--line-strong); border-left: 4px solid var(--info); border-radius: var(--radius); padding: 6px 10px; max-width: 420px; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+.toast.err { border-left-color: var(--err); } .toast.ok { border-left-color: var(--ok); } .toast.warn { border-left-color: var(--warn); }
+.toast small { display: block; color: var(--text-2); white-space: pre-wrap; }
+#busy { position: fixed; top: 44px; left: 0; right: 0; height: 2px; background: var(--accent); display: none; z-index: 20; }
+#busy.on { display: block; animation: busy 1s linear infinite; }
+@keyframes busy { from { opacity: .3 } 50% { opacity: 1 } to { opacity: .3 } }
+pre.deck { margin: 0; font-size: var(--fs-0); line-height: 1.35; }
+pre.deck .ln { display: block; padding: 0 6px; cursor: pointer; }
+pre.deck .ln::before { content: attr(data-n); display: inline-block; width: 4.5em; color: var(--text-dim); text-align: right; margin-right: 1em; }
+pre.deck .ln:hover { background: var(--bg-3); }
+pre.deck .ln.hit { background: var(--accent-glow); }
+.summary { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.empty { color: var(--text-dim); padding: 40px 20px; text-align: center; }
+.list { border-collapse: collapse; width: 100%; }
+.list th, .list td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.list tr.clickable { cursor: pointer; } .list tr.clickable:hover { background: var(--bg-3); }
+.kbd { font-family: var(--font-mono); font-size: var(--fs-0); border: 1px solid var(--line-strong); border-radius: 3px; padding: 0 4px; }
+svg.floor { display: block; width: 100%; height: 100%; background: var(--bg-1); border: 1px solid var(--line); touch-action: none; }
+svg.floor path.el { fill: none; stroke: currentColor; stroke-width: 6px; vector-effect: non-scaling-stroke; stroke-linecap: butt; }
+svg.floor path.el.drift { stroke-width: 2.5px; }
+svg.floor path.el.thin { stroke-width: 2px; }
+svg.floor path.el.dst { stroke-dasharray: 6 3; }
+svg.floor path.selpath { fill: none; stroke: var(--accent); stroke-width: 14px; opacity: .3; vector-effect: non-scaling-stroke; }
+svg.floor .axis { stroke: var(--line-strong); }
+svg.floor text { font: 10.5px var(--font-ui); fill: var(--text-2); }
+svg.chart { display: block; width: 100%; height: 260px; background: var(--bg-1); border: 1px solid var(--line); }
+svg.chart text { font: 10.5px var(--font-ui); fill: var(--text-2); }
+svg.chart .grid line { stroke: var(--line); }
+svg.chart polyline { fill: none; stroke-width: 1.5px; }
+@media (max-width: 1100px) { #app { grid-template-columns: 1fr; grid-template-rows: 44px auto 1fr auto; } #panel, #inspector { border: none; border-bottom: 1px solid var(--line); max-height: 40vh; } }
+@media (prefers-reduced-motion: reduce) { #busy.on { animation: none; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <span class="brand">lattix</span>
+    <label>Source
+      <input type="text" id="src-path" placeholder="path under the UI root, or pick a sample" list="sample-list" spellcheck="false">
+      <datalist id="sample-list"></datalist>
+    </label>
+    <button id="btn-browse" title="Browse the file picker">Browse…</button>
+    <input type="file" id="file-input" multiple hidden>
+    <input type="file" id="dir-input" webkitdirectory multiple hidden>
+    <button id="btn-folder" title="Upload a folder (deck + field maps)">Folder…</button>
+    <label>Format <select id="src-format"><option value="">auto</option></select></label>
+    <label>Species <select id="opt-species"><option value="">from deck</option></select></label>
+    <label>KE <input type="number" id="opt-ke" step="any" placeholder="from deck" style="width:7em">
+      <select id="opt-ke-unit"><option value="1">eV</option><option value="1e3">keV</option><option value="1e6" selected>MeV</option><option value="1e9">GeV</option></select></label>
+    <label>f <input type="number" id="opt-freq" step="any" placeholder="from deck" style="width:6em"> MHz</label>
+    <label>Line <input type="text" id="opt-line" placeholder="default" list="line-list" style="width:8em"><datalist id="line-list"></datalist></label>
+    <button id="btn-read" class="primary">Read</button>
+    <span id="src-warn" class="badge hidden" title="warnings"></span>
+    <span class="spacer"></span>
+    <label>Theme <select id="theme"><option value="auto">auto</option><option value="light">light</option><option value="dark">dark</option></select></label>
+    <button id="btn-help" title="keyboard shortcuts">?</button>
+  </header>
+  <div id="busy"></div>
+
+  <aside id="panel">
+    <h2>Translate</h2>
+    <div class="field"><label for="dst-format">Target</label><select id="dst-format"></select></div>
+    <div class="hint" id="dst-desc"></div>
+    <div id="dst-options"></div>
+    <details id="dst-advanced"><summary>Advanced options</summary><div id="dst-options-adv"></div></details>
+    <div class="field"><label for="opt-strict">strict (fail on the first LOSSY/DROPPED)</label><input type="checkbox" id="opt-strict"></div>
+    <div class="actions"><button id="btn-translate" class="primary" disabled>Translate</button></div>
+    <div id="status"></div>
+    <h2 style="margin-top:14px">Downloads</h2>
+    <div class="actions" id="downloads"><button data-what="deck" disabled>Deck</button><button data-what="fidelity" disabled>Fidelity JSON</button><button data-what="zip" disabled>Zip</button><button data-what="source" disabled>Source</button></div>
+    <div id="side-files" class="hint"></div>
+    <details id="reader-advanced"><summary>Reader options</summary><div id="read-options-adv"></div></details>
+  </aside>
+
+  <main id="main">
+    <div id="tabs" role="tablist">
+      <button role="tab" data-tab="synoptic" aria-selected="true">Synoptic</button>
+      <button role="tab" data-tab="floor">Floor plan</button>
+      <button role="tab" data-tab="deck">Deck text</button>
+      <button role="tab" data-tab="fidelity">Fidelity</button>
+      <button role="tab" data-tab="validation">Validation</button>
+    </div>
+    <section class="tabpanel" id="tab-synoptic" role="tabpanel">
+      <div class="chips" id="chips"></div>
+      <div class="summary" id="summary">
+        <input type="text" id="search" placeholder="search element  /" style="width:16em">
+        <span id="summary-chips"></span>
+        <span class="spacer" style="flex:1"></span>
+        <span class="muted" id="s-readout"></span>
+        <button id="btn-fit" title="fit (f)">fit</button>
+      </div>
+      <div class="row-head" id="src-head"><b>SOURCE</b><span class="muted">no lattice yet — open a deck, paste a path, or pick a sample</span></div>
+      <div class="synwrap"><svg class="syn" id="syn-src" data-side="src" tabindex="0" preserveAspectRatio="none" role="img" aria-label="source beam line"></svg></div>
+      <svg class="band" id="band" preserveAspectRatio="none"></svg>
+      <div class="row-head" id="dst-head"><b>TARGET</b><span class="muted">translate to see the written deck read back</span></div>
+      <div class="synwrap"><svg class="syn" id="syn-dst" data-side="dst" tabindex="0" preserveAspectRatio="none" role="img" aria-label="target beam line"></svg><svg id="strip" preserveAspectRatio="none" style="display:block;width:100%;height:4px"></svg></div>
+      <svg class="axis" id="axis"></svg>
+      <div id="minimap"><canvas></canvas><div class="viewport"></div></div>
+    </section>
+    <section class="tabpanel hidden" id="tab-floor" role="tabpanel">
+      <div class="summary"><span class="muted">top view: horizontal position X up, path Z to the right; source solid, target dashed</span><span class="spacer" style="flex:1"></span><button id="btn-floor-fit">fit</button></div>
+      <div style="height:calc(100% - 30px)"><svg class="floor" id="floor" tabindex="0"></svg></div>
+    </section>
+    <section class="tabpanel hidden" id="tab-deck" role="tabpanel">
+      <div class="summary"><label><input type="radio" name="deck-side" value="src" checked> source</label><label><input type="radio" name="deck-side" value="dst"> written deck</label><span id="deck-name" class="muted"></span></div>
+      <pre class="deck" id="deck"></pre>
+    </section>
+    <section class="tabpanel hidden" id="tab-fidelity" role="tabpanel">
+      <div class="summary" id="fid-filters"></div>
+      <div id="fid-body" class="empty">translate a deck to see its ledger</div>
+    </section>
+    <section class="tabpanel hidden" id="tab-validation" role="tabpanel">
+      <div class="summary">
+        <span>Engines</span><span id="engines" class="chips"></span>
+        <button id="btn-oracles-refresh" title="probe again">refresh</button>
+      </div>
+      <div class="summary" id="beam-form"></div>
+      <div class="actions"><button id="btn-validate" class="primary" disabled>Validate with engines</button><button id="btn-validate-cancel" disabled>cancel</button><span id="val-status" class="muted"></span></div>
+      <div id="val-body"></div>
+    </section>
+  </main>
+
+  <aside id="inspector">
+    <div class="grip" id="grip"></div>
+    <div id="insp-body" class="empty">click an element</div>
+  </aside>
+</div>
+<div id="tooltip" class="hidden"></div>
+<div id="toasts"></div>
+<script type="module">
+/* PURE-BEGIN */
+// Geometry, glyphs and formatting with no DOM: tested under node (tests/ui/test_index_html.py).
+const K = 1000;                                   // world x unit: millimetre
+const xw = s => s * K;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function viewBoxOf(view, H) { return `${xw(view.s0)} 0 ${Math.max(1e-6, xw(view.s1 - view.s0))} ${H}`; }
+function pxPerWorld(view, Wpx) { return Wpx / Math.max(1e-12, (view.s1 - view.s0) * K); }
+function pxOf(view, Wpx, s) { return (s - view.s0) / Math.max(1e-12, view.s1 - view.s0) * Wpx; }
+function sOf(view, Wpx, px) { return view.s0 + px / Math.max(1, Wpx) * (view.s1 - view.s0); }
+function clampView(view, limits) {
+  const span = clamp(view.s1 - view.s0, limits.minSpan, limits.maxSpan);
+  let s0 = clamp(view.s0, limits.sMin, Math.max(limits.sMin, limits.sMax - span));
+  return { s0, s1: s0 + span };
+}
+function zoomAt(view, Wpx, px, factor, limits) {
+  const span = clamp((view.s1 - view.s0) / factor, limits.minSpan, limits.maxSpan);
+  const anchor = sOf(view, Wpx, px);
+  const s0 = anchor - (px / Math.max(1, Wpx)) * span;
+  return clampView({ s0, s1: s0 + span }, limits);
+}
+function panView(view, Wpx, dpx, limits) {
+  const span = view.s1 - view.s0;
+  const ds = -dpx / Math.max(1, Wpx) * span;
+  return clampView({ s0: view.s0 + ds, s1: view.s1 + ds }, limits);
+}
+function fitView(L, limits) { return clampView({ s0: -0.01 * Math.max(L, 1e-3), s1: 1.01 * Math.max(L, 1e-3) }, limits); }
+function limitsFor(L) {
+  const len = Math.max(L, 1e-3);
+  return { minSpan: Math.min(0.02, len), maxSpan: 1.1 * len, sMin: -0.05 * len, sMax: 1.05 * len };
+}
+// {1,2,5}·10ⁿ steps such that step·pxPerM ≥ minPx
+function axisTicks(view, Wpx, minPx = 70) {
+  const span = Math.max(1e-9, view.s1 - view.s0);
+  const pxPerM = Wpx / span;
+  const raw = minPx / pxPerM;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  let step = mag;
+  for (const m of [1, 2, 5, 10]) { if (m * mag >= raw) { step = m * mag; break; } }
+  const decimals = Math.max(0, -Math.floor(Math.log10(step)));
+  const major = [];
+  const first = Math.ceil(view.s0 / step) * step;
+  for (let s = first; s <= view.s1 + 1e-12; s += step) major.push(+s.toFixed(12));
+  const minorStep = step / 5;
+  const minor = [];
+  if (minorStep * pxPerM >= 14) {
+    const f0 = Math.ceil(view.s0 / minorStep) * minorStep;
+    for (let s = f0; s <= view.s1 + 1e-12; s += minorStep) { const r = +s.toFixed(12); if (!major.includes(r)) minor.push(r); }
+  }
+  return { step, decimals, major, minor };
+}
+// survey convention (lattix.ir.lattice.survey): direction (sin θ, 0, cos θ) in (X, Z); a positive angle turns toward −X
+function arcPoints(x0, z0, theta0, L, angle, n) {
+  const pts = [];
+  const N = Math.max(2, n || Math.ceil(Math.abs(angle) / (2 * Math.PI / 180)));
+  if (Math.abs(angle) < 1e-12) {
+    for (let i = 0; i <= N; i++) { const t = L * i / N; pts.push([x0 + t * Math.sin(theta0), z0 + t * Math.cos(theta0)]); }
+    return pts;
+  }
+  const rho = L / angle;                                   // signed
+  for (let i = 0; i <= N; i++) {
+    const a = angle * i / N;
+    // local frame: ez = (sin θ, cos θ), ex = (cos θ, −sin θ); a positive angle rotates ez toward −ex
+    const lx = rho * (Math.cos(a) - 1);                     // ≤ 0 for a positive angle: toward −X
+    const lz = rho * Math.sin(a);
+    pts.push([x0 + lx * Math.cos(theta0) + lz * Math.sin(theta0), z0 - lx * Math.sin(theta0) + lz * Math.cos(theta0)]);
+  }
+  return pts;
+}
+// row geometry (H = 120): baseline yb = 0.55 H, full half-height hF = 0.38 H
+const ROW = { H: 120, yb: 66, hF: 45.6 };
+const hQ = (k1, k1max) => ROW.hF * (0.35 + 0.65 * Math.min(1, Math.abs(k1) / Math.max(1e-30, k1max)));
+const hRF = (V, Vmax) => ROW.hF * (0.40 + 0.60 * Math.min(1, Math.abs(V) / Math.max(1e-30, Vmax)));
+const ZERO_LENGTH_KEEP = new Set(["Marker", "Instrument", "Kicker", "Collimator", "Foil", "RFCavity", "Taylor", "Patch", "ReferenceChange", "Freq", "Multipole", "Solenoid"]);
+function glyphFor(row, def, maxima) {
+  // returns {body: {tag, attrs, cls}, px: [{tag, attrs, text?}], hatch: pathD|null, badge: text|null, hidden: bool}
+  const g = row.glyph || {}, kind = row.kind, x0 = xw(row.s_in), x1 = xw(row.s_out), w = Math.max(0, x1 - x0), xc = (x0 + x1) / 2;
+  const yb = ROW.yb, hF = ROW.hF, thin = w <= 1e-6;
+  const out = { body: null, px: [], hatch: null, badge: null, hidden: false, cx: xc };
+  const rect = (y, h, extra) => ({ tag: "rect", attrs: { x: x0, y, width: Math.max(w, 1e-6), height: h, ...(extra || {}) } });
+  const lozenge = (h) => { const d = Math.min(0.3 * w, 1e9); return { tag: "polygon", attrs: { points: `${x0},${yb} ${x0 + d},${yb - h} ${x1 - d},${yb - h} ${x1},${yb} ${x1 - d},${yb + h} ${x0 + d},${yb + h}` } }; };
+  const pxLozenge = (h, wpx) => ({ tag: "polygon", attrs: { points: `${-wpx / 2},0 ${-wpx / 4},${-h} ${wpx / 4},${-h} ${wpx / 2},0 ${wpx / 4},${h} ${-wpx / 4},${h}`, transform: `translate(0 ${yb})` } });
+  const m = maxima || {};
+  switch (kind) {
+    case "Drift": out.body = rect(yb - 1, 2); break;
+    case "Quadrupole": {
+      const h = hQ(g.k1 || 0, m.k1 || 1);
+      out.body = g.sign > 0 ? rect(yb - h, h) : (g.sign < 0 ? rect(yb, h) : rect(yb - 4, 8));
+      if (g.skew && w > 0) out.hatch = hatchPath(x0, x1, g.sign > 0 ? yb - h : yb, h, 6, "diag");
+      if (g.order) out.badge = "+" + g.order;
+      break;
+    }
+    case "Sextupole": case "Octupole": {
+      const q = kind === "Sextupole" ? Math.abs((row.contrib || {}).BnL2 || 0) / (m.k2 || 1) : Math.abs((row.contrib || {}).BnL3 || 0) / (m.k3 || 1);
+      const h = 0.6 * hF * (0.35 + 0.65 * Math.min(1, q)) * (kind === "Octupole" ? 0.8 : 1);
+      out.body = g.sign >= 0 ? rect(yb - h, h) : rect(yb, h);
+      break;
+    }
+    case "Multipole": {
+      out.body = thin ? null : rect(yb - 3, 6);
+      if (thin) out.px.push({ tag: "rect", attrs: { x: -1.5, y: yb - 3, width: 3, height: 6 } });
+      out.badge = (g.order == null ? "" : String(g.order)) + (g.skew ? "s" : "");
+      break;
+    }
+    case "Bend": {
+      const a = g.angle || 0, d = 0.18 * w;
+      if (g.rect) {
+        const sh = 0.12 * w * Math.sign(a || 1);
+        out.body = { tag: "polygon", attrs: { points: `${x0 + sh},${yb - hF} ${x1 + sh},${yb - hF} ${x1 - sh},${yb + hF} ${x0 - sh},${yb + hF}` } };
+      } else if (a >= 0) {
+        out.body = { tag: "polygon", attrs: { points: `${x0},${yb - hF} ${x1},${yb - hF} ${x1 - d},${yb + hF} ${x0 + d},${yb + hF}` } };
+      } else {
+        out.body = { tag: "polygon", attrs: { points: `${x0 + d},${yb - hF} ${x1 - d},${yb - hF} ${x1},${yb + hF} ${x0},${yb + hF}` } };
+      }
+      if (g.plane === "v") { out.badge = "V"; out.hatch = hatchPath(x0, x1, yb - hF, 2 * hF, 8, "vert"); }
+      else if (g.gradient) out.badge = "g";
+      break;
+    }
+    case "Solenoid":
+      out.body = rect(yb - hF, 2 * hF);
+      out.hatch = hatchPath(x0, x1, yb - hF, 2 * hF, Math.max(3, Math.min(40, Math.round(w / 50))), "coil");
+      break;
+    case "RFCavity": case "NCells": case "RFQCell": case "Superposition": {
+      const h = hRF(g.volt || 0, m.voltage_V || 1);
+      if (thin) out.px.push(pxLozenge(h, 10)); else out.body = lozenge(h);
+      if (g.tw) out.badge = "→";
+      if (kind === "NCells" && g.n_cell > 1 && w > 0) out.hatch = ticksPath(x0, x1, yb - h, 2 * h, g.n_cell);
+      if (kind === "RFQCell" && out.body) out.body.attrs["stroke-dasharray"] = "4 2";
+      if (g.sync === false && out.body) out.body.attrs["stroke-dasharray"] = "2 2";
+      break;
+    }
+    case "FieldMap": {
+      const mk = g.map_kind;
+      if (mk === "solenoid") { out.body = rect(yb - hF, 2 * hF, { "stroke-dasharray": "3 2" }); }
+      else if (mk === "quad") { const h = hQ(1, 1); out.body = rect(yb - h, 2 * h, { "stroke-dasharray": "3 2" }); }
+      else { const h = hRF(g.volt || 0, m.voltage_V || 1); out.body = { tag: "ellipse", attrs: { cx: xc, cy: yb, rx: Math.max(w / 2, 1e-6), ry: h } }; }
+      if (!g.integrated) out.badge = "?";
+      break;
+    }
+    case "Kicker": {
+      if (thin) out.px.push({ tag: "line", attrs: { x1: 0, x2: 0, y1: yb - 0.5 * hF, y2: yb + 0.5 * hF } });
+      else out.body = rect(yb - 0.5 * hF, hF, { class: "hollow" });
+      const arrows = [];
+      if (g.hx > 0) arrows.push("M-8 " + yb + " h14 m-4 -4 l4 4 -4 4"); if (g.hx < 0) arrows.push("M8 " + yb + " h-14 m4 -4 l-4 4 4 4");
+      if (g.vy > 0) arrows.push("M0 " + (yb + 8) + " v-14 m-4 4 l4 -4 4 4"); if (g.vy < 0) arrows.push("M0 " + (yb - 8) + " v14 m-4 -4 l4 4 4 -4");
+      if (!arrows.length) out.px.push({ tag: "circle", attrs: { cx: 0, cy: yb, r: 4, fill: "none" } });
+      for (const d of arrows) out.px.push({ tag: "path", attrs: { d, fill: "none" } });
+      if (g.electric) out.badge = "E";
+      break;
+    }
+    case "Collimator": {
+      if (!thin) out.body = rect(yb - 0.6 * hF, 1.2 * hF, { class: "hollow" });
+      out.px.push({ tag: "path", attrs: { d: `M-6 ${yb - 0.6 * hF} h-4 v${1.2 * hF} h4`, fill: "none" }, at: "in" });
+      out.px.push({ tag: "path", attrs: { d: `M6 ${yb - 0.6 * hF} h4 v${1.2 * hF} h-4`, fill: "none" }, at: "out" });
+      break;
+    }
+    case "Marker": out.px.push({ tag: "line", attrs: { x1: 0, x2: 0, y1: 12, y2: ROW.H - 8 } }); break;
+    case "Instrument": {
+      const fam = String(g.family || "").toUpperCase();
+      out.px.push({ tag: "line", attrs: { x1: 0, x2: 0, y1: yb - 0.5 * hF, y2: yb } });
+      const top = yb - 0.5 * hF - 5;
+      if (/BPM|MONITOR/.test(fam)) out.px.push({ tag: "circle", attrs: { cx: 0, cy: top, r: 4, fill: "none" } });
+      else if (/SIZE|PROFILE|SCREEN|BTV|LASER/.test(fam)) out.px.push({ tag: "rect", attrs: { x: -4, y: top - 4, width: 8, height: 8, fill: "none" } });
+      else if (/ACCT|DCCT|RWCM|CURRENT|BCT/.test(fam)) out.px.push({ tag: "path", attrs: { d: `M0 ${top - 5} l5 5 -5 5 -5 -5 z`, fill: "none" } });
+      else if (/PHASE|EMIT/.test(fam)) out.px.push({ tag: "path", attrs: { d: `M0 ${top - 5} l5 9 h-10 z`, fill: "none" } });
+      break;
+    }
+    case "Foil":
+      if (thin) out.px.push({ tag: "rect", attrs: { x: -3, y: yb - 0.4 * hF, width: 6, height: 0.8 * hF } }); else out.body = rect(yb - 0.4 * hF, 0.8 * hF);
+      break;
+    case "Taylor": {
+      const sc = g.rf_focusing ? 0.6 : 1;
+      if (thin) out.px.push({ tag: "rect", attrs: { x: -4 * sc, y: yb - 0.45 * hF * sc, width: 8 * sc, height: 0.9 * hF * sc, fill: "none" } });
+      else out.body = rect(yb - 0.45 * hF * sc, 0.9 * hF * sc, { class: "hollow" });
+      out.badge = "M";
+      break;
+    }
+    case "Patch": out.px.push({ tag: "path", attrs: { d: `M-6 ${yb + 6} l5 -12 M1 ${yb + 6} l5 -12`, fill: "none" } }); break;
+    case "ReferenceChange": case "Freq":
+      out.px.push({ tag: "path", attrs: { d: `M0 ${yb} v-30 l12 5 -12 5`, fill: "none" } });
+      out.badge = kind === "Freq" ? "f" : "E";
+      break;
+    case "Directive": out.hidden = true; break;
+    default: out.px.push({ tag: "line", attrs: { x1: 0, x2: 0, y1: yb - 10, y2: yb + 10 } });
+  }
+  return out;
+}
+function hatchPath(x0, x1, y, h, n, style) {
+  const parts = [];
+  const w = x1 - x0;
+  if (w <= 0) return null;
+  const step = w / Math.max(1, n);
+  for (let i = 0; i <= n; i++) {
+    const x = x0 + i * step;
+    if (style === "vert") parts.push(`M${x} ${y} v${h}`);
+    else if (style === "coil") parts.push(`M${x} ${y} L${Math.min(x1, x + 0.6 * step)} ${y + h}`);
+    else parts.push(`M${x} ${y + h} L${Math.min(x1, x + step)} ${y}`);
+  }
+  return parts.join(" ");
+}
+function ticksPath(x0, x1, y, h, n) {
+  const parts = [];
+  for (let i = 1; i < n; i++) { const x = x0 + (x1 - x0) * i / n; parts.push(`M${x} ${y + 0.15 * h} v${0.7 * h}`); }
+  return parts.join(" ");
+}
+// greedy two-row label layout; items: [{i, cx (px), w (px), keep}], returns Map i -> row (0|1)
+function layoutLabels(items, gap = 4) {
+  const rows = [-Infinity, -Infinity];
+  const out = new Map();
+  for (const it of [...items].sort((a, b) => a.cx - b.cx)) {
+    const left = it.cx - it.w / 2, right = it.cx + it.w / 2;
+    for (let r = 0; r < 2; r++) { if (left >= rows[r] + gap) { rows[r] = right; out.set(it.i, r); break; } }
+  }
+  return out;
+}
+const fmt = {
+  num(v, sig = 6) {
+    if (v == null || v === "" || Number.isNaN(v)) return "—";
+    if (typeof v !== "number") return String(v);
+    if (v === 0) return "0";
+    const a = Math.abs(v);
+    let s = (a >= 1e6 || a < 1e-4) ? v.toExponential(sig - 1) : v.toPrecision(sig);
+    if (s.includes("e")) { let [m, e] = s.split("e"); m = m.replace(/\.?0+$/, ""); return m + "e" + e.replace("+", ""); }
+    return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+  },
+  si(v, unit, sig = 5) {
+    if (v == null || Number.isNaN(v)) return "—";
+    const a = Math.abs(v);
+    const P = [[1e9, "G"], [1e6, "M"], [1e3, "k"], [1, ""], [1e-3, "m"], [1e-6, "µ"], [1e-9, "n"]];
+    for (const [f, p] of P) if (a >= f || (f === 1e-9)) return fmt.num(v / f, sig) + " " + p + unit;
+    return fmt.num(v, sig) + " " + unit;
+  },
+  m(v) { return v == null ? "—" : (Math.abs(v) < 1 && v !== 0 ? fmt.num(v * 1e3, 5) + " mm" : fmt.num(v, 6) + " m"); },
+  deg(rad) { return rad == null ? "—" : fmt.num(rad * 180 / Math.PI, 5) + "°"; },
+};
+const PURE = { K, xw, clamp, viewBoxOf, pxPerWorld, pxOf, sOf, clampView, zoomAt, panView, fitView, limitsFor, axisTicks, arcPoints, ROW, hQ, hRF, ZERO_LENGTH_KEEP, glyphFor, hatchPath, ticksPath, layoutLabels, fmt };
+if (typeof module !== "undefined" && module.exports) module.exports = PURE;
+/* PURE-END */
+// ------------------------------------------------------------------------------------------ api
+const api = {
+  token: new URLSearchParams(location.search).get("token") || "",
+  headers() { return { "X-Lattix-Token": this.token }; },
+  async _res(r) {
+    const ct = r.headers.get("Content-Type") || "";
+    const body = ct.startsWith("application/json") ? await r.json() : await r.text();
+    if (!r.ok) { const e = new Error((body && body.error && body.error.message) || `HTTP ${r.status}`); e.status = r.status; e.body = body; throw e; }
+    return body;
+  },
+  async get(path) { return this._res(await fetch(path, { headers: this.headers() })); },
+  async post(path, body) { return this._res(await fetch(path, { method: "POST", headers: { ...this.headers(), "Content-Type": "application/json" }, body: JSON.stringify(body || {}) })); },
+  async put(path, raw) { return this._res(await fetch(path, { method: "PUT", headers: this.headers(), body: raw })); },
+  async del(path) { return this._res(await fetch(path, { method: "DELETE", headers: this.headers() })); },
+  url(path) { return path + (path.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(this.token); },
+};
+// ------------------------------------------------------------------------------------------ store
+const store = {
+  session: null, formats: null, catalog: {}, samples: [],
+  source: null, translation: null, target: null, comparison: null,
+  view: { s0: 0, s1: 1 }, limits: limitsFor(1),
+  selection: null,            // {side: "src"|"dst", index}
+  hover: null, filter: new Set(), classFilter: null, cursorS: null, tab: "synoptic", theme: "auto",
+  oracles: null, job: null, validation: null, sourceText: null,
+  _subs: {},
+  on(topic, fn) { (this._subs[topic] ||= []).push(fn); },
+  emit(topic, ...args) { for (const fn of this._subs[topic] || []) { try { fn(...args); } catch (e) { console.error(topic, e); } } },
+};
+// ------------------------------------------------------------------------------------------ ui helpers
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const SVG_NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs, parent) { const el = document.createElementNS(SVG_NS, tag); for (const k in attrs || {}) if (attrs[k] != null) el.setAttribute(k, attrs[k]); if (parent) parent.appendChild(el); return el; }
+function h(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  for (const k in attrs || {}) { const v = attrs[k]; if (k === "class") el.className = v; else if (k === "text") el.textContent = v; else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else if (v != null) el.setAttribute(k, v); }
+  for (const c of children.flat()) if (c != null) el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  return el;
+}
+const ui = {
+  toast(kind, msg, detail) {
+    const t = h("div", { class: "toast " + kind }, msg, detail ? h("small", { text: detail }) : null);
+    $("#toasts").appendChild(t);
+    setTimeout(() => t.remove(), kind === "err" ? 12000 : 6000);
+  },
+  busy(on, text) { $("#busy").classList.toggle("on", !!on); if (text != null) $("#status").textContent = text; },
+  tab(name) {
+    store.tab = name;
+    for (const b of $$("#tabs [role=tab]")) b.setAttribute("aria-selected", b.dataset.tab === name ? "true" : "false");
+    for (const p of $$(".tabpanel")) p.classList.toggle("hidden", p.id !== "tab-" + name);
+    store.emit("tab", name);
+  },
+  theme(v) {
+    store.theme = v;
+    document.documentElement.setAttribute("data-theme", v);
+    try { localStorage.setItem("lattix.theme", v); } catch (e) { /* private mode */ }
+    store.emit("theme", v);
+  },
+  cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); },
+  kindColor(kind) { return `var(--k-${kind})`; },
+};
+function debounce(fn, ms) { let t = null; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+function rafOnce(fn) { let pending = false; return (...a) => { if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; fn(...a); }); }; }
+// ------------------------------------------------------------------------------------------ synoptic
+class Synoptic {
+  constructor(svg, side) {
+    this.svg = svg; this.side = side; this.vm = null; this.rows = []; this.sIn = null; this.sOut = null;
+    this.nodes = []; this.deco = []; this.labels = []; this.labelPool = []; this.cls = new Map(); this.added = new Set();
+    this.layers = {};
+    for (const name of ["grid", "baseline", "bodies", "hatch", "deco", "labels", "links", "sel", "cursor"]) this.layers[name] = svgEl("g", { class: name }, svg);
+    this.measure = document.createElement("canvas").getContext("2d");
+    this.measure.font = "10.5px " + ui.cssVar("--font-ui");
+    this.textW = new Map();
+    this._bind();
+  }
+  get W() { return this.svg.clientWidth || 800; }
+  setLattice(vm) {
+    this.vm = vm; this.rows = vm ? vm.rows : [];
+    const n = this.rows.length;
+    this.sIn = new Float64Array(n); this.sOut = new Float64Array(n);
+    for (let i = 0; i < n; i++) { this.sIn[i] = this.rows[i].s_in; this.sOut[i] = this.rows[i].s_out; }
+    this.build();
+  }
+  build() {
+    for (const k of ["bodies", "hatch", "deco", "labels", "links", "sel"]) this.layers[k].replaceChildren();
+    this.nodes = []; this.deco = []; this.labels = []; this.labelPool = [];
+    const L = this.rows.length ? this.rows[this.rows.length - 1].s_out : 1;
+    this.layers.baseline.replaceChildren(svgEl("line", { class: "baseline", x1: xw(-L), x2: xw(2 * L), y1: ROW.yb, y2: ROW.yb }));
+    if (!this.vm) return;
+    const fb = document.createDocumentFragment(), fh = document.createDocumentFragment(), fd = document.createDocumentFragment();
+    const maxima = this.vm.header.maxima || {};
+    for (const row of this.rows) {
+      const gl = glyphFor(row, this.vm.definitions[row.def], maxima);
+      const kcls = "k-" + row.kind;
+      let body = null;
+      if (gl.body && !gl.hidden) {
+        body = svgEl(gl.body.tag, { ...gl.body.attrs, class: "el " + kcls + (gl.body.attrs.class ? " " + gl.body.attrs.class : ""), "data-i": row.i });
+        body.style.color = ui.kindColor(row.kind);
+        fb.appendChild(body);
+      }
+      if (gl.hatch) { const p = svgEl("path", { d: gl.hatch, class: "hatch " + kcls + (row.kind === "NCells" ? " cellticks" : ""), "data-i": row.i }); p.style.color = ui.kindColor(row.kind); fh.appendChild(p); }
+      let dnode = null;
+      if ((gl.px.length || gl.badge) && !gl.hidden) {
+        dnode = svgEl("g", { class: "d " + kcls, "data-i": row.i, transform: `translate(${gl.cx} 0)` });
+        dnode.style.color = ui.kindColor(row.kind);
+        const px = svgEl("g", { class: "px" }, dnode);
+        for (const part of gl.px) {
+          if (part.at === "in" || part.at === "out") {   // brackets sit at the element ends, not its centre
+            const gx = svgEl("g", { transform: `translate(${part.at === "in" ? xw(row.s_in) - gl.cx : xw(row.s_out) - gl.cx} 0)` }, dnode);
+            gx.setAttribute("class", "px-end");
+            const inner = svgEl("g", { class: "px" }, gx);
+            svgEl(part.tag, { ...part.attrs, "vector-effect": "non-scaling-stroke", stroke: "currentColor" }, inner);
+            continue;
+          }
+          const el = svgEl(part.tag, { ...part.attrs, "vector-effect": "non-scaling-stroke", stroke: "currentColor" }, px);
+          if (part.attrs.fill === undefined && part.tag !== "line" && part.tag !== "path") el.setAttribute("fill", "currentColor");
+        }
+        if (gl.badge) { const t = svgEl("text", { x: 0, y: ROW.yb - ROW.hF - 4, "text-anchor": "middle" }, px); t.textContent = gl.badge; }
+        fd.appendChild(dnode);
+      }
+      this.nodes[row.i] = body; this.deco[row.i] = dnode;
+    }
+    this.layers.bodies.appendChild(fb); this.layers.hatch.appendChild(fh); this.layers.deco.appendChild(fd);
+    this.applyClasses();
+    this.setView(store.view);
+  }
+  setView(view) {
+    if (!this.vm) return;
+    const W = this.W;
+    this.svg.setAttribute("viewBox", viewBoxOf(view, ROW.H));
+    const sx = pxPerWorld(view, W);
+    this.svg.style.setProperty("--isx", String(1 / sx));
+    const meanPx = this.rows.length ? (this.rows[this.rows.length - 1].s_out - this.rows[0].s_in) * K * sx / this.rows.length : 1e9;
+    this.svg.classList.toggle("lod-low", meanPx < 6);
+    this.drawGrid(view);
+    this.drawSelection();
+    this.drawCursor();
+    this.relayoutDebounced();
+  }
+  drawGrid(view) {
+    const g = this.layers.grid; g.replaceChildren();
+    const t = axisTicks(view, this.W);
+    for (const s of t.major) svgEl("line", { x1: xw(s), x2: xw(s), y1: 0, y2: ROW.H }, g);
+  }
+  relayoutDebounced = debounce(() => this.relayout(), 60);
+  relayout() {
+    if (!this.vm) return;
+    const view = store.view, W = this.W, sx = pxPerWorld(view, W);
+    const items = [];
+    for (const row of this.rows) {
+      if (row.kind === "Directive") continue;
+      if (row.s_out < view.s0 || row.s_in > view.s1) continue;
+      const wpx = (row.s_out - row.s_in) * K * sx;
+      const tw = this.textWidth(row.name);
+      const keep = row.L <= 1e-12 && ZERO_LENGTH_KEEP.has(row.kind);
+      if (wpx >= tw + 6 || keep || (store.selection && store.selection.side === this.side && store.selection.index === row.i)) items.push({ i: row.i, cx: pxOf(view, W, (row.s_in + row.s_out) / 2), w: tw, name: row.name });
+      if (items.length > 1200) break;
+    }
+    const placed = layoutLabels(items);
+    const g = this.layers.labels; g.replaceChildren();
+    let n = 0;
+    for (const it of items) {
+      const r = placed.get(it.i); if (r == null) continue;
+      if (n++ > 400) break;
+      const gx = svgEl("g", { class: "d", transform: `translate(${xw((this.rows[it.i].s_in + this.rows[it.i].s_out) / 2)} 0)` }, g);
+      const px = svgEl("g", { class: "px" }, gx);
+      const t = svgEl("text", { x: 0, y: r === 0 ? 12 : 24, "text-anchor": "middle" }, px);
+      t.textContent = it.name;
+    }
+  }
+  textWidth(name) { let w = this.textW.get(name); if (w == null) { w = this.measure.measureText(name).width; this.textW.set(name, w); } return w; }
+  // classes: fidelity colouring (target side) and type filter
+  setClasses(map, added) { this.cls = map || new Map(); this.added = added || new Set(); this.applyClasses(); }
+  applyClasses() {
+    for (let i = 0; i < this.rows.length; i++) {
+      const cls = this.cls.get(i);
+      for (const node of [this.nodes[i], this.deco[i]]) {
+        if (!node) continue;
+        node.classList.remove("cls-EQUIVALENT", "cls-LOSSY", "cls-DROPPED", "cls-DIFF", "added");
+        if (cls && cls !== "EXACT") node.classList.add("cls-" + cls);
+        if (this.added.has(i)) node.classList.add("added");
+      }
+    }
+    this.applyFilter();
+  }
+  applyFilter() {
+    const active = store.filter.size > 0 || store.classFilter;
+    this.svg.classList.toggle("filtered", !!active);
+    if (!active) { for (const n of [...this.nodes, ...this.deco]) n && n.classList.remove("on"); return; }
+    for (let i = 0; i < this.rows.length; i++) {
+      const row = this.rows[i];
+      let on = store.filter.size ? store.filter.has(row.kind) : true;
+      if (on && store.classFilter) on = (this.cls.get(i) || "EXACT") === store.classFilter;
+      for (const n of [this.nodes[i], this.deco[i]]) n && n.classList.toggle("on", on);
+    }
+  }
+  drawSelection() {
+    const g = this.layers.sel; g.replaceChildren();
+    const sel = store.selection;
+    const links = this.layers.links; links.replaceChildren();
+    if (!this.vm) return;
+    const draw = (i, cls) => {
+      const row = this.rows[i]; if (!row) return;
+      const x0 = xw(row.s_in), x1 = xw(row.s_out);
+      const pad = 3 / pxPerWorld(store.view, this.W);
+      if (cls === "outline") { svgEl("rect", { class: "halo", x: x0 - 2 * pad, y: 4, width: Math.max(x1 - x0 + 4 * pad, 6 * pad), height: ROW.H - 8 }, g); }
+      svgEl("rect", { class: cls, x: x0 - pad, y: 6, width: Math.max(x1 - x0 + 2 * pad, 4 * pad), height: ROW.H - 12 }, cls === "outline" ? g : links);
+    };
+    if (sel && sel.side === this.side) draw(sel.index, "outline");
+    if (sel && store.comparison) {
+      const linked = linkedIndices(sel, this.side);
+      for (const j of linked) draw(j, "linked");
+    }
+  }
+  drawCursor() {
+    const g = this.layers.cursor; g.replaceChildren();
+    if (store.cursorS != null) svgEl("line", { class: "scursor", x1: xw(store.cursorS), x2: xw(store.cursorS), y1: 0, y2: ROW.H }, g);
+  }
+  // hit testing in JS: the thick element containing s, thin candidates within 4 px
+  hit(px, py) {
+    if (!this.vm || !this.rows.length) return null;
+    const view = store.view, W = this.W;
+    const s = sOf(view, W, px);
+    const cands = [];
+    for (let i = 0; i < this.rows.length; i++) {
+      const row = this.rows[i];
+      if (row.kind === "Directive") continue;
+      if (row.L <= 1e-12) { if (Math.abs(pxOf(view, W, row.s_in) - px) <= 5) cands.push(i); }
+    }
+    let thick = null;
+    let lo = 0, hi = this.rows.length - 1;                       // binary search by s_in
+    while (lo <= hi) { const mid = (lo + hi) >> 1; if (this.sIn[mid] <= s) lo = mid + 1; else hi = mid - 1; }
+    for (let i = Math.min(hi, this.rows.length - 1); i >= 0 && i > hi - 40; i--) { if (this.rows[i].L > 1e-12 && this.sIn[i] <= s && s <= this.sOut[i]) { thick = i; break; } }
+    if (cands.length && (py < ROW.yb || thick == null)) {
+      const last = this._lastHit;
+      const k = (last && cands.includes(last.i) && Math.abs(last.px - px) < 3) ? (cands.indexOf(last.i) + 1) % cands.length : 0;
+      this._lastHit = { i: cands[k], px };
+      return cands[k];
+    }
+    if (thick != null) { this._lastHit = { i: thick, px }; return thick; }
+    return cands.length ? cands[0] : null;
+  }
+  _bind() {
+    const svg = this.svg;
+    let drag = null;
+    svg.addEventListener("pointerdown", ev => {
+      svg.focus();
+      drag = { x: ev.clientX, moved: false, view: { ...store.view }, box: ev.shiftKey };
+      svg.setPointerCapture(ev.pointerId);
+    });
+    svg.addEventListener("pointermove", rafOnce(ev => {
+      const r = svg.getBoundingClientRect();
+      const px = ev.clientX - r.left, py = ev.clientY - r.top;
+      if (drag && !drag.box) {
+        const dx = ev.clientX - drag.x;
+        if (Math.abs(dx) > 2) drag.moved = true;
+        if (drag.moved) { setView(panView(drag.view, this.W, dx, store.limits)); return; }
+      }
+      const i = this.hit(px, py);
+      if (i !== store.hover?.index || store.hover?.side !== this.side) { store.hover = i == null ? null : { side: this.side, index: i }; store.emit("hover", store.hover, ev); }
+      store.emit("cursor", sOf(store.view, this.W, px));
+    }));
+    svg.addEventListener("pointerup", ev => {
+      if (!drag) return;
+      const r = svg.getBoundingClientRect();
+      const px = ev.clientX - r.left, py = ev.clientY - r.top;
+      if (drag.box) {
+        const s0 = sOf(store.view, this.W, Math.min(px, drag.x - r.left)), s1 = sOf(store.view, this.W, Math.max(px, drag.x - r.left));
+        if (s1 - s0 > 1e-6) setView(clampView({ s0, s1 }, store.limits));
+      } else if (!drag.moved) {
+        const i = this.hit(px, py);
+        if (ev.shiftKey && i == null) { store.cursorS = sOf(store.view, this.W, px); store.emit("cursorpin"); }
+        else select(i == null ? null : { side: this.side, index: i });
+      }
+      drag = null;
+    });
+    svg.addEventListener("pointerleave", () => { if (store.hover && store.hover.side === this.side) { store.hover = null; store.emit("hover", null); } });
+    svg.addEventListener("dblclick", ev => { const r = svg.getBoundingClientRect(); setView(zoomAt(store.view, this.W, ev.clientX - r.left, 2, store.limits)); });
+    svg.addEventListener("wheel", ev => {
+      if (ev.ctrlKey || ev.metaKey) { ev.preventDefault(); const r = svg.getBoundingClientRect(); setView(zoomAt(store.view, this.W, ev.clientX - r.left, ev.deltaY < 0 ? 1.15 : 1 / 1.15, store.limits)); }
+      else if (Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) { ev.preventDefault(); setView(panView(store.view, this.W, -ev.deltaX, store.limits)); }
+    }, { passive: false });
+  }
+}
+// linked indices on the other row through the alignment
+function linkedIndices(sel, side) {
+  const c = store.comparison; if (!c || !c.alignment) return [];
+  if (sel.side === "src" && side === "dst") { const e = c.alignment.elements[sel.index]; return e ? e.dst : []; }
+  if (sel.side === "dst" && side === "src") { const t = c.alignment.targets[sel.index]; return t ? t.src : []; }
+  return [];
+}
+// ------------------------------------------------------------------------------------------ axis, band, strip, minimap
+const axis = {
+  svg: $("#axis"),
+  draw(view) {
+    const svg = this.svg, W = svg.clientWidth || 800; svg.replaceChildren();
+    svg.setAttribute("viewBox", `0 0 ${W} 26`);
+    svgEl("line", { x1: 0, x2: W, y1: 0.5, y2: 0.5 }, svg);
+    const t = axisTicks(view, W);
+    for (const s of t.minor) { const x = pxOf(view, W, s); svgEl("line", { x1: x, x2: x, y1: 0, y2: 4 }, svg); }
+    for (const s of t.major) { const x = pxOf(view, W, s); svgEl("line", { x1: x, x2: x, y1: 0, y2: 8 }, svg); const tx = svgEl("text", { x, y: 20, "text-anchor": "middle" }, svg); tx.textContent = s.toFixed(t.decimals); }
+    const u = svgEl("text", { x: W - 4, y: 20, "text-anchor": "end" }, svg); u.textContent = "s [m]";
+  },
+};
+const band = {
+  svg: $("#band"),
+  draw() {
+    const svg = this.svg; svg.replaceChildren();
+    svg.setAttribute("viewBox", viewBoxOf(store.view, 28));
+    const sel = store.selection, c = store.comparison;
+    if (!sel || !c || !store.target) return;
+    const pairs = [];
+    if (sel.side === "src") { const e = c.alignment.elements[sel.index]; if (e) for (const j of e.dst) pairs.push([sel.index, j]); }
+    else { const t = c.alignment.targets[sel.index]; if (t) for (const i of t.src) pairs.push([i, sel.index]); }
+    for (const [i, j] of pairs) {
+      const a = store.source.rows[i], b = store.target.rows[j]; if (!a || !b) continue;
+      const cls = (c.diffs[i] || {}).worst || "EXACT";
+      const line = svgEl("line", { x1: xw((a.s_in + a.s_out) / 2), y1: 0, x2: xw((b.s_in + b.s_out) / 2), y2: 28 }, svg);
+      line.style.stroke = `var(--cls-${cls.toLowerCase() === "equivalent" ? "equiv" : cls.toLowerCase()})`;
+    }
+  },
+};
+const strip = {
+  svg: $("#strip"),
+  draw() {
+    const svg = this.svg; svg.replaceChildren();
+    svg.setAttribute("viewBox", viewBoxOf(store.view, 4));
+    if (!store.target || !store.comparison) return;
+    const clsOf = targetClasses();
+    for (const row of store.target.rows) {
+      const cls = clsOf.get(row.i);
+      if (!cls || cls === "EXACT") continue;
+      const r = svgEl("rect", { x: xw(row.s_in), y: 0, width: Math.max(xw(row.L), 1e-6), height: 4, "vector-effect": "non-scaling-stroke" }, svg);
+      r.style.fill = `var(--cls-${cls === "EQUIVALENT" ? "equiv" : cls.toLowerCase()})`;
+      r.style.stroke = r.style.fill;
+    }
+  },
+};
+function targetClasses() {
+  const map = new Map();
+  const c = store.comparison; if (!c || !store.target) return map;
+  for (const t of c.alignment.targets) {
+    let worst = null;
+    for (const i of t.src) { const w = (c.diffs[i] || {}).worst; if (w && (!worst || CLS_RANK[w] > CLS_RANK[worst])) worst = w; }
+    if (!worst) { for (const idx of store.target.rows[t.j]?.ledger || []) { const e = store.target.ledger.entries[idx]; if (e && (!worst || CLS_RANK[e.cls] > CLS_RANK[worst])) worst = e.cls; } }
+    map.set(t.j, worst || "EXACT");
+  }
+  return map;
+}
+const CLS_RANK = { EXACT: 0, EQUIVALENT: 1, LOSSY: 2, DROPPED: 3, DIFF: 4 };
+const PRIORITY = { Bend: 5, RFCavity: 4, FieldMap: 4, NCells: 4, Solenoid: 3, Quadrupole: 2, Sextupole: 1, Octupole: 1, Kicker: 1, Multipole: 1 };
+const minimap = {
+  el: $("#minimap"), canvas: $("#minimap canvas"), vp: $("#minimap .viewport"),
+  draw() {
+    const vm = store.source; const c = this.canvas; const dpr = window.devicePixelRatio || 1;
+    const W = this.el.clientWidth || 800, H = this.el.clientHeight || 28;
+    c.width = W * dpr; c.height = H * dpr;
+    const ctx = c.getContext("2d"); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, H);
+    if (!vm) return;
+    const L = vm.header.total_length || 1;
+    const cols = new Array(W).fill(null);
+    for (const row of vm.rows) {
+      if (row.kind === "Drift" || row.kind === "Directive") continue;
+      const a = Math.max(0, Math.floor(row.s_in / L * W)), b = Math.min(W - 1, Math.max(a, Math.floor(row.s_out / L * W)));
+      const p = PRIORITY[row.kind] || 0;
+      for (let x = a; x <= b; x++) if (!cols[x] || p > cols[x].p) cols[x] = { p, kind: row.kind };
+    }
+    ctx.fillStyle = ui.cssVar("--line-strong"); ctx.fillRect(0, H / 2, W, 1);
+    for (let x = 0; x < W; x++) if (cols[x]) { ctx.fillStyle = ui.cssVar("--k-" + cols[x].kind) || "#888"; ctx.fillRect(x, 3, 1, H - 6); }
+    this.viewport();
+  },
+  viewport() {
+    const vm = store.source; if (!vm) { this.vp.style.display = "none"; return; }
+    const L = vm.header.total_length || 1, W = this.el.clientWidth || 800;
+    const x0 = clamp(store.view.s0 / L * W, 0, W), x1 = clamp(store.view.s1 / L * W, 0, W);
+    this.vp.style.display = "block"; this.vp.style.left = x0 + "px"; this.vp.style.width = Math.max(2, x1 - x0) + "px";
+  },
+  bind() {
+    let drag = null;
+    this.el.addEventListener("pointerdown", ev => {
+      const vm = store.source; if (!vm) return;
+      const r = this.el.getBoundingClientRect(), W = r.width, L = vm.header.total_length || 1;
+      const onVp = ev.target === this.vp;
+      drag = { x: ev.clientX, view: { ...store.view }, onVp };
+      this.el.setPointerCapture(ev.pointerId);
+      if (!onVp) { const s = (ev.clientX - r.left) / W * L; const span = store.view.s1 - store.view.s0; setView(clampView({ s0: s - span / 2, s1: s + span / 2 }, store.limits)); }
+    });
+    this.el.addEventListener("pointermove", ev => {
+      if (!drag || !store.source) return;
+      const r = this.el.getBoundingClientRect(), L = store.source.header.total_length || 1;
+      const ds = (ev.clientX - drag.x) / r.width * L;
+      setView(clampView({ s0: drag.view.s0 + ds, s1: drag.view.s1 + ds }, store.limits));
+    });
+    this.el.addEventListener("pointerup", () => { drag = null; });
+  },
+};
+// ------------------------------------------------------------------------------------------ view + selection actions
+const syn = { src: null, dst: null };
+const _applyView = rafOnce(() => {
+  for (const s of [syn.src, syn.dst]) s && s.setView(store.view);
+  axis.draw(store.view); band.draw(); strip.draw(); minimap.viewport();
+  store.emit("view", store.view);
+});
+function setView(view) { store.view = view; _applyView(); }
+function select(sel) {
+  store.selection = sel;
+  for (const s of [syn.src, syn.dst]) s && s.drawSelection();
+  band.draw();
+  store.emit("selection", sel);
+  try { location.hash = sel ? `sel=${sel.side}:${sel.index}` : ""; } catch (e) { /* ignore */ }
+}
+function ensureVisible(sel) {
+  const vm = sel.side === "src" ? store.source : store.target; if (!vm) return;
+  const row = vm.rows[sel.index]; if (!row) return;
+  const span = store.view.s1 - store.view.s0;
+  if (row.s_in < store.view.s0 || row.s_out > store.view.s1) {
+    const c = (row.s_in + row.s_out) / 2;
+    setView(clampView({ s0: c - span / 2, s1: c + span / 2 }, store.limits));
+  }
+}
+// ------------------------------------------------------------------------------------------ top bar: source + read
+const topbar = {
+  init() {
+    const sel = $("#src-format");
+    for (const name of store.formats.readable) { const f = store.formats.formats[name]; sel.appendChild(h("option", { value: name, text: `${name} — ${f.description}` })); }
+    const sp = $("#opt-species");
+    for (const s of store.formats.species) sp.appendChild(h("option", { value: s, text: s }));
+    const dl = $("#sample-list");
+    for (const s of store.samples) dl.appendChild(h("option", { value: s.path, text: `${s.format}` }));
+    $("#btn-read").addEventListener("click", () => this.read());
+    $("#src-path").addEventListener("keydown", ev => { if (ev.key === "Enter") this.read(); });
+    $("#btn-browse").addEventListener("click", () => browser.open());
+    $("#btn-folder").addEventListener("click", () => $("#dir-input").click());
+    $("#file-input").addEventListener("change", ev => this.upload(ev.target.files));
+    $("#dir-input").addEventListener("change", ev => this.upload(ev.target.files));
+    $("#theme").addEventListener("change", ev => ui.theme(ev.target.value));
+    $("#btn-help").addEventListener("click", () => ui.toast("info", "Keys", "←/→ step elements (Shift: skip drifts)   Tab: the aligned element on the other row\n/ search   f fit   + − 0 zoom   i inspector   1–5 tabs   Esc clear\nCtrl+wheel zooms, drag pans, double-click zooms in, Shift+drag box-zooms, Shift+click pins the s cursor"));
+    $("#src-warn").addEventListener("click", () => { const w = store.source?.header.warnings || []; ui.toast("warn", `${w.length} warning(s)`, w.slice(0, 12).join("\n")); });
+    $("#src-path").addEventListener("input", ev => {
+      const s = store.samples.find(x => x.path === ev.target.value);
+      if (s) { $("#src-format").value = s.format; this.applyOptions(s.options); }
+    });
+  },
+  applyOptions(opts) {
+    if (!opts) return;
+    if (opts.species) $("#opt-species").value = opts.species;
+    if (opts.kinetic_energy_eV) { $("#opt-ke").value = opts.kinetic_energy_eV / 1e6; $("#opt-ke-unit").value = "1e6"; }
+    if (opts.frequency_Hz) $("#opt-freq").value = opts.frequency_Hz / 1e6;
+  },
+  options() {
+    const o = {};
+    const sp = $("#opt-species").value; if (sp) o.species = sp;
+    const ke = parseFloat($("#opt-ke").value); if (Number.isFinite(ke)) o.kinetic_energy_eV = ke * parseFloat($("#opt-ke-unit").value);
+    const f = parseFloat($("#opt-freq").value); if (Number.isFinite(f)) o.frequency_Hz = f * 1e6;
+    const line = $("#opt-line").value.trim(); if (line) o.line = line;
+    for (const inp of $$("#read-options-adv [data-opt]")) { const v = optionValue(inp); if (v !== null && v !== "") o[inp.dataset.opt] = v; }
+    return o;
+  },
+  async read(sourceOverride) {
+    const path = $("#src-path").value.trim();
+    const sample = store.samples.find(x => x.path === path);
+    const source = sourceOverride || (sample ? { sample: path } : { path });
+    if (!sourceOverride && !path) { ui.toast("warn", "give a deck path, pick a sample or browse"); return; }
+    const body = { source, options: this.options() };
+    const fmt = $("#src-format").value; if (fmt) body.format = fmt;
+    if (store.session && sourceOverride) body.session = store.session;
+    ui.busy(true, "reading…");
+    try {
+      const r = await api.post("/api/read", body);
+      store.session = r.session;
+      loadSource(r.source);
+      ui.toast("ok", `read ${r.source.header.n_placed} elements (${r.detected_format})`);
+    } catch (e) { ui.toast("err", "read failed", e.message); }
+    finally { ui.busy(false, ""); }
+  },
+  async upload(files) {
+    if (!files || !files.length) return;
+    ui.busy(true, `uploading ${files.length} file(s)…`);
+    try {
+      if (!store.session) store.session = (await api.post("/api/session", {})).session;
+      let deck = null;
+      const list = Array.from(files);
+      const decks = list.filter(f => { try { return !!guessLocal(f.name); } catch (e) { return false; } });
+      for (const f of list) {
+        const rel = f.webkitRelativePath || f.name;
+        await api.put(`/api/session/${store.session}/upload?path=${encodeURIComponent(rel)}`, await f.arrayBuffer());
+        if (!deck && (decks.length === 1 ? f === decks[0] : /\.(dat|madx|seq|lte|bmad|lat|flat|yaml|json|in|py|jl|xml|dyn)$/i.test(f.name))) deck = rel;
+      }
+      if (!deck) deck = (list[0].webkitRelativePath || list[0].name);
+      $("#src-path").value = deck;
+      await this.read({ path: deck });
+    } catch (e) { ui.toast("err", "upload failed", e.message); }
+    finally { ui.busy(false, ""); $("#file-input").value = ""; $("#dir-input").value = ""; }
+  },
+};
+function guessLocal(name) {
+  const n = name.toLowerCase();
+  for (const [fmt, f] of Object.entries(store.formats.formats)) for (const suf of f.suffixes) if (n.endsWith(suf)) return fmt;
+  return null;
+}
+// simple file browser (dialog-less: a toast-like popover listing the directory)
+const browser = {
+  dir: null,
+  async open(path) {
+    try {
+      const b = await api.get(`/api/browse?path=${encodeURIComponent(path || this.dir || ".")}`);
+      this.dir = b.path;
+      const box = h("div", { class: "toast", style: "max-width:520px;max-height:60vh;overflow:auto" });
+      box.appendChild(h("div", {}, h("b", { text: b.path }), " ", h("button", { text: "close", onclick: () => box.remove() }), b.parent ? h("button", { text: "↑ up", onclick: () => { box.remove(); this.open(b.parent); } }) : null));
+      const t = h("table", { class: "list" });
+      for (const e of b.entries) {
+        const tr = h("tr", { class: "clickable" }, h("td", { text: e.dir ? "📁 " + e.name : e.name }), h("td", { text: e.dir ? "" : (e.format || "") }), h("td", { class: "num muted", text: e.dir ? "" : fmt.num(e.bytes / 1024, 4) + " kB" }));
+        tr.addEventListener("click", () => { if (e.dir) { box.remove(); this.open(b.path + "/" + e.name); } else { $("#src-path").value = b.path + "/" + e.name; $("#src-format").value = e.format || ""; box.remove(); topbar.read(); } });
+        t.appendChild(tr);
+      }
+      box.appendChild(t);
+      $("#toasts").appendChild(box);
+    } catch (e) { ui.toast("err", "browse failed", e.message); }
+  },
+};
+// ------------------------------------------------------------------------------------------ options forms
+function optionValue(inp) {
+  const t = inp.dataset.type;
+  if (t === "bool") return inp.checked;
+  const v = inp.value;
+  if (v === "" || v == null) return null;
+  if (t === "number" || t === "int") { const n = parseFloat(v); return Number.isFinite(n) ? n : null; }
+  return v;
+}
+function optionField(f, side, fmt) {
+  const id = `opt-${side}-${fmt}-${f.name}`;
+  let inp;
+  const saved = optionStore.get(side, fmt, f.name);
+  const def = saved !== undefined ? saved : f.default;
+  if (f.type === "bool") { inp = h("input", { type: "checkbox", id }); inp.checked = !!def; }
+  else if (f.type === "choice") { inp = h("select", { id }); if (f.free) inp.appendChild(h("option", { value: "", text: "(default)" })); for (const c of f.choices) inp.appendChild(h("option", { value: c, text: c === "" ? "(none)" : c })); if (def != null) inp.value = String(def); }
+  else if (f.type === "number" || f.type === "int") { inp = h("input", { type: "number", id, step: "any", placeholder: def == null ? "" : String(def) }); if (saved !== undefined && saved !== null) inp.value = saved; }
+  else { inp = h("input", { type: "text", id, placeholder: def == null ? "" : (typeof def === "object" ? JSON.stringify(def) : String(def)) }); if (saved !== undefined && saved !== null) inp.value = typeof saved === "object" ? JSON.stringify(saved) : saved; }
+  inp.dataset.opt = f.name; inp.dataset.type = f.type;
+  inp.addEventListener("change", () => optionStore.set(side, fmt, f.name, optionValue(inp)));
+  return h("div", { class: "field" }, h("label", { for: id, text: f.name, title: f.help || f.name }), inp);
+}
+const optionStore = {
+  key(side, fmt) { return `lattix.opts.${side}.${fmt}`; },
+  all(side, fmt) { try { return JSON.parse(localStorage.getItem(this.key(side, fmt)) || "{}"); } catch (e) { return {}; } },
+  get(side, fmt, name) { return this.all(side, fmt)[name]; },
+  set(side, fmt, name, v) { const a = this.all(side, fmt); if (v === null || v === "") delete a[name]; else a[name] = v; try { localStorage.setItem(this.key(side, fmt), JSON.stringify(a)); } catch (e) { /* ignore */ } },
+};
+const COMMON_WRITE = new Set(["energy_mode", "use_expressions", "expressions", "mode", "line_mode", "document", "flavor", "install_apertures", "strict"]);
+const translatePanel = {
+  init() {
+    const sel = $("#dst-format");
+    const groups = { "readable + writable": [], "write-only": [], "via Bmad (bridge)": [] };
+    for (const name of store.formats.writable) {
+      const f = store.formats.formats[name];
+      (f.bridge ? groups["via Bmad (bridge)"] : f.readable ? groups["readable + writable"] : groups["write-only"]).push(name);
+    }
+    for (const [label, names] of Object.entries(groups)) {
+      if (!names.length) continue;
+      const og = h("optgroup", { label });
+      for (const n of names) og.appendChild(h("option", { value: n, text: `${n} — ${store.formats.formats[n].description}` }));
+      sel.appendChild(og);
+    }
+    sel.value = "madx";
+    sel.addEventListener("change", () => this.form());
+    this.form();
+    $("#btn-translate").addEventListener("click", () => this.translate());
+    for (const b of $$("#downloads button")) b.addEventListener("click", () => this.download(b.dataset.what));
+  },
+  form() {
+    const fmt = $("#dst-format").value, f = store.formats.formats[fmt];
+    $("#dst-desc").textContent = (f.side_files ? "writes side files (maps/rfdata) next to the deck. " : "") + (f.readable ? "" : "write-only: no read-back comparison. ");
+    const common = $("#dst-options"), adv = $("#dst-options-adv");
+    common.replaceChildren(); adv.replaceChildren();
+    for (const o of f.write_options) (COMMON_WRITE.has(o.name) ? common : adv).appendChild(optionField(o, "write", fmt));
+    $("#dst-advanced").classList.toggle("hidden", !adv.children.length);
+  },
+  readerForm(fmt) {
+    const box = $("#read-options-adv"); box.replaceChildren();
+    const f = store.formats.formats[fmt]; if (!f) return;
+    for (const o of f.read_options) { if (["species", "kinetic_energy_eV", "frequency_Hz", "line", "sequence", "use", "root"].includes(o.name)) continue; box.appendChild(optionField(o, "read", fmt)); }
+  },
+  options() {
+    const o = {};
+    for (const inp of $$("#dst-options [data-opt], #dst-options-adv [data-opt]")) { const v = optionValue(inp); if (v !== null && v !== "") o[inp.dataset.opt] = v; else if (inp.dataset.type === "bool") o[inp.dataset.opt] = inp.checked; }
+    return o;
+  },
+  async translate() {
+    if (!store.session || !store.source) return;
+    const fmt = $("#dst-format").value;
+    ui.busy(true, `translating to ${fmt}…`);
+    $("#btn-translate").disabled = true;
+    try {
+      const t0 = performance.now();
+      const r = await api.post("/api/translate", { session: store.session, format: fmt, options: this.options(), strict: $("#opt-strict").checked });
+      loadTranslation(r);
+      const dt = ((performance.now() - t0) / 1000).toFixed(1);
+      $("#status").textContent = `written ${r.deck.lines} lines, ${r.side_files.length} side file(s), tier ${r.tier}, ${dt} s` + (r.target_error ? ` — read-back failed: ${r.target_error.message}` : "");
+      if (r.target_error) ui.toast("warn", "the deck was written but could not be read back", r.target_error.message);
+      for (const w of r.warnings || []) ui.toast("warn", w);
+    } catch (e) {
+      const entry = e.body && e.body.error && e.body.error.entry;
+      ui.toast("err", "translation failed", e.message);
+      if (entry && entry.element && store.source) { const i = store.source.rows.findIndex(r => r.name === entry.element); if (i >= 0) { select({ side: "src", index: i }); ensureVisible({ side: "src", index: i }); } }
+      $("#status").textContent = "failed: " + e.message;
+    } finally { ui.busy(false); $("#btn-translate").disabled = !store.source; }
+  },
+  download(what) {
+    if (!store.session) return;
+    let url;
+    if (what === "source") url = `/api/session/${store.session}/download?what=source`;
+    else if (store.translation) url = `/api/session/${store.session}/translation/${store.translation.translation}/download?what=${what}`;
+    else return;
+    window.open(api.url(url), "_blank");
+  },
+};
+// ------------------------------------------------------------------------------------------ loading data into the page
+function loadSource(vm) {
+  store.source = vm; store.translation = null; store.target = null; store.comparison = null; store.selection = null; store.classFilter = null; store.sourceText = null;
+  const L = vm.header.total_length || 1;
+  store.limits = limitsFor(L);
+  store.view = fitView(L, store.limits);
+  syn.src.setLattice(vm); syn.src.setClasses(new Map(), new Set());
+  syn.dst.setLattice(null);
+  const hd = vm.header, ref = hd.reference;
+  $("#src-head").replaceChildren(h("b", { text: "SOURCE" }), h("span", { text: hd.file.split("/").pop() }), h("span", { text: hd.format }), h("span", { class: "num", text: `${hd.n_placed} elements` }), h("span", { class: "num", text: fmt.m(hd.total_length) }), h("span", { text: `${ref.species.name} ${fmt.si(ref.kinetic_energy_eV, "eV")}` + (ref.rf_frequency_Hz ? ` · ${fmt.num(ref.rf_frequency_Hz / 1e6, 6)} MHz` : "") }));
+  $("#dst-head").replaceChildren(h("b", { text: "TARGET" }), h("span", { class: "muted", text: "translate to see the written deck read back" }));
+  const wb = $("#src-warn"); const nw = hd.warnings.length; wb.textContent = nw ? `⚠ ${nw}` : ""; wb.classList.toggle("hidden", !nw); wb.classList.toggle("warn", nw > 0);
+  const ll = $("#line-list"); ll.replaceChildren(); for (const n of hd.lines || []) ll.appendChild(h("option", { value: n }));
+  translatePanel.readerForm(hd.format);
+  chips.draw(); summaryStrip.draw();
+  $("#btn-translate").disabled = false;
+  for (const b of $$("#downloads button")) b.disabled = b.dataset.what !== "source";
+  $("#side-files").textContent = "";
+  minimap.draw(); floor.setLattices(vm, null); deckText.render(); fidelityTab.render(); validation.enable();
+  _applyView();
+  select(null);
+  store.emit("source", vm);
+}
+function loadTranslation(r) {
+  store.translation = r; store.target = r.target; store.comparison = r.comparison;
+  syn.dst.setLattice(r.target);
+  if (r.target) {
+    const clsOf = targetClasses();
+    const added = new Set(r.comparison ? r.comparison.alignment.targets.filter(t => !t.src.length).map(t => t.j) : []);
+    syn.dst.setClasses(clsOf, added);
+    const hd = r.target.header;
+    $("#dst-head").replaceChildren(h("b", { text: "TARGET" }), h("span", { text: r.deck.name }), h("span", { text: r.format }), h("span", { class: "num", text: `${hd.n_placed} elements` }), h("span", { class: "num", text: fmt.m(hd.total_length) }), h("span", { class: "cls cls-" + (r.tier === "exact" ? "EXACT" : r.tier === "equivalent" ? "EQUIVALENT" : "LOSSY"), text: r.tier }), r.comparison ? h("span", { text: r.comparison.ir.ok ? "IR round trip ok" : `IR round trip: ${r.comparison.ir.problems.length} problem(s)`, class: r.comparison.ir.ok ? "muted" : "cls-DIFF", title: (r.comparison.ir.problems || []).slice(0, 6).join("\n") }) : null);
+    const Lmax = Math.max(store.source.header.total_length, hd.total_length);
+    store.limits = limitsFor(Lmax);
+  } else {
+    $("#dst-head").replaceChildren(h("b", { text: "TARGET" }), h("span", { text: r.deck.name }), h("span", { class: "muted", text: r.target_error ? "not readable back: " + r.target_error.message : "not read back" }));
+  }
+  for (const b of $$("#downloads button")) b.disabled = false;
+  const sf = r.side_files.map(f => f.name);
+  $("#side-files").textContent = sf.length ? `${sf.length} side file(s): ${sf.slice(0, 4).join(", ")}${sf.length > 4 ? ", …" : ""}` : "";
+  summaryStrip.draw(); deckText.render(); fidelityTab.render(); floor.setLattices(store.source, r.target); validation.enable();
+  _applyView(); select(store.selection);
+  store.emit("target", r);
+}
+// ------------------------------------------------------------------------------------------ chips (legend + filter), summary strip
+const chips = {
+  draw() {
+    const box = $("#chips"); box.replaceChildren();
+    if (!store.source) return;
+    const counts = store.source.header.counts;
+    for (const kind of store.formats.kinds) {
+      if (!counts[kind]) continue;
+      const c = h("span", { class: "chip" + (store.filter.size && !store.filter.has(kind) ? " off" : ""), title: "click to filter, shift-click to add" }, h("i", { style: `color: var(--k-${kind})` }), `${kind} ${counts[kind]}`);
+      c.addEventListener("click", ev => {
+        if (ev.shiftKey) { store.filter.has(kind) ? store.filter.delete(kind) : store.filter.add(kind); }
+        else if (store.filter.size === 1 && store.filter.has(kind)) store.filter.clear(); else { store.filter.clear(); store.filter.add(kind); }
+        this.draw(); syn.src.applyFilter(); syn.dst.applyFilter();
+      });
+      box.appendChild(c);
+    }
+    if (store.filter.size) box.appendChild(h("button", { text: "clear filter", onclick: () => { store.filter.clear(); this.draw(); syn.src.applyFilter(); syn.dst.applyFilter(); } }));
+  },
+};
+const summaryStrip = {
+  draw() {
+    const box = $("#summary-chips"); box.replaceChildren();
+    const c = store.comparison; if (!c) return;
+    const wc = c.summary.worst_counts;
+    for (const cls of ["EXACT", "EQUIVALENT", "LOSSY", "DROPPED", "DIFF"]) {
+      if (!wc[cls]) continue;
+      const chip = h("span", { class: "chip" + (store.classFilter && store.classFilter !== cls ? " off" : ""), title: cls === "DIFF" ? "translation defect: a difference the ledger does not explain — please report" : "worst ledger class per source element; click to filter" }, h("span", { class: "cls cls-" + cls, text: CLS_LETTER[cls] }), `${cls} ${wc[cls]}`);
+      chip.addEventListener("click", () => { store.classFilter = store.classFilter === cls ? null : cls; this.draw(); syn.src.setClasses(sourceClasses(), new Set()); syn.dst.applyFilter(); fidelityTab.render(); });
+      box.appendChild(chip);
+    }
+  },
+};
+const CLS_LETTER = { EXACT: "✓", EQUIVALENT: "≈", LOSSY: "!", DROPPED: "×", DIFF: "⚠" };
+function sourceClasses() {
+  const map = new Map(); const c = store.comparison; if (!c) return map;
+  for (const d of c.diffs) map.set(d.i, d.worst);
+  return map;
+}
+// ------------------------------------------------------------------------------------------ tooltip + hover
+const tooltip = {
+  el: $("#tooltip"),
+  show(text, ev) { this.el.textContent = text; this.el.classList.remove("hidden"); this.move(ev); },
+  move(ev) { if (!ev) return; const x = Math.min(ev.clientX + 14, window.innerWidth - 360), y = Math.min(ev.clientY + 14, window.innerHeight - 120); this.el.style.left = x + "px"; this.el.style.top = y + "px"; },
+  hide() { this.el.classList.add("hidden"); },
+};
+function headline(row, def) {
+  const d = row.derived || {}, k = row.kind, g = row.glyph || {};
+  const parts = [];
+  if (k === "Quadrupole") parts.push(`G = ${fmt.num(def.multipole?.Bn?.["1"], 5)} T/m`, `k1 = ${fmt.num(d.k1, 5)} 1/m²`);
+  else if (k === "Bend") parts.push(`angle = ${fmt.deg(g.angle)}`, d.rho_m ? `ρ = ${fmt.num(d.rho_m, 5)} m` : null, `e1/e2 = ${fmt.deg(def.bend?.e1)} / ${fmt.deg(def.bend?.e2)}`);
+  else if (["RFCavity", "FieldMap", "NCells", "RFQCell"].includes(k)) parts.push(`V = ${fmt.si(d.V_eff_V, "V")}`, `φs = ${fmt.num(d.phase_deg, 4)}°`, def.rf?.frequency_Hz ? `f = ${fmt.num(def.rf.frequency_Hz / 1e6, 6)} MHz` : null, `dE = ${fmt.si(d.gain_eV, "eV")}`);
+  else if (k === "Solenoid") parts.push(`B = ${fmt.num(def.solenoid?.Bsol_T, 5)} T`, `ks = ${fmt.num(d.ks, 5)} 1/m`);
+  else if (k === "Kicker") parts.push(`hkick = ${fmt.num(def.hkick * 1e3, 4)} mrad`, `vkick = ${fmt.num(def.vkick * 1e3, 4)} mrad`);
+  else if (k === "Collimator" && def.aperture) parts.push(`aperture ${fmt.num((def.aperture.x_limits?.[1] - def.aperture.x_limits?.[0]) / 2 * 1e3, 4)} × ${fmt.num((def.aperture.y_limits?.[1] - def.aperture.y_limits?.[0]) / 2 * 1e3, 4)} mm`);
+  else if (k === "Multipole") parts.push(`BnL: ${Object.entries(def.multipole?.BnL || {}).map(([n, v]) => `${n}:${fmt.num(v, 4)}`).join(" ")}`);
+  else if (k === "Instrument") parts.push(def.family);
+  return parts.filter(Boolean).join("   ");
+}
+store.on("hover", (hv, ev) => {
+  if (!hv) { tooltip.hide(); return; }
+  const vm = hv.side === "src" ? store.source : store.target; const row = vm?.rows[hv.index]; if (!row) return;
+  const def = vm.definitions[row.def] || {};
+  let text = `${row.name}${def.provenance?.original_name && def.provenance.original_name !== row.name ? " (" + def.provenance.original_name + ")" : ""}  ·  ${row.kind}\ns = ${fmt.num(row.s_in, 6)} → ${fmt.num(row.s_out, 6)} m  (L = ${fmt.m(row.L)})`;
+  const hl = headline(row, def); if (hl) text += "\n" + hl;
+  if (hv.side === "dst" && store.comparison) { const cls = targetClasses().get(hv.index); if (cls && cls !== "EXACT") { const codes = new Set(); for (const i of store.comparison.alignment.targets[hv.index]?.src || []) for (const l of store.comparison.diffs[i]?.ledger || []) if (l.cls !== "EXACT") codes.add(l.code); text += `\n${CLS_LETTER[cls]} ${cls}  ${[...codes].slice(0, 4).join(", ")}`; } }
+  tooltip.show(text, ev);
+});
+store.on("cursor", s => { $("#s-readout").textContent = `s = ${fmt.num(s, 6)} m`; });
+// ------------------------------------------------------------------------------------------ inspector
+const inspector = {
+  body: $("#insp-body"),
+  full: false,
+  render() {
+    const sel = store.selection;
+    if (!sel) { this.body.className = "empty"; this.body.textContent = store.source ? "click an element" : "no lattice yet — open a deck, paste a path, or pick a sample"; return; }
+    const vm = sel.side === "src" ? store.source : store.target; const row = vm?.rows[sel.index]; if (!row) return;
+    const def = vm.definitions[row.def] || {};
+    this.body.className = "";
+    const frag = document.createDocumentFragment();
+    const title = h("h2", {}, h("span", { class: "swatch", style: `background: var(--k-${row.kind})` }), row.name);
+    frag.appendChild(title);
+    frag.appendChild(h("div", { class: "sub" }, `${row.kind}${def.provenance?.original_type ? " · " + def.provenance.original_type : ""}${def.provenance?.original_name && def.provenance.original_name !== row.name ? " · was " + def.provenance.original_name : ""}`, h("br"), `s = ${fmt.num(row.s_in, 6)} → ${fmt.num(row.s_out, 6)} m  (L = ${fmt.m(row.L)})  #${row.i}${row.rev ? " reversed" : ""}${row.path?.length > 1 ? "  in " + row.path.join(" › ") : ""}`, h("br"), h("label", {}, h("input", { type: "checkbox", checked: this.full ? "checked" : null, onchange: ev => { this.full = ev.target.checked; this.render(); } }), " full precision")));
+    const sig = this.full ? 12 : 6;
+    const props = (title, rows) => { const s = h("section", {}, h("h3", { text: title })); const g = h("div", { class: "props" }); for (const [k, v, u, native] of rows) { if (v === undefined || v === null || v === "") continue; g.appendChild(h("span", { class: "k", text: k })); g.appendChild(h("span", { class: "v" }, typeof v === "number" ? fmt.num(v, sig) : String(v), u ? h("span", { class: "u", text: u }) : null)); if (native) g.appendChild(h("span", { class: "native", text: native })); } if (g.children.length) { s.appendChild(g); frag.appendChild(s); } };
+    const d = row.derived || {};
+    // reference
+    const rs = vm.header.reference_state || {};
+    const refIn = { ke: row.ke_in, beta: row.beta_in, brho: row.brho_in }, refOut = { ke: row.ke_out };
+    props("Reference at entrance", [["kinetic energy", refIn.ke, "eV"], ["β", refIn.beta, ""], ["γ", vm.header.reference.species.mass_eV ? 1 + refIn.ke / vm.header.reference.species.mass_eV : null, ""], ["Bρ (signed)", refIn.brho, "T·m"], ["RF clock", vm.header.reference.rf_frequency_Hz ? vm.header.reference.rf_frequency_Hz / 1e6 : null, "MHz"], ["exit kinetic energy", refOut.ke, "eV"], ["phase advance (drift)", d.phase_advance_deg, "deg"]]);
+    const nat = def.native && Object.keys(def.native).length ? def.native : null;
+    const natLine = (key) => nat ? Object.entries(nat).map(([f, o]) => o && o[key] != null ? `${f}: ${key} = ${o[key]}` : null).filter(Boolean).join("; ") : "";
+    const mp = def.multipole || {};
+    switch (row.kind) {
+      case "Quadrupole": props("Quadrupole", [["Bn[1] (gradient)", mp.Bn?.["1"], "T/m", natLine("G") || natLine("k1")], ["Bs[1] (skew)", mp.Bs?.["1"], "T/m"], ["tilt", mp.tilt?.["1"], "rad"], ["k1 = G/Bρ", d.k1, "1/m²"], ["k1s", d.k1s, "1/m²"], ["K1·L", d.K1L, "1/m"], ["G·L", d.GL, "T"], ["focal length", d.focal_length_m, "m"], ...Object.entries(mp.Bn || {}).filter(([n]) => n !== "1").map(([n, v]) => [`Bn[${n}]`, v, `T/m^${n}`])]); break;
+      case "Sextupole": props("Sextupole", [["Bn[2]", mp.Bn?.["2"], "T/m²"], ["Bs[2]", mp.Bs?.["2"], "T/m²"], ["k2", d.k2, "1/m³"], ["K2·L", d.K2L, "1/m²"], ["tilt", mp.tilt?.["2"], "rad"]]); break;
+      case "Octupole": props("Octupole", [["Bn[3]", mp.Bn?.["3"], "T/m³"], ["k3", d.k3, "1/m⁴"], ["K3·L", d.K3L, "1/m³"]]); break;
+      case "Multipole": props("Multipole (integrated)", [...Object.entries(mp.BnL || {}).map(([n, v]) => [`BnL[${n}]`, v, `T·m^(1−${n})`]), ...Object.entries(mp.BsL || {}).map(([n, v]) => [`BsL[${n}]`, v, `T·m^(1−${n})`]), ...Object.entries(d.knl || {}).map(([n, v]) => [`knl[${n}]`, v, `1/m^${n}`]), ...Object.entries(d.ksl || {}).map(([n, v]) => [`ksl[${n}]`, v, `1/m^${n}`]), ["hkick (dipole term)", d.hkick, "rad"], ["vkick", d.vkick, "rad"]]); break;
+      case "Bend": { const b = def.bend || {}; props("Bend", [["angle", b.angle, "rad", natLine("angle")], ["angle", d.angle_deg, "deg"], ["ρ = L/angle", d.rho_m, "m"], ["B₀", d.B0_T, "T"], ["e1", b.e1, "rad"], ["e2", b.e2, "rad"], ["fint", b.edge_int1, ""], ["fintx", b.edge_int2, ""], ["half gap", b.hgap, "m"], ["tilt_ref", b.tilt_ref, "rad"], ["rectangular", b.rect ? "yes (e1/e2 include angle/2)" : "sector", ""], ["fringe K2", b.fringe_k2, ""], ["Bn[1] (gradient)", mp.Bn?.["1"], "T/m"], ["k1", d.k1, "1/m²"], ["field index", d.field_index, ""], ["chord", d.chord_m, "m"]]); break; }
+      case "Solenoid": props("Solenoid", [["Bsol", def.solenoid?.Bsol_T, "T", natLine("B")], ["ks = B/Bρ", d.ks, "1/m"], ["∫B·dl", d.int_B_Tm, "T·m"], ["Larmor angle", d.larmor_rad, "rad"]]); break;
+      case "RFCavity": case "NCells": case "RFQCell": case "FieldMap": case "Superposition": {
+        const rf = def.rf || {};
+        props(row.kind === "FieldMap" ? "Field map" : "RF", [["voltage", rf.voltage_V, "V", natLine("E0TL") || natLine("volt")], ["V_eff", d.V_eff_V, "V"], ["synchronous phase", d.phase_deg, "deg"], ["phase", rf.phase_rad, "rad"], ["frequency", rf.frequency_Hz ? rf.frequency_Hz / 1e6 : null, "MHz"], ["harmonic", d.harmonic, ""], ["gradient", rf.gradient_V_per_m, "V/m"], ["L_active", rf.L_active_m, "m"], ["n_cell", rf.n_cell, ""], ["TTF", rf.ttf, ""], ["reference gain", d.gain_eV, "eV"], ["gain from", d.gain_explicit ? "explicit dE_ref" : "V·cos φ", ""], ["cavity type", rf.cavity_type, ""], ["phase is synchronous", rf.phase_is_sync ? "yes" : "no (driven phase)", ""], ["λ", d.lambda_m, "m"], ["βλ", d.beta_lambda_m, "m"], ["thin-gap RF defocusing", d.rf_defocusing_1_per_m, "1/m"]]);
+        if (row.kind === "FieldMap") props("Map", [["geom", def.geom, ""], ["files", (def.files || []).join(", "), ""], ["ke / kb", `${def.ke} / ${def.kb}`, ""], ["ki / ka", `${def.ki} / ${def.ka}`, ""], ["p_flag", def.p_flag, ""]]);
+        const ms = d.map_summary; if (ms) props("Map summary (integrated)", [["kind", ms.kind, ""], ["dE_ref", ms.dE_ref_eV, "eV"], ["V_c (crest)", ms.v_c_V, "V"], ["φs", ms.phase_sync_rad != null ? ms.phase_sync_rad * 180 / Math.PI : null, "deg"], ["V_eff", ms.v_eff_V, "V"], ["TTF(β_in)", ms.ttf, ""], ["∫Ez", ms.int_Ez_V, "V"], ["∫Bz", ms.int_Bz_Tm, "T·m"], ["∫Bz²", ms.int_Bz2_T2m, "T²·m"], ["L_eff", ms.L_eff_m, "m"], ["B_eff", ms.B_eff_T, "T"], ["β in / out", ms.beta_in != null ? `${fmt.num(ms.beta_in, 5)} / ${fmt.num(ms.beta_out, 5)}` : null, ""], ["steps", ms.n_steps, ""], ["sha256", (ms.sha256 || []).map(x => String(x).slice(0, 12)).join(", "), ""]]);
+        else if (row.kind === "FieldMap") props("Map summary", [["note", "not integrated (files missing?)", ""]]);
+        const rp = d.replacement; if (rp) props("Without field maps a target gets", [["class", rp.cls, ""], ["code", rp.code, ""], ["parts", rp.parts.map(p => `${p.kind} ${fmt.num(p.length, 4)} m`).join(" + "), ""]]);
+        if (def.params && Object.keys(def.params).length) props("Parameters", Object.entries(def.params).map(([k, v]) => [k, typeof v === "object" ? JSON.stringify(v) : v, ""]));
+        if (def.children) props("Children", def.children.map(([off, name]) => [name, off, "m"]));
+        break;
+      }
+      case "Kicker": props("Kicker", [["hkick", def.hkick, "rad", natLine("Bx") || natLine("hkick")], ["vkick", def.vkick, "rad"], ["hkick", def.hkick * 1e3, "mrad"], ["vkick", def.vkick * 1e3, "mrad"], ["∫B·dl (x)", d.int_Bdl_x_Tm, "T·m"], ["∫B·dl (y)", d.int_Bdl_y_Tm, "T·m"], ["electric", def.electric ? "yes" : "no", ""]]); break;
+      case "Instrument": props("Instrument", [["family", def.family, ""], ...Object.entries(def.params || {}).map(([k, v]) => [k, typeof v === "object" ? JSON.stringify(v) : v, ""])]); break;
+      case "Foil": props("Foil", [["material", def.material, ""], ["thickness", def.thickness_kg_per_m2, "kg/m²"], ["thickness", d.thickness_mg_cm2, "mg/cm²"], ["dE_ref", def.dE_ref_eV, "eV"]]); break;
+      case "Taylor": { const s = h("section", {}, h("h3", { text: `Taylor map (basis ${def.basis || "common"})` })); const t = h("table", { class: "diff" }); for (const r of def.matrix || []) t.appendChild(h("tr", {}, ...r.map(v => h("td", { class: Math.abs(v - (r === (def.matrix || [])[t.children.length] ? 0 : 0)) < 0 ? "" : "", text: fmt.num(v, 5) })))); s.appendChild(t); frag.appendChild(s); props("Map invariants", [["det (x)", d.det_x, ""], ["det (y)", d.det_y, ""], ["symplectic error", d.symplectic_err, ""], ["offset", (def.offset || []).map(v => fmt.num(v, 4)).join(", "), ""], ["RF focusing of", def.meta?.rf_focusing_of, ""]]); break; }
+      case "Patch": props("Patch", [["x offset", def.x_offset, "m"], ["y offset", def.y_offset, "m"], ["z offset", def.z_offset, "m"], ["x rot", def.x_rot, "rad"], ["y rot", def.y_rot, "rad"], ["tilt", def.tilt, "rad"], ["t offset", def.t_offset_s, "s"], ["E_tot offset", def.e_tot_offset_eV, "eV"]]); break;
+      case "ReferenceChange": props("Reference change", [["dE_ref", def.dE_ref_eV, "eV"], ["energy", def.energy_eV, "eV"], ["dphase", def.dphase_rad, "rad"], ["dtime", def.dtime_s, "s"]]); break;
+      case "Freq": props("RF clock", [["frequency", def.frequency_Hz ? def.frequency_Hz / 1e6 : null, "MHz"]]); break;
+      case "Directive": props("Directive", [["format", def.format, ""], ["card", def.card, ""], ["role", def.role, ""], ["args", (def.args || []).join(" "), ""]]); break;
+      default: break;
+    }
+    if (def.aperture) { const a = def.aperture; props("Aperture", [["shape", a.shape, ""], ["x", a.x_limits ? `${fmt.num(a.x_limits[0] * 1e3, 4)} … ${fmt.num(a.x_limits[1] * 1e3, 4)}` : null, "mm"], ["y", a.y_limits ? `${fmt.num(a.y_limits[0] * 1e3, 4)} … ${fmt.num(a.y_limits[1] * 1e3, 4)}` : null, "mm"], ["at", a.aperture_at, ""]]); }
+    if (def.shift) { const s = def.shift; const rows = [["dx", s.x_offset, "m"], ["dy", s.y_offset, "m"], ["dz", s.z_offset, "m"], ["pitch (x rot)", s.x_rot, "rad"], ["yaw (y rot)", s.y_rot, "rad"], ["roll (tilt)", s.tilt, "rad"]].filter(r => r[1]); if (rows.length) props("Misalignment", rows); }
+    if (def.expressions && Object.keys(def.expressions).length) props("Expressions", Object.entries(def.expressions).map(([k, v]) => [k, `:= ${v.text || v}`, ""]));
+    if (nat) { const s = h("section", {}, h("h3", { text: "Native attributes (re-emitted only to the same format)" })); for (const [f, o] of Object.entries(nat)) { const g = h("div", { class: "props" }); g.appendChild(h("span", { class: "k", text: f })); g.appendChild(h("span", { class: "v mono", style: "white-space:normal;text-align:left", text: typeof o === "object" ? JSON.stringify(o) : String(o) })); s.appendChild(g); } frag.appendChild(s); }
+    if (def.provenance) { const p = def.provenance; const s = h("section", {}, h("h3", { text: "Provenance" })); const g = h("div", { class: "props" }); g.appendChild(h("span", { class: "k", text: "file" })); const link = h("a", { href: "#", text: `${(p.file || vm.header.file || "").split("/").pop()}${p.line ? ":" + p.line : ""}` }); link.addEventListener("click", ev => { ev.preventDefault(); deckText.goto(sel.side, p.line); }); g.appendChild(h("span", { class: "v" }, link)); if (p.original_name) { g.appendChild(h("span", { class: "k", text: "original name" })); g.appendChild(h("span", { class: "v", text: p.original_name })); } if (p.original_type) { g.appendChild(h("span", { class: "k", text: "original type" })); g.appendChild(h("span", { class: "v", text: p.original_type })); } s.appendChild(g); frag.appendChild(s); }
+    if (def.deck_lines && def.deck_lines.length) { const s = h("section", {}, h("h3", { text: "In the written deck" })); const pre = h("pre", { class: "deck", style: "max-height:12em;overflow:auto;background:var(--bg-inset);padding:4px" }); for (const l of def.deck_lines) { const sp = h("span", { class: "ln", "data-n": l.line, text: l.text, title: l.role }); sp.addEventListener("click", () => deckText.goto("dst", l.line)); pre.appendChild(sp); } s.appendChild(pre); frag.appendChild(s); }
+    // translation: diff + ledger
+    const c = store.comparison;
+    if (c) {
+      const srcIdx = sel.side === "src" ? sel.index : (c.alignment.targets[sel.index]?.src[0]);
+      const diff = srcIdx != null ? c.diffs[srcIdx] : null;
+      if (diff) {
+        const s = h("section", {}, h("h3", {}, "Translation ", h("span", { class: "cls cls-" + diff.worst, text: CLS_LETTER[diff.worst] + " " + diff.worst })));
+        const al = c.alignment.elements[srcIdx];
+        s.appendChild(h("div", { class: "muted", text: `matched by ${al.match}${al.dropped ? ", dropped by the writer" : ""}${al.absent ? ", nothing to write" : ""}; target elements: ${al.dst.map(j => store.target?.rows[j]?.name + (al.roles[String(j)] && al.roles[String(j)] !== "primary" ? " (" + al.roles[String(j)] + ")" : "")).join(", ") || "none"}` }));
+        const t = h("table", { class: "diff" }, h("tr", {}, h("th", { text: "quantity" }), h("th", { text: "source" }), h("th", { text: "target" }), h("th", { text: "class" })));
+        for (const [q, v] of Object.entries(diff.quantities)) if (v.class !== "equal" || this.full) t.appendChild(h("tr", { class: v.class }, h("td", { text: q }), h("td", { text: fmt.num(v.src, 6) }), h("td", { text: fmt.num(v.dst, 6) }), h("td", { text: v.class + (v.codes.length ? " · " + v.codes.join(", ") : "") })));
+        t.appendChild(h("tr", { class: diff.energy.class }, h("td", { text: "exit KE [eV]" }), h("td", { text: fmt.num(diff.energy.src_out_eV, 8) }), h("td", { text: fmt.num(diff.energy.dst_out_eV, 8) }), h("td", { text: diff.energy.class + (diff.energy.codes.length ? " · " + diff.energy.codes.slice(0, 3).join(", ") : "") })));
+        t.appendChild(h("tr", { class: diff.position.class }, h("td", { text: "entrance s [m]" }), h("td", { text: fmt.num(diff.position.src_s_in, 8) }), h("td", { text: fmt.num(diff.position.dst_s_in, 8) }), h("td", { text: diff.position.class })));
+        s.appendChild(t);
+        if (diff.ledger.length) { const ul = h("div", { class: "props", style: "grid-template-columns: auto 1fr" }); for (const l of diff.ledger) { ul.appendChild(h("span", { class: "cls cls-" + l.cls, text: CLS_LETTER[l.cls], title: l.cls })); const code = h("a", { href: "#", text: l.code, title: (store.catalog[l.code]?.message || "") }); code.addEventListener("click", ev => { ev.preventDefault(); store.classFilter = null; fidelityTab.filterCode = l.code; ui.tab("fidelity"); fidelityTab.render(); }); ul.appendChild(h("span", { class: "v", style: "text-align:left;white-space:normal" }, code, " ", h("span", { class: "muted", text: `(${l.side}) ${l.message}` }))); } s.appendChild(ul); }
+        frag.appendChild(s);
+      }
+    }
+    this.body.replaceChildren(frag);
+  },
+};
+store.on("selection", () => inspector.render());
+store.on("source", () => inspector.render());
+// ------------------------------------------------------------------------------------------ deck text tab
+const deckText = {
+  side: "src", lines: [], el: $("#deck"),
+  async render() {
+    const side = $$("input[name=deck-side]").find(r => r.checked)?.value || "src";
+    this.side = side;
+    let text = "", name = "";
+    if (side === "dst") { text = store.translation?.deck.text || ""; name = store.translation?.deck.name || ""; }
+    else { if (store.sourceText == null && store.session) { try { store.sourceText = (await api.get(`/api/session/${store.session}/source_text`)).text; } catch (e) { store.sourceText = ""; } } text = store.sourceText || ""; name = store.source?.header.file.split("/").pop() || ""; }
+    $("#deck-name").textContent = name ? `${name} · ${text.split("\n").length} lines` : "";
+    this.lines = text.split("\n");
+    const frag = document.createDocumentFragment();
+    const n = Math.min(this.lines.length, 30000);
+    for (let i = 0; i < n; i++) frag.appendChild(h("span", { class: "ln", "data-n": i + 1, text: this.lines[i] || " " }));
+    if (this.lines.length > n) frag.appendChild(h("span", { class: "ln muted", "data-n": "…", text: `${this.lines.length - n} more lines not shown` }));
+    this.el.replaceChildren(frag);
+    this.highlight();
+  },
+  highlight() {
+    for (const el of $$("#deck .ln.hit")) el.classList.remove("hit");
+    const sel = store.selection; if (!sel) return;
+    if (sel.side !== this.side) return;
+    const vm = sel.side === "src" ? store.source : store.target; const row = vm?.rows[sel.index]; if (!row) return;
+    const def = vm.definitions[row.def] || {};
+    const nos = new Set((def.deck_lines || []).map(l => l.line));
+    if (def.provenance?.line && sel.side === "src") nos.add(def.provenance.line);
+    let first = null;
+    for (const n of nos) { const el = this.el.querySelector(`.ln[data-n="${n}"]`); if (el) { el.classList.add("hit"); first ||= el; } }
+    if (first && store.tab === "deck") first.scrollIntoView({ block: "center" });
+  },
+  goto(side, line) {
+    if (!line) return;
+    const r = $$("input[name=deck-side]").find(x => x.value === side); if (r) r.checked = true;
+    ui.tab("deck");
+    this.render().then(() => { const el = this.el.querySelector(`.ln[data-n="${line}"]`); if (el) { el.classList.add("hit"); el.scrollIntoView({ block: "center" }); } });
+  },
+  bind() {
+    for (const r of $$("input[name=deck-side]")) r.addEventListener("change", () => this.render());
+    this.el.addEventListener("click", ev => {
+      const ln = ev.target.closest(".ln"); if (!ln) return;
+      const n = parseInt(ln.dataset.n, 10); if (!n) return;
+      const vm = this.side === "src" ? store.source : store.target; if (!vm) return;
+      // the element whose deck lines include n (target) or whose provenance line is n (source)
+      let hit = null;
+      for (const [name, def] of Object.entries(vm.definitions)) { if ((def.deck_lines || []).some(l => l.line === n) || (this.side === "src" && def.provenance?.line === n)) { hit = name; break; } }
+      if (hit) { const i = vm.rows.findIndex(r => r.def === hit); if (i >= 0) { select({ side: this.side, index: i }); ensureVisible({ side: this.side, index: i }); } }
+    });
+    store.on("selection", () => this.highlight());
+    store.on("tab", t => { if (t === "deck") this.highlight(); });
+  },
+};
+// ------------------------------------------------------------------------------------------ fidelity tab
+const fidelityTab = {
+  filterCode: null, filterCls: null,
+  render() {
+    const body = $("#fid-body"), filters = $("#fid-filters");
+    filters.replaceChildren(); body.replaceChildren();
+    const tr = store.translation;
+    if (!tr) { body.className = "empty"; body.textContent = "translate a deck to see its ledger"; return; }
+    body.className = "";
+    const led = tr.fidelity;
+    for (const cls of ["EXACT", "EQUIVALENT", "LOSSY", "DROPPED"]) { const n = led.counts[cls] || 0; const chip = h("span", { class: "chip" + (this.filterCls && this.filterCls !== cls ? " off" : "") }, h("span", { class: "cls cls-" + cls, text: CLS_LETTER[cls] }), `${cls} ${n}`); chip.addEventListener("click", () => { this.filterCls = this.filterCls === cls ? null : cls; this.filterCode = null; this.render(); }); filters.appendChild(chip); }
+    if (this.filterCode) filters.appendChild(h("button", { text: `code ${this.filterCode} ×`, onclick: () => { this.filterCode = null; this.render(); } }));
+    if (store.comparison) filters.appendChild(h("span", { class: "muted", text: `writer ledger; read-back ledger: ${Object.entries(store.comparison.ledger.reader.codes).map(([c, n]) => c + "×" + n).join(", ") || "clean"}` }));
+    const groups = new Map();
+    for (const e of led.entries) { if (e.cls === "EXACT" && !this.filterCls) continue; if (this.filterCls && e.cls !== this.filterCls) continue; if (this.filterCode && e.code !== this.filterCode) continue; const g = groups.get(e.code) || { cls: e.cls, entries: [] }; g.entries.push(e); groups.set(e.code, g); }
+    const t = h("table", { class: "list" }, h("tr", {}, h("th", { text: "" }), h("th", { text: "code" }), h("th", { text: "count" }), h("th", { text: "message / elements" })));
+    for (const [code, g] of [...groups.entries()].sort((a, b) => CLS_RANK[b[1].cls] - CLS_RANK[a[1].cls] || b[1].entries.length - a[1].entries.length)) {
+      const names = [...new Set(g.entries.map(e => e.element).filter(Boolean))];
+      const cell = h("td", {}, h("div", { text: g.entries[0].message || store.catalog[code]?.message || "" }), h("div", { class: "muted" }));
+      const nameBox = cell.lastChild;
+      for (const n of names.slice(0, 40)) { const a = h("a", { href: "#", text: n, style: "margin-right:6px" }); a.addEventListener("click", ev => { ev.preventDefault(); const i = store.source.rows.findIndex(r => r.name === n); if (i >= 0) { select({ side: "src", index: i }); ensureVisible({ side: "src", index: i }); ui.tab("synoptic"); } }); nameBox.appendChild(a); }
+      if (names.length > 40) nameBox.appendChild(h("span", { text: `… ${names.length - 40} more` }));
+      const row = h("tr", {}, h("td", {}, h("span", { class: "cls cls-" + g.cls, text: CLS_LETTER[g.cls], title: g.cls })), h("td", { class: "mono", text: code, title: store.catalog[code]?.message || "" }), h("td", { class: "num", text: g.entries.length }), cell);
+      t.appendChild(row);
+    }
+    if (t.children.length === 1) body.appendChild(h("div", { class: "empty", text: "nothing to show for this filter" }));
+    else body.appendChild(t);
+    if (store.comparison && store.comparison.ir.problems.length) body.appendChild(h("pre", { class: "deck", text: "IR round trip problems:\n" + store.comparison.ir.problems.join("\n") }));
+  },
+};
+// ------------------------------------------------------------------------------------------ floor plan
+class FloorPlan {
+  constructor(svg) {
+    this.svg = svg; this.src = null; this.dst = null; this.box = null; this.view = null; this.paths = { src: [], dst: [] };
+    this.layers = {}; for (const n of ["axis", "dst", "src", "sel", "labels"]) this.layers[n] = svgEl("g", { class: n }, svg);
+    this._bind();
+  }
+  setLattices(src, dst) { this.src = src; this.dst = dst; this.build(); }
+  build() {
+    for (const n of ["dst", "src", "sel", "labels"]) this.layers[n].replaceChildren();
+    this.paths = { src: [], dst: [] };
+    let minx = 0, maxx = 0, minz = 0, maxz = 0;
+    for (const [side, vm] of [["src", this.src], ["dst", this.dst]]) {
+      if (!vm) continue;
+      const frag = document.createDocumentFragment();
+      for (const row of vm.rows) {
+        if (row.kind === "Directive") continue;
+        const sv = row.survey; if (!sv) continue;
+        const [x0, , z0, t0] = sv.in, [x1, , z1] = sv.out;
+        minx = Math.min(minx, x0, x1); maxx = Math.max(maxx, x0, x1); minz = Math.min(minz, z0, z1); maxz = Math.max(maxz, z0, z1);
+        let d;
+        if (row.L <= 1e-12) { const ex = Math.cos(t0), ez = -Math.sin(t0); d = `M${z0 - 0.05 * ez} ${-(x0 - 0.05 * ex)} L${z0 + 0.05 * ez} ${-(x0 + 0.05 * ex)}`; }
+        else if (row.kind === "Bend" && row.glyph.plane === "h" && Math.abs(row.glyph.angle) > 1e-12) { const pts = arcPoints(x0, z0, t0, row.L, row.glyph.angle); d = "M" + pts.map(p => `${p[1]} ${-p[0]}`).join(" L"); }
+        else d = `M${z0} ${-x0} L${z1} ${-x1}`;
+        const p = svgEl("path", { d, class: `el ${side} ${row.kind === "Drift" ? "drift" : ""} ${row.L <= 1e-12 ? "thin" : ""}`, "data-i": row.i, "data-side": side });
+        p.style.color = ui.kindColor(row.kind);
+        frag.appendChild(p); this.paths[side][row.i] = p;
+      }
+      this.layers[side].appendChild(frag);
+    }
+    this.box = { minx, maxx, minz, maxz };
+    if (!this.view) this.fit();
+    else this.apply();
+  }
+  fit() {
+    if (!this.box) return;
+    const b = this.box, pad = 0.05 * Math.max(b.maxz - b.minz, b.maxx - b.minx, 1) + 0.5;
+    this.view = { x: b.minz - pad, y: -(b.maxx + pad), w: (b.maxz - b.minz) + 2 * pad, h: (b.maxx - b.minx) + 2 * pad };
+    this.apply();
+  }
+  apply() {
+    const v = this.view; if (!v) return;
+    this.svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`);
+    const g = this.layers.axis; g.replaceChildren();
+    const r = this.svg.getBoundingClientRect();
+    if (r.width < 10 || r.height < 10) { this.drawSelection(); return; }        // hidden tab: nothing to size against
+    const k = Math.min(r.width / v.w, r.height / v.h);                           // px per metre (meet)
+    const scale = 1 / k;                                                          // metres per px
+    const bar = axisTicks({ s0: 0, s1: r.width * scale }, r.width, 80).step;
+    const y = v.y + v.h - (v.h - r.height * scale) / 2 - 16 * scale, x = v.x + (v.w - r.width * scale) / 2 + 20 * scale;
+    svgEl("line", { class: "axis", x1: x, x2: x + bar, y1: y, y2: y, "vector-effect": "non-scaling-stroke" }, g);
+    // font-size in user units is clamped by Chromium below ~1 unit (renders a giant glyph): size the text in px and scale the node
+    const t = svgEl("text", { transform: `translate(${x} ${y - 6 * scale}) scale(${scale})`, style: "font-size:11px" }, g);
+    t.textContent = `${fmt.num(bar, 3)} m`;
+    this.drawSelection();
+  }
+  drawSelection() {
+    const g = this.layers.sel; g.replaceChildren();
+    const sel = store.selection; if (!sel) return;
+    const p = this.paths[sel.side]?.[sel.index]; if (!p) return;
+    svgEl("path", { class: "selpath", d: p.getAttribute("d") }, g);
+    if (store.cursorS != null) this.cursor(store.cursorS);
+  }
+  cursor(s) {
+    const vm = this.src; if (!vm) return;
+    const row = vm.rows.find(r => r.s_in <= s && s <= r.s_out && r.L > 0); if (!row) return;
+    const f = (s - row.s_in) / row.L; const [x0, , z0] = row.survey.in, [x1, , z1] = row.survey.out;
+    const old = this.layers.sel.querySelector(".cur"); if (old) old.remove();
+    const rr = this.svg.getBoundingClientRect(); const k = Math.min(rr.width / this.view.w, rr.height / this.view.h) || 1;
+    svgEl("circle", { class: "cur", cx: z0 + (z1 - z0) * f, cy: -(x0 + (x1 - x0) * f), r: 5 / k, fill: "var(--accent)" }, this.layers.sel);
+  }
+  _bind() {
+    const svg = this.svg; let drag = null;
+    svg.addEventListener("pointerdown", ev => { drag = { x: ev.clientX, y: ev.clientY, view: { ...this.view }, moved: false }; svg.setPointerCapture(ev.pointerId); });
+    svg.addEventListener("pointermove", ev => {
+      if (!drag || !this.view) return;
+      const r = svg.getBoundingClientRect(); const scale = this.view.w / r.width;
+      const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+      if (drag.moved) { this.view = { ...drag.view, x: drag.view.x - dx * scale, y: drag.view.y - dy * scale }; this.apply(); }
+    });
+    svg.addEventListener("pointerup", ev => {
+      if (drag && !drag.moved) { const p = ev.target.closest("path.el"); if (p) select({ side: p.dataset.side, index: +p.dataset.i }); else select(null); }
+      drag = null;
+    });
+    svg.addEventListener("wheel", ev => {
+      ev.preventDefault(); if (!this.view) return;
+      const r = svg.getBoundingClientRect(); const fx = (ev.clientX - r.left) / r.width, fy = (ev.clientY - r.top) / r.height;
+      const f = ev.deltaY < 0 ? 1 / 1.15 : 1.15;
+      const v = this.view; const nw = v.w * f, nh = v.h * f;
+      this.view = { x: v.x + fx * (v.w - nw), y: v.y + fy * (v.h - nh), w: nw, h: nh }; this.apply();
+    }, { passive: false });
+    svg.addEventListener("pointermove", rafOnce(ev => { const p = ev.target.closest && ev.target.closest("path.el"); if (p) { const hv = { side: p.dataset.side, index: +p.dataset.i }; store.hover = hv; store.emit("hover", hv, ev); } else if (store.hover) { store.hover = null; store.emit("hover", null); } }));
+    $("#btn-floor-fit").addEventListener("click", () => this.fit());
+    store.on("selection", () => this.drawSelection());
+    store.on("tab", t => { if (t === "floor") requestAnimationFrame(() => this.apply()); });
+  }
+}
+// ------------------------------------------------------------------------------------------ validation tab
+const validation = {
+  polling: null,
+  init() {
+    $("#btn-validate").addEventListener("click", () => this.run());
+    $("#btn-validate-cancel").addEventListener("click", () => this.cancel());
+    $("#btn-oracles-refresh").addEventListener("click", () => this.loadOracles(true));
+    store.on("tab", t => { if (t === "validation") this.loadOracles(false); });
+    this.beamForm();
+  },
+  enable() { $("#btn-validate").disabled = !store.source; if (store.source) this.beamForm(); },
+  beamForm() {
+    const box = $("#beam-form"); box.replaceChildren();
+    const ref = store.source?.header.reference;
+    const fields = [["species", ref?.species.name || "proton", "text"], ["kinetic_energy_eV", ref?.kinetic_energy_eV ?? 2.1e6, "number"], ["frequency_Hz", ref?.rf_frequency_Hz ?? "", "number"], ["betx", 10, "number"], ["alfx", 0, "number"], ["bety", 10, "number"], ["alfy", 0, "number"], ["dx", 0, "number"], ["dpx", 0, "number"]];
+    box.appendChild(h("span", { class: "muted", text: "beam (Twiss: envelope engines only)" }));
+    for (const [k, v, t] of fields) box.appendChild(h("label", {}, k + " ", h("input", { type: t, id: "beam-" + k, value: v === "" ? null : String(v), step: "any", style: "width:7em" })));
+  },
+  beam() { const o = {}; for (const k of ["species", "kinetic_energy_eV", "frequency_Hz", "betx", "alfx", "bety", "alfy", "dx", "dpx"]) { const el = $("#beam-" + k); if (!el) continue; const v = el.value; if (v === "") continue; o[k] = k === "species" ? v : parseFloat(v); } return o; },
+  async loadOracles(refresh) {
+    try {
+      let o = await api.get("/api/oracles" + (refresh ? "?refresh=1" : ""));
+      let tries = 0;
+      while (!o.ready && tries++ < 120) { await new Promise(r => setTimeout(r, 500)); o = await api.get("/api/oracles"); }
+      store.oracles = o; this.drawEngines();
+    } catch (e) { ui.toast("err", "engine probe failed", e.message); }
+  },
+  drawEngines() {
+    const box = $("#engines"); box.replaceChildren();
+    const o = store.oracles; if (!o) return;
+    if (!o.ready) { box.appendChild(h("span", { class: "muted", text: "probing engines…" })); return; }
+    const srcFmt = store.source?.header.format, dstFmt = store.translation?.format;
+    // pre-select each deck format's primary engine (or its first available fallback), as the battery does
+    const wanted = new Set();
+    for (const f of [srcFmt, dstFmt]) {
+      const spec = f && store.formats.formats[f]; if (!spec) continue;
+      const cands = [...(spec.engine_candidates || []), spec.engine].filter(Boolean);
+      const pick = cands.find(n => o.engines[n] && o.engines[n].available);
+      if (pick) wanted.add(pick);
+    }
+    for (const [name, e] of Object.entries(o.engines).sort()) {
+      const reads = e.formats.filter(f => f === srcFmt || f === dstFmt);
+      const chip = h("label", { class: "chip" + (e.available ? "" : " off"), title: (e.available ? "" : "unavailable: " + e.why + "\n") + "reads: " + e.formats.join(", ") + (e.local_only ? " (local only)" : "") }, h("input", { type: "checkbox", value: name, disabled: e.available ? null : "disabled", checked: wanted.has(name) ? "checked" : null }), `${name}${reads.length ? " (" + reads.join("/") + ")" : ""}`);
+      box.appendChild(chip);
+    }
+  },
+  async run() {
+    if (!store.session) return;
+    const engines = $$("#engines input:checked").map(i => i.value);
+    if (engines.length < 2) { ui.toast("warn", "pick at least two engines (one per deck format, or two on the source)"); return; }
+    try {
+      const r = await api.post("/api/validate", { session: store.session, translation: store.translation?.translation || "", engines, beam: this.beam() });
+      store.job = r.job; $("#btn-validate").disabled = true; $("#btn-validate-cancel").disabled = false; $("#val-status").textContent = "queued…";
+      this.poll();
+    } catch (e) { ui.toast("err", "validation not started", e.message); }
+  },
+  async cancel() { if (store.job) { try { await api.post(`/api/jobs/${store.job}/cancel`, {}); } catch (e) { /* ignore */ } } },
+  async poll() {
+    clearTimeout(this.polling);
+    try {
+      const j = await api.get(`/api/jobs/${store.job}`);
+      $("#val-status").textContent = `${j.state}  ${j.progress.done}/${j.progress.total} ${j.progress.current || ""}`;
+      this.renderLog(j);
+      if (["done", "failed", "cancelled", "timeout"].includes(j.state)) {
+        $("#btn-validate").disabled = !store.source; $("#btn-validate-cancel").disabled = true;
+        if (j.state === "done") { store.validation = j.result; this.renderResult(j.result); ui.toast("ok", "validation finished"); }
+        else ui.toast(j.state === "failed" ? "err" : "warn", `validation ${j.state}`, j.error?.message || "");
+        return;
+      }
+      this.polling = setTimeout(() => this.poll(), 1000);
+    } catch (e) { ui.toast("err", "job poll failed", e.message); $("#btn-validate").disabled = false; }
+  },
+  renderLog(j) {
+    let pre = $("#val-log"); if (!pre) { pre = h("pre", { id: "val-log", class: "deck", style: "max-height:12em;overflow:auto" }); $("#val-body").replaceChildren(pre); }
+    pre.textContent = j.log.join("\n");
+  },
+  renderResult(res) {
+    const body = $("#val-body");
+    const frag = document.createDocumentFragment();
+    frag.appendChild($("#val-log") || h("div"));
+    const eng = h("table", { class: "list" }, h("tr", {}, h("th", { text: "engine" }), h("th", { text: "deck" }), h("th", { text: "elements" }), h("th", { text: "L [m]" }), h("th", { text: "W_end [eV]" }), h("th", { text: "s" }), h("th", { text: "" })));
+    for (const [name, e] of Object.entries(res.engines)) eng.appendChild(h("tr", {}, h("td", { text: name }), h("td", { text: e.format || "" }), h("td", { class: "num", text: e.n ?? "" }), h("td", { class: "num", text: e.total_length != null ? fmt.num(e.total_length, 8) : "" }), h("td", { class: "num", text: e.W_end != null ? fmt.num(e.W_end, 8) : "" }), h("td", { class: "num", text: e.seconds != null ? fmt.num(e.seconds, 3) : "" }), h("td", { class: "muted", text: e.skipped ? "skipped: " + e.skipped : e.error ? "failed: " + e.error : (e.warnings || []).length ? `${e.warnings.length} warning(s)` : "" })));
+    frag.appendChild(eng);
+    for (const pc of res.comparisons) {
+      const s = h("section", {}, h("h3", { text: `${pc.a} vs ${pc.b}` }));
+      s.appendChild(h("pre", { class: "deck", text: pc.row + (pc.notes.length ? "\n" + pc.notes.join("; ") : "") }));
+      if (pc.verdict) s.appendChild(h("div", { class: "muted", text: `verdict: ${pc.verdict.ok ? "ok" : "not ok"} (${pc.verdict.tier}; blocks ${pc.verdict.blocks_used.join(", ")}; ${pc.verdict.note})` }));
+      s.appendChild(this.chart(pc, res.blocks));
+      frag.appendChild(s);
+    }
+    body.replaceChildren(frag);
+  },
+  chart(pc, blocks) {
+    const W = 900, H = 260, ml = 60, mr = 20, mt = 16, mb = 40, FLOOR = 1e-16;
+    const svg = svgEl("svg", { class: "chart", viewBox: `0 0 ${W} ${H}` });
+    const pts = pc.per_boundary || [];
+    if (!pts.length) { const t = svgEl("text", { x: 10, y: 20 }, svg); t.textContent = "no shared boundaries"; return svg; }
+    const xs = pts.map(p => p.s); const x0 = Math.min(...xs), x1 = Math.max(...xs) || x0 + 1;
+    const vals = pts.flatMap(p => Object.values(p.blocks).map(v => Math.max(v ?? FLOOR, FLOOR)));
+    const lo = Math.floor(Math.log10(Math.min(...vals))), hi = Math.max(Math.ceil(Math.log10(Math.max(...vals))), lo + 1);
+    const X = s => ml + (s - x0) / (x1 - x0) * (W - ml - mr), Y = v => mt + (hi - Math.log10(Math.max(v, FLOOR))) / (hi - lo) * (H - mt - mb);
+    const g = svgEl("g", { class: "grid" }, svg);
+    for (let dec = lo; dec <= hi; dec += Math.max(1, Math.floor((hi - lo) / 8))) { const y = Y(10 ** dec); svgEl("line", { x1: ml, x2: W - mr, y1: y, y2: y }, g); const t = svgEl("text", { x: ml - 6, y: y + 4, "text-anchor": "end" }, svg); t.textContent = `1e${dec}`; }
+    for (let k = 0; k <= 5; k++) { const s = x0 + (x1 - x0) * k / 5; const t = svgEl("text", { x: X(s), y: H - 22, "text-anchor": "middle" }, svg); t.textContent = fmt.num(s, 4); }
+    const xl = svgEl("text", { x: (ml + W - mr) / 2, y: H - 6, "text-anchor": "middle" }, svg); xl.textContent = "s [m]";
+    let lx = ml;
+    for (const b of blocks) {
+      const poly = svgEl("polyline", { points: pts.map(p => `${X(p.s)},${Y(p.blocks[b] ?? FLOOR)}`).join(" ") }, svg);
+      poly.style.stroke = `var(--blk-${b})`;
+      const t = svgEl("text", { x: lx, y: mt - 4 }, svg); t.textContent = b; t.style.fill = `var(--blk-${b})`; lx += 60;
+      const title = svgEl("title", {}, poly); title.textContent = b;
+    }
+    return svg;
+  },
+};
+// ------------------------------------------------------------------------------------------ keys, resize, init
+const keys = {
+  bind() {
+    document.addEventListener("keydown", ev => {
+      const tag = (ev.target.tagName || "").toLowerCase();
+      if (tag === "input" || tag === "select" || tag === "textarea") { if (ev.key === "Escape") ev.target.blur(); return; }
+      const sel = store.selection;
+      if (ev.key === "/") { ev.preventDefault(); $("#search").focus(); return; }
+      if (ev.key === "Escape") { select(null); store.classFilter = null; store.filter.clear(); chips.draw(); summaryStrip.draw(); syn.src.applyFilter(); syn.dst.applyFilter(); return; }
+      if (ev.key === "f") { if (store.source) setView(fitView(store.limits.maxSpan / 1.1, store.limits)); return; }
+      if (ev.key === "+" || ev.key === "=") { setView(zoomAt(store.view, syn.src.W, syn.src.W / 2, 1.5, store.limits)); return; }
+      if (ev.key === "-") { setView(zoomAt(store.view, syn.src.W, syn.src.W / 2, 1 / 1.5, store.limits)); return; }
+      if (ev.key === "0") { if (store.source) setView(fitView(store.source.header.total_length, store.limits)); return; }
+      if (ev.key === "i") { $("#inspector").classList.toggle("hidden"); return; }
+      if (/^[1-5]$/.test(ev.key)) { ui.tab(["synoptic", "floor", "deck", "fidelity", "validation"][+ev.key - 1]); return; }
+      if (ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "Home" || ev.key === "End") {
+        if (!store.source) return;
+        const side = sel ? sel.side : "src"; const vm = side === "src" ? store.source : store.target; if (!vm) return;
+        let i = sel ? sel.index : -1;
+        const step = ev.key === "ArrowRight" ? 1 : ev.key === "ArrowLeft" ? -1 : 0;
+        if (ev.key === "Home") i = 0; else if (ev.key === "End") i = vm.rows.length - 1;
+        else { do { i += step; } while (i >= 0 && i < vm.rows.length && (vm.rows[i].kind === "Directive" || (ev.shiftKey && vm.rows[i].kind === "Drift"))); }
+        if (i >= 0 && i < vm.rows.length) { select({ side, index: i }); ensureVisible({ side, index: i }); }
+        ev.preventDefault(); return;
+      }
+      if (ev.key === "Tab" && sel && store.comparison) {
+        const other = sel.side === "src" ? "dst" : "src"; const linked = linkedIndices(sel, other);
+        if (linked.length) { ev.preventDefault(); select({ side: other, index: linked[0] }); }
+      }
+    });
+    $("#search").addEventListener("keydown", ev => {
+      if (ev.key !== "Enter") return;
+      const q = ev.target.value.trim().toLowerCase(); if (!q || !store.source) return;
+      const rows = store.source.rows; const start = store.selection?.side === "src" ? store.selection.index + 1 : 0;
+      for (let k = 0; k < rows.length; k++) { const i = (start + k) % rows.length; if (rows[i].name.toLowerCase().includes(q)) { select({ side: "src", index: i }); const span = Math.max(0.05, rows[i].L * 6); setView(clampView({ s0: rows[i].s_in - span, s1: rows[i].s_out + span }, store.limits)); return; } }
+      ui.toast("warn", `no element matching "${q}"`);
+    });
+    for (const b of $$("#tabs [role=tab]")) b.addEventListener("click", () => ui.tab(b.dataset.tab));
+    $("#btn-fit").addEventListener("click", () => { if (store.source) setView(fitView(store.source.header.total_length, store.limits)); });
+    // inspector resize
+    const grip = $("#grip"); let g = null;
+    grip.addEventListener("pointerdown", ev => { g = { x: ev.clientX, w: $("#inspector").offsetWidth }; grip.setPointerCapture(ev.pointerId); });
+    grip.addEventListener("pointermove", ev => { if (!g) return; const w = clamp(g.w - (ev.clientX - g.x), 280, window.innerWidth / 2); document.documentElement.style.setProperty("--insp-w", w + "px"); });
+    grip.addEventListener("pointerup", () => { if (g) { try { localStorage.setItem("lattix.insp", document.documentElement.style.getPropertyValue("--insp-w")); } catch (e) { /* ignore */ } } g = null; });
+    window.addEventListener("resize", debounce(() => { _applyView(); minimap.draw(); floor.apply(); }, 100));
+    store.on("theme", () => { minimap.draw(); });
+    store.on("cursorpin", () => { for (const s of [syn.src, syn.dst]) s.drawCursor(); floor.drawSelection(); });
+  },
+};
+let floor = null;
+async function main() {
+  try { const t = localStorage.getItem("lattix.theme"); if (t) { $("#theme").value = t; ui.theme(t); } const w = localStorage.getItem("lattix.insp"); if (w) document.documentElement.style.setProperty("--insp-w", w); } catch (e) { /* ignore */ }
+  syn.src = new Synoptic($("#syn-src"), "src"); syn.dst = new Synoptic($("#syn-dst"), "dst");
+  floor = new FloorPlan($("#floor"));
+  minimap.bind(); deckText.bind(); keys.bind(); validation.init();
+  try {
+    const [formats, catalog, samples] = await Promise.all([api.get("/api/formats"), api.get("/api/catalog"), api.get("/api/samples")]);
+    store.formats = formats; store.catalog = catalog; store.samples = samples.decks || [];
+  } catch (e) { ui.toast("err", "cannot reach the lattix server", e.message + "\nopen the URL that `lattix ui` printed (it carries the access token)"); return; }
+  topbar.init(); translatePanel.init(); inspector.render();
+  const sid = new URLSearchParams(location.search).get("session");
+  if (sid) { try { const s = await api.get(`/api/session/${sid}`); store.session = sid; if (s.source) loadSource(s.source); for (const tr of Object.values(s.translations || {})) loadTranslation(tr); } catch (e) { ui.toast("warn", "session not found", e.message); } }
+  const m = location.hash.match(/sel=(src|dst):(\d+)/); if (m && store.source) select({ side: m[1], index: +m[2] });
+}
+main();
+</script>
+</body>
+</html>
