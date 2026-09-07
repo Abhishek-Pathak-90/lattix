@@ -239,6 +239,8 @@ class ImpacttOracle:
                     # a resumed tail that yields no dump at all: its elements keep their span, not a map
                     warnings.append(f"chunk {ci} ({part[0].name} … {part[-1].name}) wrote no dump: the tail is "
                                     "reported without a map")
+                    for e in elems[a:]:
+                        e.dump = False
                     break
                 b = elems.index(got[-1]) + 1
                 part = elems[a:b]
@@ -248,6 +250,14 @@ class ImpacttOracle:
             delta_cum = sum(e.delta for e in elems[:b] if e.is_bend)
             if b < len(elems):
                 raw = dumps[part[-1].unit]
+                if not np.all(np.isfinite(raw)):
+                    # a runaway probe (IMPACT-T's dipole model) left non-finite coordinates in the resume dump:
+                    # the run ends here and the rest of the line is reported without a map
+                    warnings.append(f"the dump at {part[-1].name} holds non-finite probe coordinates: the run stops "
+                                    "there, the remaining elements are reported without a map")
+                    for e in elems[b:]:
+                        e.dump = False
+                    break
                 (wd / "partcl.data").write_text(_raw_particles(raw))
             ci += 1
         # maps: the first plane is the nominal start, reached from the launch point through free space
