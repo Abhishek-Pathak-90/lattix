@@ -1,0 +1,27 @@
+! lattix battery deck: rectangular bends written as sector bends with explicit faces, one with a negative
+! angle (the PIP-II BTL geometry: rho = 20.4 m, theta = 6.56 deg), plus a pure sector bend. Proton 800 MeV.
+beam, particle=proton, energy=1.738272088;
+d1: drift, l=0.5;
+d2: drift, l=1.0;
+qf: quadrupole, l=0.3, k1=0.8;
+qd: quadrupole, l=0.3, k1=-0.8;
+brect: sbend, l=2.34, angle=0.1146, e1=0.0573, e2=0.0573;
+bneg: sbend, l=1.0, angle=-0.05, e1=-0.025, e2=-0.025;
+bsec: sbend, l=1.2, angle=0.08;
+mend: marker;
+rect_bends: sequence, l=9.94, refer=entry;
+d1, at=0.0;
+qf, at=0.5;
+d2, at=0.8;
+brect, at=1.8;
+d1, at=4.14;
+qd, at=4.64;
+d2, at=4.94;
+bneg, at=5.94;
+d1, at=6.94;
+qf, at=7.44;
+bsec, at=7.74;
+d2, at=8.94;
+mend, at=9.94;
+endsequence;
+use, sequence=rect_bends;

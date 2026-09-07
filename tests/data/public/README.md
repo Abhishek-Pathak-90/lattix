@@ -11,6 +11,9 @@ is what `lattix.corpus.sniff_format` must return for the file
 Paths in the tables are relative to `tests/data/public/`; upstream paths are relative
 to the clone root.
 
+The `lattix/` directory is the one exception to the copied-verbatim rule: those decks are lattix's own,
+written for the cross-format battery (BSD-3, `LICENSES/lattix.txt`).
+
 ## FLAME
 
 - Upstream: <https://github.com/frib-high-level-controls/FLAME> (`tier1_linac/FLAME`)
@@ -163,3 +166,13 @@ to the clone root.
 | `impactt/Sample1/rfdata1` | table | `examples/Sample1/rfdata1` (SolRF Fourier blocks: E field, then solenoid B) |
 | `impactt/Sample1/rfdata2` | table | `examples/Sample1/rfdata2` |
 | `impactt/Sample1/rfdata3` | table | `examples/Sample1/rfdata3` |
+
+## lattix (synthetic battery decks)
+
+- Upstream: this repository (written for the battery, not copied)
+- License: BSD-3-Clause, the project's own (`LICENSES/lattix.txt`)
+
+| File | Format | Upstream path |
+|---|---|---|
+| `lattix/rect_bends.madx` | madx | `tests/data/public/lattix/rect_bends.madx` (rectangular bends with explicit faces, one negative-angle, one sector; PIP-II BTL geometry) |
+| `lattix/vertical_bends.madx` | madx | `tests/data/public/lattix/vertical_bends.madx` (vertical rectangular bends, one negative-angle; the BTL BVDD/ORB1 case) |

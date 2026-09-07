@@ -1,0 +1,27 @@
+! lattix battery deck: vertical rectangular bends (tilt = pi/2), one with a negative angle — the PIP-II BTL
+! BVDD/ORB1 case — between quadrupoles, with a horizontal sector bend. Proton 800 MeV, no fringe fields.
+beam, particle=proton, energy=1.738272088;
+d1: drift, l=0.5;
+d2: drift, l=1.0;
+qf: quadrupole, l=0.3, k1=0.8;
+qd: quadrupole, l=0.3, k1=-0.8;
+bvup: sbend, l=1.05, angle=0.0416, e1=0.0208, e2=0.0208, tilt=pi/2;
+bvdn: sbend, l=1.05, angle=-0.0416, e1=-0.0208, e2=-0.0208, tilt=pi/2;
+bsec: sbend, l=1.2, angle=0.08;
+mend: marker;
+vertical_bends: sequence, l=8.7, refer=entry;
+d1, at=0.0;
+qf, at=0.5;
+d2, at=0.8;
+bvup, at=1.8;
+d1, at=2.85;
+qd, at=3.35;
+d2, at=3.65;
+bvdn, at=4.65;
+d1, at=5.7;
+qf, at=6.2;
+bsec, at=6.5;
+d2, at=7.7;
+mend, at=8.7;
+endsequence;
+use, sequence=vertical_bends;

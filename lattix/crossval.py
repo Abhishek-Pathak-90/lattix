@@ -71,6 +71,10 @@ DECKS: list[tuple[str, str, dict]] = [
     ("impactx/solenoid.madx", "madx", {}),
     ("pyorbit3/fodo.lat", "mad8", {"species": "proton", "brho": 5.65737309979}),      # 1 GeV proton
     ("pyorbit3/sis18.lat", "mad8", {"species": "proton", "brho": 5.65737309979}),
+    # lattix's own bend decks (BSD-3): pole faces, a negative-angle bend, vertical bends — the RF clock keeps the
+    # RF-based writers (IMPACT-Z, IMPACT-T, DYNAC) at the exact tier on an RF-free MAD-X source
+    ("lattix/rect_bends.madx", "madx", {"frequency_Hz": 352.21e6}),
+    ("lattix/vertical_bends.madx", "madx", {"frequency_Hz": 352.21e6}),
 ]
 
 #: decks that seed the *derived* sources: each is written to every other format and those files
