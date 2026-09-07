@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/lattix-lockup-light.png">
+  <img src="docs/assets/lattix-lockup-dark.png" alt="lattix" width="204">
+</picture>
+
 # lattix — accelerator lattice translator
 
 Translate a lattice deck from one accelerator code's format to another's
