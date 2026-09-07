@@ -49,7 +49,7 @@ def _pick_deck(oracle, decks: dict[str, Path], pinned: str | None) -> str | None
 def run_validation(decks: dict[str, Path], engines: list[str | tuple[str, str | None]], beam: BeamSpec, *,
                    workdir: Path | None = None, log: Callable[[str], None] | None = None,
                    progress: Callable[[int, int, str], None] | None = None,
-                   should_stop: Callable[[], bool] | None = None) -> ValidationOutcome:
+                   should_stop: Callable[[], bool] | None = None, lat=None) -> ValidationOutcome:
     """Run every engine on the deck it reads (``{format: path}``; an engine given as ``(name, format)``
     is pinned to that deck) and compare all pairs.  An unavailable engine, one without a deck or one that
     raises is recorded, never fatal; ``log`` receives the one-line summaries ``lattix validate`` prints,
@@ -76,6 +76,14 @@ def run_validation(decks: dict[str, Path], engines: list[str | tuple[str, str | 
             run.skipped = why
             _say(log, f"{name:8s} skipped: {why}")
             continue
+        if lat is not None:
+            from lattix.crossval import constant_p0_note
+
+            note = constant_p0_note(lat, (name,))
+            if note:
+                run.skipped = note
+                _say(log, f"{name:8s} skipped: {note}")
+                continue
         fmt = _pick_deck(o, decks, pinned)
         if fmt is None:
             run.skipped = f"no deck in a format it reads ({o.formats})"
@@ -202,7 +210,7 @@ def verdicts_for(outcome: ValidationOutcome, lat, tier: str = "lossy", codes=())
 
     if lat is None:
         return {}
-    code_counts = {str(c): 1 for c in codes}
+    code_counts = dict(codes) if isinstance(codes, dict) else {str(c): 1 for c in codes}
     out = {}
     for pc in outcome.comparisons:
         ra = outcome.runs.get(pc.a).result if pc.a in outcome.runs else None

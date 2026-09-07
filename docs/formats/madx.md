@@ -64,6 +64,10 @@ overlap are moved out (`MARKER_MOVED_OUT_OF_OVERLAP`).
 
 ## Known limits
 
+- The reader's `frequency_Hz` option sets the machine RF clock an RF-free MAD-X deck lacks, which the RF-based
+  writers (IMPACT-Z, IMPACT-T, DYNAC) need to stay exact. MAD-X keeps p0 constant: on a line whose momentum
+  grows more than twofold (`P0_RATIO_LIMIT`) the battery and `lattix validate` do not run it and say why
+  (its own `twiss` fails at p ×5.6 on the LightWin ADS deck).
 * MAD-X's own `twiss` fails on an open accelerating line with real `rfcavity` elements
   ("error with deltap"); the MAD-X leg of the field-map gate checks loading and reporting.
 * Deferred expressions are re-emitted only for MAD-X → MAD-X translations; other targets

@@ -208,3 +208,31 @@ def test_goldens(tmp_path):
     write(all_kinds_lattice(), out2, "impactt")
     _golden("all_kinds.impactt.in", out2)
     _golden("all_kinds.rfdata1", out2.parent / "rfdata1")
+
+
+def test_negative_bend_pole_faces_are_the_mirror_of_the_positive_ones(tmp_path):
+    """The rfdata face lines of (angle<0, e1<0, e2<0) must be the x → −x mirror of (angle>0, e1>0, e2>0):
+    same slopes with the sign flipped (MAD-X: (angle<0, e1, e2) ≡ (angle>0, tilt π, −e1, −e2)); a round trip
+    alone would not show it because the reader inverts whatever the writer did."""
+    from lattix.ir.elements import Bend, BendP, Drift
+    from lattix.ir.lattice import Lattice
+    from lattix.ir.reference import ReferenceParticle, species
+
+    def faces(angle, e1, e2, out):
+        lat = Lattice.from_sequence("b", [Drift(name="d0", length=0.2),
+                                          Bend(name="b", length=1.0, bend=BendP(angle=angle, e1=e1, e2=e2)),
+                                          Drift(name="d1", length=0.2)],
+                                    ReferenceParticle(species=species("proton"), kinetic_energy_eV=8e8,
+                                                      rf_frequency_Hz=352.21e6))
+        out.mkdir()
+        write(lat, out / "ImpactT.in", "impactt")
+        coefs = [float(x) for x in (out / "rfdata1").read_text().split()]
+        return coefs[2], coefs[8]                      # k1 (entrance face slope), k4 (exit face slope)
+    k1p, k4p = faces(0.1, 0.05, 0.05, tmp_path / "pos")
+    k1n, k4n = faces(-0.1, -0.05, -0.05, tmp_path / "neg")
+    assert k1p == pytest.approx(math.tan(0.05)) and k4p == pytest.approx(math.tan(0.05))
+    assert k1n == pytest.approx(-k1p) and k4n == pytest.approx(-k4p)
+    lat2, _ = read(tmp_path / "neg" / "ImpactT.in", "impactt", species="proton")
+    b = next(e for e in lat2.elements.values() if e.kind == "Bend")
+    assert b.bend.angle == pytest.approx(-0.1, rel=1e-9)
+    assert b.bend.e1 == pytest.approx(-0.05, rel=1e-9) and b.bend.e2 == pytest.approx(-0.05, rel=1e-9)

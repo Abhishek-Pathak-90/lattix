@@ -108,3 +108,31 @@ def test_cmd_validate_verdict_with_tier_and_codes(tmp_path, capsys):
     v = json.loads(out.read_text())["comparisons"][0]["verdict"]
     assert v["tier"] == "equivalent" and v["ok"] is True and "T4x4" in v["blocks_used"]
     assert v["map_tol"] is not None and v["metric_rel"] is not None
+
+
+def test_constant_p0_engine_is_skipped_with_its_reason(tmp_path, monkeypatch):
+    from lattix import crossval
+    from lattix.ir.elements import RFP, Drift, RFCavity
+    from lattix.ir.lattice import Lattice
+    from lattix.ir.reference import ReferenceParticle, species
+
+    ref = ReferenceParticle(species=species("proton"), kinetic_energy_eV=2.1e6, rf_frequency_Hz=352.2e6)
+    hot = Lattice.from_sequence("hot", [Drift(name="d", length=0.1),
+                                        RFCavity(name="c", length=0.0, rf=RFP(voltage_V=5e8, phase_rad=0.0,
+                                                                              frequency_Hz=352.2e6)),
+                                        Drift(name="e", length=0.1)], ref)
+    monkeypatch.setitem(crossval.FOLLOWS_P0, "vfake_a", False)
+    beam = BeamSpec(species="proton", kinetic_energy_eV=2.1e6)
+    deck = DATA / "helix" / "fodo_cell.dat"
+    o = run_validation({"tracewin": deck}, ["vfake_a", "vfake_b"], beam, workdir=tmp_path, lat=hot)
+    assert o.runs["vfake_a"].skipped and "keeps p0 constant" in o.runs["vfake_a"].skipped
+    assert o.runs["vfake_b"].result is not None and not o.comparisons
+
+
+def test_cmd_validate_writes_json_even_with_one_engine(tmp_path):
+    out = tmp_path / "v.json"
+    rc = main(["validate", "--deck", f"tracewin={DATA / 'helix' / 'fodo_cell.dat'}", "--oracles", "vfake_a,vfake_off",
+               "--json", str(out)])
+    assert rc == 2 and out.exists()
+    payload = json.loads(out.read_text())
+    assert payload["engines"]["vfake_off"]["skipped"] and payload["comparisons"] == []

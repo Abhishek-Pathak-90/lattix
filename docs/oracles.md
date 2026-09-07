@@ -718,3 +718,50 @@ MAD-X gate therefore checks loading and reporting, the physics gate runs on Bmad
 * The battery's OPAL cases (fixed points and IR round trips on every public deck, including LightWin's
   142 field maps written as `1DDynamic` files) pass; the format tests pin the source-derived numbers.
 
+## Bend faces, vertical and negative bends (measured 2026-09-06)
+
+Two lattix decks written for the battery (`tests/data/public/lattix/rect_bends.madx`: rectangular bends as
+`sbend` with explicit faces, one negative-angle, one sector, PIP-II BTL geometry; `vertical_bends.madx`:
+the same with `tilt = π/2` on a positive and a negative bend — the BTL `BVDD`/`ORB1` case), proton 800 MeV,
+no fringe fields, every engine against MAD-X at the exact tier. Max relative |ΔR̂cum| over the compared
+blocks:
+
+| engine | `rect_bends` | `vertical_bends` | tier / note |
+|---|---|---|---|
+| Bmad | 4.3e-10 | 4.1e-10 | exact |
+| Elegant | 9.9e-11 | 8.5e-11 | exact |
+| xtrack | 8.1e-10 | 9.6e-10 | exact |
+| ImpactX | 1.8e-11 | 1.4e-11 | exact |
+| FLAME | 6.3e-11 | 6.0e-11 | exact |
+| SciBmad | 7.6e-10 | 6.6e-10 | exact |
+| Cheetah | 6.0e-10 | 5.8e-10 | exact |
+| IMPACT-Z | 1.1e-9 | 3.4e-2 | exact; vertical bends written horizontal (`IMPACTZ_NO_REF_TILT`, the verdict names it) |
+| PyORBIT3 | 2.9e-10 | 3.4e-2 | exact; vertical bends written horizontal (`PYORBIT_BEND_TILT_DROPPED`) |
+| Synergia | 7.4e-9 | 3.4e-2 | equivalent (bend rule below); libFF's `sbend` has no tilt and libFF no rotation element → `BEND_TILT_DROPPED` |
+| DYNAC | 4.4e-6 | 4.1e-6 | equivalent (bend rule below) |
+| IMPACT-T | 2.5e-2 | 3.4e-2 | report only (no pole-face focusing, tilt dropped) |
+| HELIX | 7.1e-11 | 4.7e-11 | report only (rule 2); the negative rectangular bend agrees here, `psb.seq` still gives 1.0e3 |
+
+- **Negative-angle bends**: IMPACT-Z and PyORBIT take the IR's signed `angle`, `e1`, `e2` as MAD-X does — the
+  earlier BTL divergence at `BVDD`/`ORB1` was the vertical tilt alone. The IMPACT-T pole-face file was
+  asymmetric: `k1 = s·tan(e1)`, `k4 = s·tan(|θ| − e2)`; the mirror of a negative bend needs `k1 = tan(e1)`,
+  `k4 = s·tan(|θ| − s·e2)` (reader inverted accordingly; positive bends unchanged).
+- **Synergia pole faces and charge**: a 0.1 rad bend with 0.05 rad faces agrees with MAD-X and Bmad to
+  1.3e-8 for a proton and differs by 2.7e-2 for H⁻ (the sector bend agrees for both, Bmad agrees for both):
+  libFF's edge focusing follows the sign of the charge. Verdict: report only for a negative species with
+  pole faces (upstream). Fringe fields: `hgap`/`fint`/`fintx` with `fint·hgap` ≈ 0 change nothing (1e-8);
+  `fint = 0.45, hgap = 0.025` differs by 4.5e-4 (its own fringe model); the chicane's sector bends by
+  5.7e-6 → Synergia bends are the equivalent tier.
+- **DYNAC**: ~1e-6 per BMAGNET from the 6-digit dumps (9.5e-5 over the 4-bend chicane vs Elegant, 1.7e-3
+  over the 36 BTL bends vs HELIX) → bends are the equivalent tier; the 5e-5 floor stays for RF-only decks.
+- **IMPACT-T oracle**: a control skipped inside a dipole loop blocks the later ones; the adapter now resumes
+  the final chunk too, reports the tail after the last written dump as one element with a NaN map (length
+  kept, the comparison skips that boundary) and keeps only the uncovered part of a drift card that starts
+  before the previous element ends (a negative drift in the source). The BTL's 297.5 m became 307.97 m.
+- **Constant-p0 engines**: MAD-X's own `twiss` fails on `lightwin/example.dat` (20 → 502 MeV, p ×5.6,
+  "open line - error with deltap") while `dtl_section.dat` (p ×1.7) still compares on the transverse block
+  and the dispersion → above `P0_RATIO_LIMIT = 2` a constant-p0 engine is not run (report only, reason
+  given); MAD-X gets an RF clock through the reader's `frequency_Hz` option so RF-free MAD-X decks stay
+  exact for the RF-based writers.
+- The IR round trip compares integrated quantities, never `e1`/`e2`: pole-face errors are only visible to
+  the engines, which is why these decks are in `DECKS`.

@@ -207,6 +207,7 @@ class Reader:
 
     def read(self, path: Path, *, sequence: str | None = None, strict: bool = False,
              species: str | Species | None = None, kinetic_energy_eV: float | None = None,
+             frequency_Hz: float | None = None,
              keep_expressions: bool = True) -> tuple[Lattice, FidelityReport]:
         try:
             from cpymad.madx import Madx
@@ -251,6 +252,11 @@ class Reader:
             madx.quit()
 
         ref = self._reference(beam, species, kinetic_energy_eV, warnings)
+        if frequency_Hz:
+            # MAD-X carries no machine RF clock: the option sets the one the RF-based writers (IMPACT-Z,
+            # IMPACT-T, DYNAC) need — an RF-free deck is otherwise LOSSY/EQUIVALENT there by construction
+            ref = ReferenceParticle(species=ref.species, kinetic_energy_eV=ref.kinetic_energy_eV,
+                                    rf_frequency_Hz=float(frequency_Hz))
         brho = ref.brho_signed
 
         n_rows = len(rows)

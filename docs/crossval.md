@@ -36,7 +36,7 @@ any EQUIVALENT → 2 % and 0.5 %; LOSSY/DROPPED → reported, not asserted.
 $ lattix crossval                                   # all decks × all pairs, no engines (~4 min)
 $ lattix crossval --engines --src tracewin           # engine pairs for one source format
 $ lattix crossval --decks fodo,mebt --markdown report.md --json report.json
-$ pytest tests/crossval -m "crossval and not slow"   # the same as tests (230 cases)
+$ pytest tests/crossval -m "crossval and not slow"   # the same as tests (26 decks × 18 targets)
 $ pytest tests/crossval -m "crossval and slow"       # engine pairs (needs the engines)
 ```
 
@@ -104,3 +104,12 @@ does not).  What remains is documented engine behaviour: fringe-integral bends b
 Bmad, HELIX's bend path-length row and negative-bend body, MAD-X `twiss` at large δ, IMPACT-Z's
 short-cavity focusing versus the thin-gap formula; ion species cannot yet be handed to the
 engines.
+
+Third round (2026-09-06, the PIP-II BTL and two lattix bend decks — `docs/oracles.md` "Bend faces"):
+the battery now carries rectangular, negative-angle and vertical bends; IMPACT-Z and PyORBIT were right
+on negative bends all along (their vertical bends are written horizontal, LOSSY and named in the
+verdict); Synergia's pole-face focusing follows the sign of the charge and its `sbend` has no tilt
+(report only); DYNAC's and Synergia's bend maps are the equivalent tier; the IMPACT-T pole-face file of
+a negative bend is the proper mirror and its oracle no longer drops the line after a missed dump;
+a constant-p0 engine on a line whose momentum grows more than twofold is not run (report only, reason
+given). The IR round trip never compares `e1`/`e2` — pole faces are checked by the engines only.

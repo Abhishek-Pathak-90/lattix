@@ -793,8 +793,8 @@ class Reader:
         if coefs and len(coefs) >= 10 and angle:
             s = 1.0 if angle > 0 else -1.0
             k1, k4 = coefs[2], coefs[8]
-            el.bend.e1 = math.atan(s * k1)
-            el.bend.e2 = abs(angle) - math.atan(s * k4)
+            el.bend.e1 = math.atan(k1)                        # writer: k1 = tan(e1), k4 = s·tan(|θ| − s·e2)
+            el.bend.e2 = s * (abs(angle) - math.atan(s * k4))
             el.meta["impactt_bend"] = {"angle": angle, "e1": el.bend.e1, "e2": el.bend.e2}
             fringe = max(coefs[5] - coefs[3], coefs[9] - coefs[7]) if len(coefs) >= 10 else 0.0
             if fringe > 1e-6 or any(coefs[12:20]):

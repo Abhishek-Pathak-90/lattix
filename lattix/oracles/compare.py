@@ -95,9 +95,13 @@ def compare_pair(a: OracleResult, b: OracleResult, tol_s: float = 1e-9) -> PairC
     scale = 0.0
     blocks = {k: 0.0 for k in BLOCKS}
     per_boundary: list[tuple[float, dict[str, float]]] = []
+    n_nan = 0
     for ia, ib in pairs:
         ma = rescale_to_constant_p0(Ra[ia], pa0, momentum_eV(ca.ref_kinetic_eV_out[ia], ca.mass_eV))
         mb = rescale_to_constant_p0(Rb[ib], pb0, momentum_eV(cb.ref_kinetic_eV_out[ib], cb.mass_eV))
+        if not (np.all(np.isfinite(ma)) and np.all(np.isfinite(mb))):
+            n_nan += 1                       # an engine reported this span without a map: nothing to compare
+            continue
         dm = np.abs(ma - mb)
         scale = max(scale, float(np.max(np.abs(ma))), float(np.max(np.abs(mb))))
         d = float(np.max(dm))
@@ -110,8 +114,11 @@ def compare_pair(a: OracleResult, b: OracleResult, tol_s: float = 1e-9) -> PairC
     ea = ca.ref_kinetic_eV_out[[p[0] for p in pairs]]
     eb = cb.ref_kinetic_eV_out[[p[1] for p in pairs]]
     energy_rel = float(np.max(np.abs(ea - eb) / np.maximum(np.abs(ea), 1e-300)))
-    if any(not np.allclose(r[:2, :2], r[:2, :2]) for r in Ra):  # pragma: no cover
-        notes.append("nan in maps")
+    if n_nan:
+        notes.append(f"{n_nan} shared boundary(ies) without a map (NaN) skipped")
+    if not diffs:
+        return PairComparison(a.engine, b.engine, 0, a.total_length, b.total_length,
+                              np.nan, np.nan, np.nan, np.nan, None, {}, [*notes, "no shared boundaries with maps"])
     sv = None
     if a.survey is not None and b.survey is not None:
         ia, ib = pairs[-1]

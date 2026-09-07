@@ -139,6 +139,37 @@ ENGINE_CANDIDATES: dict[str, tuple[str, ...]] = {"tracewin": ("helix", "lightwin
 FOLLOWS_P0 = {"helix": True, "bmad": True, "elegant": True, "tracewin": True, "impactx": True, "lightwin": True,
               "cheetah": True, "pyorbit": True, "impactt": True, "ocelot": True, "dynac": True, "synergia": True,
               "impactz": True, "flame": True, "madx": False, "xtrack": False, "scibmad": False}
+#: a constant-p0 engine applies every normalised strength at the start rigidity and expands its maps about
+#: that momentum: MEASURED 2026-09-06 — helix/dtl_section.dat (p ×1.7) still compares on the transverse block
+#: and the dispersion, lightwin/example.dat (20 → 502 MeV, p ×5.6) makes MAD-X's own twiss fail ("open line -
+#: error with deltap"). Above this momentum ratio such an engine is not run: report only, with the reason.
+P0_RATIO_LIMIT = 2.0
+
+
+def momentum_ratio(lat: Lattice) -> float:
+    """``max(p/p_start)`` a constant-p0 engine's reference would reach along the line (RF gains only)."""
+    from lattix.ir.energy_mode import probe_momentum_ratio
+
+    placed = propagate(lat)
+    if not placed:
+        return 1.0
+    ratios = probe_momentum_ratio(placed, lat.reference)
+    last = placed[-1]
+    if last.ref_out is not None and last.ref_in is not None:
+        ratios = [*ratios, ratios[-1] * (last.ref_out.pc_eV / last.ref_in.pc_eV if last.ref_in.pc_eV else 1.0)]
+    return max(ratios) if ratios else 1.0
+
+
+def constant_p0_note(lat: Lattice, engines) -> str | None:
+    """The report-only reason when a constant-p0 engine in ``engines`` cannot follow this line, else None."""
+    fixed = [e for e in engines if not FOLLOWS_P0.get(e, True)]
+    if not fixed:
+        return None
+    ratio = momentum_ratio(lat)
+    if ratio <= P0_RATIO_LIMIT:
+        return None
+    return (f"{'/'.join(fixed)} keep{'s' if len(fixed) == 1 else ''} p0 constant: the momentum grows ×{ratio:.2g} "
+            f"along this line (limit ×{P0_RATIO_LIMIT:g}); not run, report only")
 
 RTOL = 1e-9
 #: lattice-level codes after which normalized strengths no longer mean the same thing
@@ -146,6 +177,18 @@ _SPECIES_LOSS = ("SPECIES_NOT_REPRESENTABLE", "UNKNOWN_SPECIES", "PALS_SPECIES_U
 EXACT_MAP_TOL = 1e-7          # max |ΔR̂cum| relative, exact tier (roundoff over long lines)
 #: engines whose output files limit the maps fitted from them (the exact tier is held at that floor)
 ENGINE_PRECISION = {"dynac": 5e-5, "tracewin": 1e-6}
+#: ledger codes after which the written optics differ from the source by construction (the verdict names them)
+_OPTICS_CODES = {
+    "IMPACTZ_NO_REF_TILT": "vertical (tilted) bends written in the horizontal plane",
+    "PYORBIT_BEND_TILT_DROPPED": "vertical (tilted) bends written in the horizontal plane",
+    "IMPACTT_BEND_TILT_DROPPED": "vertical (tilted) bends written in the horizontal plane",
+    "BEND_TILT_DROPPED": "the bend tilt is dropped",
+    "BEND_TILT_UNSUPPORTED": "the bend tilt is dropped",
+    "BEND_FRINGE_DROPPED": "the fringe-field integral (fint·hgap) is dropped",
+    "IMPACTZ_NO_FRINGE_K2": "the second fringe coefficient is dropped",
+    "IMPACTZ_SINGLE_FINT": "the exit fringe integral is set equal to the entrance one",
+    "MULTIPOLE_ORDERS_DROPPED": "higher multipole orders (a bend's gradient, skew terms) are dropped",
+}
 EQUIV_MAP_TOL = 2e-2          # equivalent tier
 EXACT_ENERGY_TOL = 1e-9
 EQUIV_ENERGY_TOL = 5e-3
@@ -212,6 +255,10 @@ AFFECTS: dict[str, set[str]] = {
     "OPAL_CAVITY_MAP": set(), "FM_AS_OPAL_MAP": set(), "OPAL_CAVITY_TO_DRIFT": {"gain", "volt", "energy"},
     "SOLENOID_TO_MARKER": set(), "OPAL_GAP_DRIFT_INSERTED": set(), "OPAL_LAG_AS_SYNC_PHASE": set(),
     "UNSUPPORTED_OPAL_ELEMENT": set(), "FM_STATIC_B_DROPPED": set(),
+    # a bend written in the wrong plane: its angle moves between the horizontal and the vertical sums
+    "IMPACTZ_NO_REF_TILT": {"angle_h", "angle_v"}, "PYORBIT_BEND_TILT_DROPPED": {"angle_h", "angle_v"},
+    "IMPACTT_BEND_TILT_DROPPED": {"angle_h", "angle_v"}, "BEND_TILT_DROPPED": {"angle_h", "angle_v"},
+    "BEND_TILT_UNSUPPORTED": {"angle_h", "angle_v"},
 }
 
 #: codes whose model moves an element boundary by up to this many metres (short cavities)
@@ -776,6 +823,30 @@ def engine_verdict(pc, ea: str, eb: str, lat: Lattice, tier: str, codes: dict[st
         # own crest (7e-4): engine models differ on every RF element
         tier = "equivalent"
         caveat("DYNAC buncher / CAVNUM models: engine models differ; ")
+    if "dynac" in (ea, eb) and tier == "exact" and has_bends:
+        # MEASURED 2026-09-06 (docs/oracles.md, bend faces): the maps fitted from DYNAC's 6-digit dumps drift
+        # by ~1e-6 per BMAGNET (9.5e-5 over the 4-bend csr_chicane vs Elegant, 1.7e-3 over the 36 bends of the
+        # PIP-II BTL vs HELIX): engine precision, not a translation difference
+        tier = "equivalent"
+        caveat("DYNAC bend maps (6-digit dumps, ~1e-6 per bend): engine precision; ")
+    if "synergia" in (ea, eb) and has_bends:
+        faces = any(e.kind == "Bend" and (e.bend.e1 or e.bend.e2) for e in lat.elements.values())
+        if faces and lat.reference.species.charge < 0:
+            # MEASURED 2026-09-06 (docs/oracles.md, bend faces): Synergia's sbend pole-face focusing follows the
+            # sign of the charge — a 0.1 rad bend with 0.05 rad faces agrees with MAD-X/Bmad to 1.3e-8 for a
+            # proton and differs by 2.7e-2 for H⁻ (the sector bend agrees for both): report only, upstream bug
+            tier = "lossy"
+            caveat("Synergia pole-face focusing flips with a negative species (known Synergia limit, report only); ")
+        elif tier == "exact":
+            # MEASURED 2026-09-06 (docs/oracles.md, bend faces): Synergia's sbend differs from MAD-X by 5.7e-6 on
+            # the csr_chicane (sector bends) and by 4.5e-4 with a fringe field (fint·hgap, its own fringe model)
+            tier = "equivalent"
+            caveat("Synergia sbend body / fringe model (5.7e-6 sector, 4.5e-4 with fint·hgap): engine models differ; ")
+    # LOSSY codes that change the optics itself: the pair is report only (lossy tier) — say why
+    for code, why in _OPTICS_CODES.items():
+        n = codes.get(code, 0)
+        if n:
+            caveat(f"{code} ×{n}: {why} — the maps may differ from the first such element; ")
     fm_derived = any(c.startswith("FM_") for c in codes)
     if has_rf and (FOLLOWS_P0.get(ea, True) != FOLLOWS_P0.get(eb, True) or "elegant" in (ea, eb) or fm_derived):
         # a field map integrated by one engine and a cavity element in the other agree on the
@@ -866,6 +937,10 @@ def _engine_check(res: CaseResult, deck: Path, src: str, out: Path, dst: str, la
         beam = beam_from_lattice(lat)
     except RuntimeError as exc:
         res.engine_note = f"skipped: {exc}"          # custom ion species: the adapters take named species only
+        return
+    p0_note = constant_p0_note(lat, (ea, eb))
+    if p0_note:
+        res.engine_note = p0_note
         return
     key_a = (str(deck), src, ea)
     if key_a not in cache:

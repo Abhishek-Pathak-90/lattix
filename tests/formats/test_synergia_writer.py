@@ -175,3 +175,21 @@ def test_goldens(tmp_path):
     out2 = tmp_path / "all_kinds.synergia.json"
     write(all_kinds_lattice(), out2, "synergia")
     _golden("all_kinds.synergia.json", out2)
+
+
+def test_vertical_bend_is_lossy(tmp_path):
+    """libFF's sbend has no tilt (measured 2026-09-06): a tilted bend keeps the attribute for the round trip but
+    is LOSSY, so the battery holds no engine pair to it."""
+    from lattix.formats import write
+    from lattix.ir.elements import Bend, BendP, Drift
+    from lattix.ir.lattice import Lattice
+    from lattix.ir.reference import ReferenceParticle, species
+
+    ref = ReferenceParticle(species=species("proton"), kinetic_energy_eV=8e8, rf_frequency_Hz=352.21e6)
+    lat = Lattice.from_sequence("v", [Drift(name="d", length=0.5),
+                                      Bend(name="bv", length=1.05, bend=BendP(angle=0.0416, e1=0.0208, e2=0.0208,
+                                                                              tilt_ref=math.pi / 2)),
+                                      Bend(name="bh", length=1.0, bend=BendP(angle=0.05))], ref)
+    rep = write(lat, tmp_path / "v.synergia.json", "synergia")
+    codes = {(e.element, e.code) for e in rep.entries if e.cls.value == "LOSSY"}
+    assert ("bv", "BEND_TILT_DROPPED") in codes and not any(el == "bh" for el, _ in codes)

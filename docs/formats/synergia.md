@@ -100,6 +100,11 @@ option (`"constant"` default — measured, see below — `"local"`, `"delta"`) i
 
 ## Known limits
 
+- **Bends (measured 2026-09-06):** libFF's `sbend` has no tilt and libFF no rotation element — a vertical bend is
+  propagated in the horizontal plane (LOSSY `BEND_TILT_DROPPED`, the attribute is still written); the pole-face
+  focusing follows the sign of the charge (H⁻: 2.7e-2 on a 0.1 rad bend with 0.05 rad faces, proton 1.3e-8) —
+  report only for a negative species with faces; its sector body (5.7e-6) and fringe model (4.5e-4 with
+  `fint·hgap`) put bends in the equivalent tier.
 * Synergia's `foil`, `nllens`, `elens` and `dipedge` have no IR kinds; the IR's foil, patch and
   reference change have no Synergia element (markers with tags).
 * One design momentum: bends downstream of acceleration are under-bent (no `k0`), a

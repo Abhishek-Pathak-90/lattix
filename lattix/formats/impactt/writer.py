@@ -581,8 +581,11 @@ class Writer:
         by = brho * angle / arc
         s = 1.0 if angle > 0 else -1.0
         xe, ze = -s * rho * (1.0 - math.cos(angle)), rho * math.sin(abs(angle))
-        k1 = s * math.tan(b.e1)
-        k4 = s * math.tan(abs(angle) - b.e2)
+        # the pole-face lines of a negative bend are the mirror (x → −x) of the positive one with the faces
+        # negated (MAD-X: (angle<0, e1, e2) ≡ (angle>0, tilt π, −e1, −e2)): slope k1 = tan(e1) either way,
+        # exit slope k4 = s·tan(|θ| − s·e2)
+        k1 = math.tan(b.e1)
+        k4 = s * math.tan(abs(angle) - s * b.e2)
         b4 = ze - k4 * xe
         native = el.meta.get("impactt_bend")
         if native and abs(native.get("angle", 0.0) - angle) < 1e-15 and native.get("e1") == b.e1 \

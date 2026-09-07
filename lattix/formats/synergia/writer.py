@@ -364,6 +364,11 @@ class Writer:
         tilt = float(b.tilt_ref) + (float(el.shift.tilt) if el.shift is not None else 0.0)
         if tilt:
             d["tilt"] = tilt
+            # MEASURED 2026-09-06 (docs/oracles.md, bend faces): libFF's ff_sbend has no tilt and libFF no rotation
+            # element — a vertical bend is propagated in the horizontal plane (5.8e-2 vs MAD-X on a 0.0416 rad bend);
+            # the attribute is kept for the round trip and for a libFF that may honour it
+            self.rep.lossy("BEND_TILT_DROPPED", "Synergia's sbend (libFF ff_sbend) ignores tilt: the bend is "
+                           "propagated in the horizontal plane", element=el.name, kind=el.kind, tilt=tilt)
         if abs(self.ratio - 1.0) > 1e-15 and el.length:
             # MEASURED: Synergia derives the bend field from the design momentum and its sbend takes no k0, so an
             # accelerated bunch is bent by angle·p_design/p_local (R21 = −h·sin(θ·p_design/p_local) on a 10°

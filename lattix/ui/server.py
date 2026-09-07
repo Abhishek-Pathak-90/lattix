@@ -439,6 +439,15 @@ def _subprocess_validation(job: Job, spec: dict) -> dict:
     return result
 
 
+def _code_counts(report) -> list[str]:
+    """``CODE=count`` for every non-EXACT ledger code (the verdict names the optics-affecting ones)."""
+    counts: dict[str, int] = {}
+    for e in report.entries:
+        if e.cls.value != "EXACT":
+            counts[e.code] = counts.get(e.code, 0) + 1
+    return [f"{c}={n}" for c, n in sorted(counts.items())]
+
+
 def start_validation(app: App, session: Session, body: dict) -> Job:
     from lattix.crossval import beam_from_lattice, pick_engine
 
@@ -468,18 +477,23 @@ def start_validation(app: App, session: Session, body: dict) -> Job:
                 engines.append(e)
     if len(engines) < 2:
         raise ApiError(400, "bad_request", "pick at least two engines (one per deck format, or two on the source)")
-    beam = body.get("beam") or None
-    if beam is None:
+    beam = dict(body.get("beam") or {})
+    if not all(beam.get(k) for k in ("species", "kinetic_energy_eV")):
+        # anything the form left out comes from the source lattice — never from an engine's own default
         try:
             b = beam_from_lattice(src.lattice)
         except RuntimeError as exc:
             raise ApiError(400, "bad_request", f"{exc}; pick a named species in the beam form") from None
-        beam = {"species": b.species, "kinetic_energy_eV": b.kinetic_energy_eV, "frequency_Hz": b.frequency_Hz}
+        fallback = (("species", b.species), ("kinetic_energy_eV", b.kinetic_energy_eV),
+                    ("frequency_Hz", b.frequency_Hz))
+        for k, v in fallback:
+            if not beam.get(k) and v is not None:
+                beam[k] = v
     wd = (tr.dir if tr is not None else session.dir) / "validate"
     wd.mkdir(parents=True, exist_ok=True)
     spec = {"decks": decks, "engines": engines, "beam": beam, "workdir": str(wd),
             "tier": tr.tier if tr is not None else "exact",          # two engines on one deck: exact
-            "codes": sorted({e.code for e in tr.report.entries if e.cls.value != "EXACT"}) if tr is not None else []}
+            "codes": _code_counts(tr.report) if tr is not None else []}
 
     def run(job: Job) -> dict:
         job.set_progress(0, len(engines), engines[0])

@@ -83,13 +83,23 @@ def cmd_validate(a) -> int:
         decks[fmt] = Path(path)
     engines = a.oracles.split(",")
     beam = _beam_from_args(a)
+    lat = read_lattice(decks, beam)
     outcome = run_validation(decks, engines, beam, workdir=Path(a.workdir) if a.workdir else None,
-                             log=lambda line: print(line, file=sys.stderr if "skipped" in line else sys.stdout))
+                             log=lambda line: print(line, file=sys.stderr if "skipped" in line else sys.stdout),
+                             lat=lat)
+    codes = {}
+    for item in (a.codes or "").split(","):
+        if item:
+            name, _, n = item.partition("=")
+            codes[name] = int(n) if n.isdigit() else 1
+    verdicts = verdicts_for(outcome, lat, a.tier or "lossy", codes) if len(outcome.results) >= 2 else {}
+    if a.json:
+        # written before the exit-2 path too: a skipped/failed engine and its reason must reach the caller
+        payload = outcome_to_dict(outcome, decks=decks, beam=beam, verdicts=verdicts, full=True)
+        Path(a.json).write_text(json.dumps(payload) + "\n")
     if len(outcome.results) < 2:
         print("need at least two engines to compare", file=sys.stderr)
         return 2
-    codes = [c for c in (a.codes or "").split(",") if c]
-    verdicts = verdicts_for(outcome, read_lattice(decks, beam), a.tier or "lossy", codes)
     for pc in outcome.comparisons:
         print(pc.row() + ("  " + "; ".join(pc.notes) if pc.notes else ""))
         v = verdicts.get((pc.a, pc.b))
@@ -99,9 +109,6 @@ def cmd_validate(a) -> int:
                   f"{', '.join(sorted(v.blocks_used))}; max over them {v.metric_rel:.2e} (relative)"
                   + ("".join(f"\n{'':21s}  · {n}" for n in v.notes)))
     worst = outcome.worst
-    if a.json:
-        payload = outcome_to_dict(outcome, decks=decks, beam=beam, verdicts=verdicts, full=True)
-        Path(a.json).write_text(json.dumps(payload) + "\n")
     if a.html:
         from lattix.report_html import write_validate_html
 
@@ -226,8 +233,9 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--json", default=None)
     s.add_argument("--tier", choices=("exact", "equivalent", "lossy"), default=None,
                    help="the translation's fidelity tier the pairs are held to (default: report only)")
-    s.add_argument("--codes", default=None, help="comma list of the translation's ledger codes (FM_* selects "
-                                                  "the field-map comparison rules)")
+    s.add_argument("--codes", default=None,
+                   help="comma list of the translation's ledger codes, CODE or CODE=count (FM_* selects the field-map "
+                        "comparison rules; the counts feed the verdict notes)")
     _add_beam_args(s)
     s.set_defaults(func=cmd_validate)
 

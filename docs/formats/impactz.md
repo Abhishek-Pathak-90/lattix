@@ -68,6 +68,9 @@ re-integrated.
 
 ## Known limits
 
+- **Bends (measured 2026-09-06):** negative angles and pole faces agree with MAD-X to 1e-9 (`rect_bends.madx`);
+  a vertical bend is written horizontal (`IMPACTZ_NO_REF_TILT`, 3.4e-2 on `vertical_bends.madx`) and the
+  battery verdict names the code.
 * Type-5 multipoles produce NaN under `flagmap = 1`; misalignments need `flagerr = 1`.
 * IMPACT-Z has no reference tilt, second fringe integral, skew multipole, patch or foil.
 * The `rfdata` file limit and the reference-energy coupling of type 104 are recorded as

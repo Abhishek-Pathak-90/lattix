@@ -69,6 +69,7 @@ its built-in tables).
 
 ## Known limits
 
+- A vertical bend read back always gets `tilt_ref = +π/2` (`ver=1`): write `tilt = π/2`, never `−π/2`.
 * No thin multipole, octupole, field map, fringe integrals, reference tilt, patch.
 * `aper` is read nowhere in FLAME's source; collimation is not simulated.
 * PyPI ships only manylinux x86_64 wheels; on macOS FLAME is built from the clone.

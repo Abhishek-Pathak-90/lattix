@@ -219,18 +219,18 @@ svg.chart polyline { fill: none; stroke-width: 1.5px; }
     <button id="btn-help" title="keyboard shortcuts">?</button>
     <div id="busy"></div>
   </header>
-  <div id="beam" class="modal" hidden>
+  <div id="beam-dialog" class="modal" hidden>
     <div class="backdrop"></div>
     <div class="dialog" role="dialog" aria-label="beam">
       <div class="head"><b>This deck carries no beam</b></div>
-      <p id="beam-text" class="muted"></p>
+      <p id="beam-dlg-text" class="muted"></p>
       <div class="row">
-        <label>Species <select id="beam-species"></select></label>
-        <label>KE <input type="number" id="beam-ke" step="any" style="width:7em">
-          <select id="beam-ke-unit"><option value="1">eV</option><option value="1e3">keV</option><option value="1e6" selected>MeV</option><option value="1e9">GeV</option></select></label>
-        <label>f <input type="number" id="beam-freq" step="any" style="width:6em"> MHz</label>
+        <label>Species <select id="beam-dlg-species"></select></label>
+        <label>KE <input type="number" id="beam-dlg-ke" step="any" style="width:7em">
+          <select id="beam-dlg-ke-unit"><option value="1">eV</option><option value="1e3">keV</option><option value="1e6" selected>MeV</option><option value="1e9">GeV</option></select></label>
+        <label>f <input type="number" id="beam-dlg-freq" step="any" style="width:6em"> MHz</label>
       </div>
-      <div class="actions"><button id="beam-apply" class="primary">Read again with this beam</button><button id="beam-keep">Keep the assumed beam</button></div>
+      <div class="actions"><button id="beam-dlg-apply" class="primary">Read again with this beam</button><button id="beam-dlg-keep">Keep the assumed beam</button></div>
       <div class="hint">TraceWin decks hold no beam; HELIX keeps it in a <code>.lgproj</code> next to the deck — open the deck in place (Browse… or a path) or upload both files together, and it is taken from there.</div>
     </div>
   </div>
@@ -1068,25 +1068,25 @@ function guessLocal(name) {
 // the species and energy are right — ask, and read again
 const beamPrompt = {
   bind() {
-    $("#beam-keep").addEventListener("click", () => this.close());
-    $("#beam .backdrop").addEventListener("click", () => this.close());
-    $("#beam").addEventListener("keydown", ev => { if (ev.key === "Escape") { this.close(); ev.preventDefault(); } ev.stopPropagation(); });
-    $("#beam-apply").addEventListener("click", () => this.apply());
+    $("#beam-dlg-keep").addEventListener("click", () => this.close());
+    $("#beam-dialog .backdrop").addEventListener("click", () => this.close());
+    $("#beam-dialog").addEventListener("keydown", ev => { if (ev.key === "Escape") { this.close(); ev.preventDefault(); } ev.stopPropagation(); });
+    $("#beam-dlg-apply").addEventListener("click", () => this.apply());
   },
-  close() { $("#beam").hidden = true; },
+  close() { $("#beam-dialog").hidden = true; },
   open(vm) {
     const ref = vm.header.reference;
-    const sel = $("#beam-species"); sel.replaceChildren();
+    const sel = $("#beam-dlg-species"); sel.replaceChildren();
     for (const o of $("#opt-species").options) if (o.value) sel.appendChild(h("option", { value: o.value, text: o.textContent }));
     sel.value = ref.species.name;
-    $("#beam-ke").value = String(ref.kinetic_energy_eV / 1e6); $("#beam-ke-unit").value = "1e6";
-    $("#beam-freq").value = ref.rf_frequency_Hz ? String(ref.rf_frequency_Hz / 1e6) : "";
-    $("#beam-text").textContent = `${vm.header.file.split("/").pop()} was read as ${ref.species.name} at ${fmt.si(ref.kinetic_energy_eV, "eV")} — an assumption, not the deck's beam. Every normalised strength, the written deck and any engine run depend on it; a line read far from its energy is unstable and compares as astronomical numbers.`;
-    $("#beam").hidden = false; $("#beam-ke").focus(); $("#beam-ke").select();
+    $("#beam-dlg-ke").value = String(ref.kinetic_energy_eV / 1e6); $("#beam-dlg-ke-unit").value = "1e6";
+    $("#beam-dlg-freq").value = ref.rf_frequency_Hz ? String(ref.rf_frequency_Hz / 1e6) : "";
+    $("#beam-dlg-text").textContent = `${vm.header.file.split("/").pop()} was read as ${ref.species.name} at ${fmt.si(ref.kinetic_energy_eV, "eV")} — an assumption, not the deck's beam. Every normalised strength, the written deck and any engine run depend on it; a line read far from its energy is unstable and compares as astronomical numbers.`;
+    $("#beam-dialog").hidden = false; $("#beam-dlg-ke").focus(); $("#beam-dlg-ke").select();
   },
   apply() {
-    $("#opt-species").value = $("#beam-species").value; $("#opt-ke").value = $("#beam-ke").value;
-    $("#opt-ke-unit").value = $("#beam-ke-unit").value; $("#opt-freq").value = $("#beam-freq").value;
+    $("#opt-species").value = $("#beam-dlg-species").value; $("#opt-ke").value = $("#beam-dlg-ke").value;
+    $("#opt-ke-unit").value = $("#beam-dlg-ke-unit").value; $("#opt-freq").value = $("#beam-dlg-freq").value;
     this.close(); topbar.read(store.lastRead);
   },
 };

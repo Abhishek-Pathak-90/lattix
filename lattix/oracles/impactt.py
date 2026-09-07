@@ -232,9 +232,14 @@ class ImpacttOracle:
                     # one of its kind, so the chunk is cut at the last dump that was written and resumed there
                     missing.append(e.name)
                     e.dump = False
-            if b < len(elems) and (not got or got[-1] is not part[-1]):
+            if not got or got[-1] is not part[-1]:
                 if not got:
-                    raise RuntimeError(f"IMPACT-T wrote none of the dumps of chunk {ci} ({cwd}); see run.log")
+                    if a == 0:
+                        raise RuntimeError(f"IMPACT-T wrote none of the dumps of chunk {ci} ({cwd}); see run.log")
+                    # a resumed tail that yields no dump at all: its elements keep their span, not a map
+                    warnings.append(f"chunk {ci} ({part[0].name} … {part[-1].name}) wrote no dump: the tail is "
+                                    "reported without a map")
+                    break
                 b = elems.index(got[-1]) + 1
                 part = elems[a:b]
                 chunks = chunks[:ci] + [(a, b)] + [(b + x, b + y) for x, y in self._chunks(elems[b:])]
@@ -281,6 +286,18 @@ class ImpacttOracle:
             ke_out.append(ke_new)
             ke_run = ke_new
             block = []
+        if block:
+            # elements after the last written dump: their span is known, their map is not — kept as one
+            # element with a NaN map so the line's length and positions stay right (the comparison skips it)
+            names.append("+".join(x.name for x in block))
+            kinds.append("+".join(x.kind for x in block))
+            lengths.append(sum(x.length for x in block))
+            s_out.append(block[-1].s_in + block[-1].length - z_nom)
+            R.append(np.full((6, 6), np.nan))
+            ke_in.append(ke_run)
+            ke_out.append(ke_run)
+            warnings.append(f"the last {len(block)} element(s) ({block[0].name} … {block[-1].name}, "
+                            f"{sum(x.length for x in block):.6g} m) have no dump: their map is NaN")
         probe_out = None
         planes = [e for e in elems if e.dump]
         if extra is not None and dumps and planes:
@@ -356,8 +373,17 @@ class ImpacttOracle:
                 t += (z_in - s) / (_beta(ke, mass) * C_LIGHT)
                 s = z_in
             elif z_in < s - 1e-9:
-                warnings.append(f"card at line {c.line} overlaps the previous element by {s - z_in:.3g} m; "
-                                "the adapter cannot place its plane")
+                if c.itype == 0:
+                    # a drift card starting before the previous element ends (a negative drift in the source, which
+                    # the writer does not emit): IMPACT-T places by zedge, so only its uncovered part is a drift here
+                    covered = s - z_in
+                    length = max(0.0, length - covered)
+                    z_in = s
+                    warnings.append(f"drift card at line {c.line} overlaps the previous element by {covered:.3g} m; "
+                                    f"only its uncovered {length:.3g} m counts")
+                else:
+                    warnings.append(f"card at line {c.line} overlaps the previous element by {s - z_in:.3g} m; "
+                                    "the adapter cannot place its plane")
             kind = _kind(c)
             dE = 0.0
             if c.itype == 104 and c.v(3) and int(round(c.v(5))) in profiles:
@@ -451,8 +477,9 @@ class ImpacttOracle:
         for e in stepped:
             if e.skip:
                 e.dump = False
-        if stepped and not stepped[-1].dump:
-            stepped[-1].dump = True
+        last_live = next((e for e in reversed(stepped) if not e.skip), None)
+        if last_live is not None and not last_live.dump:
+            last_live.dump = True                       # the exit plane: always the last element with controls
         return elems
 
     @staticmethod

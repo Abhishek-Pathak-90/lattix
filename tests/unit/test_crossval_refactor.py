@@ -173,3 +173,54 @@ def test_compare_pair_notes_an_unstable_line():
     assert not any("unstable" in n for n in compare_pair(ra, ra).notes) or True   # same maps: the note is about scale
     small = compare_pair(_res("madx", ["d"], [1.0], [d]), _res("xtrack", ["d"], [1.0], [d]))
     assert not any("unstable" in n for n in small.notes)
+
+
+def test_constant_p0_gate_reports_a_strongly_accelerating_line():
+    from lattix.crossval import P0_RATIO_LIMIT, constant_p0_note, momentum_ratio
+    from lattix.ir.elements import RFP, Drift, RFCavity
+    from lattix.ir.lattice import Lattice
+    from lattix.ir.reference import ReferenceParticle, species
+
+    ref = ReferenceParticle(species=species("proton"), kinetic_energy_eV=2.1e6, rf_frequency_Hz=352.2e6)
+    hot = Lattice.from_sequence("hot", [Drift(name="d", length=0.1),
+                                        RFCavity(name="c", length=0.0, rf=RFP(voltage_V=5e8, phase_rad=0.0,
+                                                                              frequency_Hz=352.2e6)),
+                                        Drift(name="e", length=0.1)], ref)
+    cold = Lattice.from_sequence("cold", [Drift(name="d", length=0.1),
+                                          RFCavity(name="c", length=0.0, rf=RFP(voltage_V=1e5, phase_rad=0.0,
+                                                                                frequency_Hz=352.2e6)),
+                                          Drift(name="e", length=0.1)], ref)
+    assert momentum_ratio(hot) > P0_RATIO_LIMIT > momentum_ratio(cold) >= 1.0
+    note = constant_p0_note(hot, ("madx", "helix"))
+    assert note and "madx keeps p0 constant" in note and "report only" in note
+    assert constant_p0_note(hot, ("bmad", "helix")) is None          # p0-following pairs run
+    assert constant_p0_note(cold, ("madx", "helix")) is None         # a modest gain is compared (blocks rule)
+    assert constant_p0_note(hot, ("vfake",)) is None                 # an unknown engine follows p0
+
+
+def test_engine_verdict_bend_rules_and_optics_code_notes():
+    """DYNAC and Synergia bend maps cap the exact tier; a LOSSY code that changes the optics is named."""
+    lat, _ = read(DATA / "helix" / "bend_line.dat", "tracewin", kinetic_energy_eV=2.1e6)
+    d = drift_common(1.0, 2.1e6, MP)
+    ra, rb = _res("madx", ["d"], [1.0], [d]), _res("dynac", ["d"], [1.0], [d])
+    v = engine_verdict(compare_pair(ra, rb), "madx", "dynac", lat, "exact", {}, ra, rb)
+    assert v.tier == "equivalent" and any("DYNAC bend maps" in n for n in v.notes)
+    rb = _res("synergia", ["d"], [1.0], [d])
+    v = engine_verdict(compare_pair(ra, rb), "madx", "synergia", lat, "exact", {}, ra, rb)
+    assert v.tier == "equivalent" and any("Synergia sbend" in n for n in v.notes)
+    # a negative species with pole faces: Synergia's edge focusing flips — report only
+    from lattix.ir.elements import Bend, BendP, Drift
+    from lattix.ir.lattice import Lattice
+    from lattix.ir.reference import ReferenceParticle, species
+    hm = Lattice.from_sequence("hm", [Drift(name="d", length=0.5),
+                                      Bend(name="b", length=1.0, bend=BendP(angle=0.1, e1=0.05, e2=0.05))],
+                               ReferenceParticle(species=species("h-"), kinetic_energy_eV=8e8))
+    v = engine_verdict(compare_pair(ra, rb), "madx", "synergia", hm, "exact", {}, ra, rb)
+    assert v.tier == "lossy" and any("negative species" in n for n in v.notes)
+    rb = _res("impactz", ["d"], [1.0], [d])
+    v = engine_verdict(compare_pair(ra, rb), "madx", "impactz", lat, "lossy", {"IMPACTZ_NO_REF_TILT": 4}, ra, rb)
+    assert any(n.startswith("IMPACTZ_NO_REF_TILT ×4") and "horizontal plane" in n for n in v.notes)
+    v = engine_verdict(compare_pair(ra, rb), "madx", "impactz", lat, "lossy", {"IMPACTZ_NO_REF_TILT": 4}, ra, rb)
+    assert v.tier == "lossy" and v.ok
+    v = engine_verdict(compare_pair(ra, rb), "madx", "impactz", lat, "exact", {}, ra, rb)
+    assert v.tier == "exact" and not any("×" in n for n in v.notes)

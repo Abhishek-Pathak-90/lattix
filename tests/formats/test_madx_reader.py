@@ -536,3 +536,16 @@ use, sequence=s;
     with pytest.raises(TranslationError) as exc:
         Reader().read(p, strict=True)
     assert code in str(exc.value)
+
+
+def test_frequency_option_sets_the_rf_clock(tmp_path):
+    p = _deck(tmp_path, """
+beam, particle=proton, energy=1.738272;
+qf: quadrupole, l=0.3, k1=0.6;
+s: sequence, l=1.0; qf, at=0.5; endsequence;
+use, sequence=s;
+""")
+    lat, _ = Reader().read(p)
+    assert lat.reference.rf_frequency_Hz is None
+    lat, _ = Reader().read(p, frequency_Hz=352.21e6)
+    assert lat.reference.rf_frequency_Hz == 352.21e6 and lat.reference.kinetic_energy_eV == pytest.approx(8e8, rel=1e-6)

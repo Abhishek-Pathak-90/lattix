@@ -284,7 +284,7 @@ codes describe what the *target* format cannot hold.
 
 | code | class | meaning | source |
 |---|---|---|---|
-| `BEND_TILT_DROPPED` | LOSSY | FLAME sbend only bends horizontally (ver = 0) or vertically (ver = 1); tilt_ref = rad cannot be written | `writer.py` |
+| `BEND_TILT_DROPPED` | LOSSY | FLAME sbend only bends horizontally (ver = 0) or vertically (ver = 1); tilt_ref = rad cannot be written | `writer.py` +1 |
 | `ELECTROSTATIC_UNSUPPORTED` | DROPPED | FLAME is an electrostatic element with no IR model; kept as a marker of length m (parameters preserved in native) | `reader.py` |
 | `FLAME_BAD_EXPRESSION` | LOSSY | = : | `reader.py` +1 |
 | `FLAME_BEND_DPHI` | EQUIVALENT | sbend is an extra pole-face angle FLAME adds on top of phi1/phi2; kept in native only | `reader.py` |

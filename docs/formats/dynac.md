@@ -121,6 +121,9 @@ opposite `ALINER` beam shifts (EQUIVALENT `MISALIGN_AS_ALINER`).
 
 ## Known limits
 
+- **Bends (measured 2026-09-06):** the maps fitted from the 6-digit dumps drift by ~1e-6 per BMAGNET (9.5e-5 over
+  the 4-bend chicane vs Elegant, 1.7e-3 over the 36 PIP-II BTL bends vs HELIX): bend decks are the equivalent
+  tier in the battery; the 5e-5 exact floor stays for RF-only decks.
 * No octupole, matrix element, RFQ cell, foil model of lattix's, pitch/yaw patch or continuous aperture
   in DYNAC; sextupoles act at second order only (`SECORD`).
 * Thick cavities are thin bunchers at their centre (their length kept by drifts); cell trains and field

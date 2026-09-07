@@ -80,6 +80,9 @@ gap focusing (`BaseRfGap`), not lattix's thin-gap lens.
 
 ## Known limits
 
+- **Bends (measured 2026-09-06):** negative angles and pole faces agree with MAD-X to 3e-10 (`rect_bends.madx`);
+  a vertical bend is written horizontal (`PYORBIT_BEND_TILT_DROPPED`, 3.4e-2 on `vertical_bends.madx`) and the
+  battery verdict names the code.
 * No sextupole, octupole, thin multipole, fringe-field integral, bend tilt, misalignment, matrix,
   patch, foil or collimator in the linac XML.
 * Correctors and gaps are thin: a thick kicker or cavity acts at its centre (Equivalent tier).

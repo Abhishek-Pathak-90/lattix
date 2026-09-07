@@ -91,10 +91,16 @@ class MadxOracle:
         mass_eV, charge = beam_used.mass_eV, beam_used.charge
         ke = beam_used.kinetic_energy_eV
 
-        tw = m.twiss(sequence=seq, betx=beam_used.betx, alfx=beam_used.alfx,
-                     bety=beam_used.bety, alfy=beam_used.alfy, dx=beam_used.dx,
-                     dpx=beam_used.dpx, dy=beam_used.dy, dpy=beam_used.dpy, sectormap=True,
-                     sectorfile=str(wd / "sectormap.tfs"))
+        try:
+            tw = m.twiss(sequence=seq, betx=beam_used.betx, alfx=beam_used.alfx,
+                         bety=beam_used.bety, alfy=beam_used.alfy, dx=beam_used.dx,
+                         dpx=beam_used.dpx, dy=beam_used.dy, dpy=beam_used.dpy, sectormap=True,
+                         sectorfile=str(wd / "sectormap.tfs"))
+        except Exception as exc:  # noqa: BLE001 - cpymad raises TwissFailed, a RuntimeError subclass
+            raise RuntimeError(
+                f"MAD-X twiss failed on the open line ({type(exc).__name__}); MAD-X keeps p0 constant and expands "
+                "its maps about the start momentum — a strongly accelerating line cannot be tracked this way: "
+                "validate it with a p0-following engine (Bmad, Elegant, TraceWin/HELIX)") from exc
         st = m.table.sectortable
         names_all = [str(n) for n in st.name]
         keep = [i for i, n in enumerate(names_all) if not n.lower().endswith(("$start", "$end"))]

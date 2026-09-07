@@ -140,6 +140,11 @@ thin_gap_length_m=…, harmonics=…, errors=…)`; `write_rfdata=False` skips t
 
 ## Known limits
 
+- **Pole faces of a negative bend (2026-09-06):** the face lines are the x → −x mirror of the positive bend with
+  the faces negated: `k1 = tan(e1)`, `k4 = s·tan(|θ| − s·e2)` (the exit slope was `s·tan(|θ| − e2)` before).
+  The oracle resumes its final chunk after a missed dump, reports the tail after the last written dump with
+  a NaN map instead of dropping it, and keeps only the uncovered part of a drift card that overlaps the
+  previous element.
 * The dipole model (no pole-face focusing) makes bend decks report-only in the battery.
 * Thin gaps are short cavities: their transverse RF focusing is a field integration's, not the
   thin-gap formula's (Equivalent tier: `mebt_line` 8.1e-3 against HELIX with the reference energy
