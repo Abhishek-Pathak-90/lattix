@@ -307,7 +307,9 @@ use, l1
     assert isinstance(e["ty"], Taylor)
     assert e["ty"].matrix[0][0] == pytest.approx(0.5) and e["ty"].offset[1] == pytest.approx(0.25)
     assert isinstance(e["pa"], Patch)
-    assert (e["pa"].x_offset, e["pa"].y_rot, e["pa"].tilt) == pytest.approx((0.001, 0.002, 0.3))
+    # y_pitch = 0.002 is a rotation about x with the opposite sense: the IR x_rot is -0.002
+    assert (e["pa"].x_offset, e["pa"].x_rot, e["pa"].y_rot, e["pa"].tilt) == \
+        pytest.approx((0.001, -0.002, 0.0, 0.3))
     assert rep.counts.get("DROPPED", 0) == 0
 
 
@@ -338,6 +340,30 @@ def test_rfcavity_is_a_ring_cavity(tmp_path):
         pytest.approx(lat.reference.kinetic_energy_eV)
 
 
+def test_pitch_planes_agree_with_the_other_writers(tmp_path):
+    """A Bmad ``x_pitch`` is a rotation about y, so it is the IR ``y_rot`` and therefore Elegant's
+    ``YAW``; ``y_pitch`` is the IR ``-x_rot``, which Elegant writes as ``PITCH``.  This pins the two
+    writers to one convention.  It does not prove the plane is physically right: a pitch is an orbit
+    kick and does not show up in the element maps the oracles compare, so the physical anchor stays
+    the Tao versus BeamTracking orbit measurement quoted in the reader."""
+    from lattix.formats.bmad import Writer
+    from lattix.formats.elegant import Writer as LteWriter
+
+    lat, _ = read_text(tmp_path, """
+q: quadrupole, l = 0.3, k1 = 2.0, x_pitch = 1e-3, y_pitch = 2e-3
+l1: line = (q)
+use, l1
+""")
+    q = lat.elements["q"]
+    assert (q.shift.x_rot, q.shift.y_rot) == pytest.approx((-2e-3, 1e-3))
+    LteWriter().write(lat, tmp_path / "pitch.lte")
+    lte = (tmp_path / "pitch.lte").read_text().replace(" ", "").upper()
+    assert "YAW=0.001" in lte and "PITCH=0.002" in lte          # elegant PITCH is -x_rot
+    Writer().write(lat, tmp_path / "back.bmad")                  # and the reader's mirror comes back
+    out = (tmp_path / "back.bmad").read_text()
+    assert "x_pitch = 0.001" in out and "y_pitch = 0.002" in out
+
+
 def test_apertures_and_misalignments(tmp_path):
     lat, _ = read_text(tmp_path, """
 q: quadrupole, l = 0.6, k1 = 1, x1_limit = 0.01, x2_limit = 0.02, y1_limit = 0.03,
@@ -354,7 +380,8 @@ use, l1
     assert q.aperture.y_limits == pytest.approx((-0.03, 0.04))
     assert (q.shift.x_offset, q.shift.y_offset, q.shift.z_offset) == \
         pytest.approx((1e-3, 2e-3, 3e-3))
-    assert (q.shift.x_rot, q.shift.y_rot) == pytest.approx((1e-4, 2e-4))
+    # x_pitch rotates about y (IR y_rot); y_pitch rotates about x with the opposite sense (IR -x_rot)
+    assert (q.shift.x_rot, q.shift.y_rot) == pytest.approx((-2e-4, 1e-4))
     assert q.shift.tilt == 0.0            # a quadrupole's tilt is multipole physics, not a shift
     b = lat.elements["b"]
     assert b.bend.tilt_ref == pytest.approx(0.2)     # geometry

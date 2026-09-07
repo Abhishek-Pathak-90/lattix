@@ -479,9 +479,10 @@ class Writer:
         if s is None or s.is_zero() or base == "patch":
             return []
         out = []
+        # IR y_rot, a rotation about y, is Bmad's x_pitch; IR x_rot is -y_pitch (the reader's mirror)
         for attr, value in (("x_offset", s.x_offset), ("y_offset", s.y_offset),
-                            ("z_offset", s.z_offset), ("x_pitch", s.x_rot),
-                            ("y_pitch", s.y_rot)):
+                            ("z_offset", s.z_offset), ("x_pitch", s.y_rot),
+                            ("y_pitch", -s.x_rot)):
             if value:
                 out.append(f"{attr} = {_num(value)}")
         if s.tilt:
@@ -742,8 +743,8 @@ class Writer:
     def _def_patch(self, el, brho, lat, ux, rep):
         attrs = []
         for attr, value in (("x_offset", el.x_offset), ("y_offset", el.y_offset),
-                            ("z_offset", el.z_offset), ("x_pitch", el.x_rot),
-                            ("y_pitch", el.y_rot), ("tilt", el.tilt)):
+                            ("z_offset", el.z_offset), ("x_pitch", el.y_rot),
+                            ("y_pitch", -el.x_rot), ("tilt", el.tilt)):
             if value:
                 attrs.append(f"{attr} = {_num(value)}")
         return "patch", attrs

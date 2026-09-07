@@ -1055,8 +1055,11 @@ class Reader:
         el.x_offset = self._num(d.attrs.get("x_offset"), r)
         el.y_offset = self._num(d.attrs.get("y_offset"), r)
         el.z_offset = self._num(d.attrs.get("z_offset"), r)
-        el.x_rot = self._num(d.attrs.get("x_pitch"), r)
-        el.y_rot = self._num(d.attrs.get("y_pitch"), r)
+        # Bmad names a pitch after the plane the exit end moves in: x_pitch rotates about y, which is
+        # the IR y_rot, and y_pitch rotates about x with the opposite sense, the IR -x_rot.  Measured on
+        # Tao versus BeamTracking orbits; the same rule Bmad's own foreign-format writers use.
+        el.x_rot = -self._num(d.attrs.get("y_pitch"), r)
+        el.y_rot = self._num(d.attrs.get("x_pitch"), r)
         el.tilt = self._num(d.attrs.get("tilt"), r)
         nat = el.native.setdefault("bmad", {})
         dropped = {}
@@ -1160,8 +1163,8 @@ class Reader:
         shift = BodyShiftP(x_offset=self._num(a.get("x_offset"), r),
                            y_offset=self._num(a.get("y_offset"), r),
                            z_offset=self._num(a.get("z_offset"), r),
-                           x_rot=self._num(a.get("x_pitch"), r),
-                           y_rot=self._num(a.get("y_pitch"), r),
+                           x_rot=-self._num(a.get("y_pitch"), r),      # see _conv_patch
+                           y_rot=self._num(a.get("x_pitch"), r),
                            tilt=tilt)
         if isinstance(el, Patch):                    # its offsets ARE the element
             return

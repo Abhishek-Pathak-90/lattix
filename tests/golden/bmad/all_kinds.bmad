@@ -22,7 +22,7 @@ mk: marker
 bp: monitor, l = 0.05
 fl: foil, material_type = "C", area_density = 0.237
 ty: taylor, l = 0.2, {1: 0.5|2}, {5: 0.001|}
-pt: patch, x_offset = 0.001, y_pitch = 0.002, tilt = 0.3
+pt: patch, x_offset = 0.001, x_pitch = 0.002, tilt = 0.3
 rc: marker
 ! lattix directive (tracewin matching): ADJUST 1 2
 sup_child: drift, l = 0.2
