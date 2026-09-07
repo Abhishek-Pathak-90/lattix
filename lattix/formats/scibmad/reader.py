@@ -65,6 +65,9 @@ _FUNCTION = re.compile(r"^\s*function\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 _TERM = re.compile(r"([+-]?)\s*([0-9.]+(?:[eE][+-]?\d+)?)\s*(?:\*\s*v\[(\d)\])?")
 _SPECIES_BACK = {v: k for k, v in SPECIES_NAMES.items()}
 _SPECIES_BACK.update({"H-": "h-", "anti-proton": "antiproton", "antiproton": "antiproton"})
+#: reference keywords Beamlines.jl accepts on a Beamline call and, as the leading element of a
+#: line, on a Marker (HELIX's SciBmad examples and Bmad's own converter write the Marker form)
+_REF_KEYS = ("species_ref", "E_ref", "pc_ref", "p_over_q_ref")
 _MULT = re.compile(r"^(Kn|Ks|Bn|Bs)(\d+)(L?)$")
 _TILT = re.compile(r"^tilt(\d+)$")
 
@@ -260,7 +263,10 @@ class Reader:
         for name, _items, kw in beamlines:
             if name == root_name:
                 root_kw = kw
-        ref = self._reference(root_kw, species, kinetic_energy_eV, text, rep, warnings)
+        ref_kw = dict(root_kw)
+        for key, val in self._marker_reference(root_name, beamlines, vectors, elements_raw).items():
+            ref_kw.setdefault(key, val)                 # the Beamline's own keywords win
+        ref = self._reference(ref_kw, species, kinetic_energy_eV, text, rep, warnings)
         brho = ref.brho_signed
 
         # -- elements ----------------------------------------------------------
@@ -409,6 +415,33 @@ class Reader:
         return items, kw
 
     # -- reference ------------------------------------------------------------
+    @staticmethod
+    def _marker_reference(root_name, beamlines, vectors, elements_raw) -> dict[str, _Value]:
+        """The reference keywords of a ``Marker`` placed first in the root line.
+
+        ``Beamline([...]; species_ref = …, E_ref = …)`` is one carrier; the other is a leading
+        ``lat_begin = Marker(species_ref = …, E_ref = …)``, which is what HELIX's SciBmad examples
+        and Bmad's own converter emit.  Anything else, a splat of a vector included, resolves to
+        its own first entry; an unresolvable head simply carries no reference.
+        """
+        items = next((it for name, it, _kw in beamlines if name == root_name), None)
+        if items is None:
+            items = [jname for _l, jname, _k, _b in elements_raw][:1]
+        head, seen = (items[0].strip() if items else ""), set()
+        vecs = dict(vectors)
+        while head:
+            head = head.removesuffix("...").strip()
+            if head in vecs and head not in seen and vecs[head]:
+                seen.add(head)
+                head = vecs[head][0].strip()
+                continue
+            break
+        for _line_no, jname, kind, body in elements_raw:
+            if jname == head and kind == "Marker":
+                _pos, kw = parse_kwargs(body)
+                return {k: v for k, v in kw.items() if k in _REF_KEYS}
+        return {}
+
     def _reference(self, kw: dict[str, _Value], species_opt, kinetic_opt, text: str,
                    rep: FidelityReport, warnings: list[str]) -> ReferenceParticle:
         tag = parse_reference_tag(text)
@@ -421,7 +454,8 @@ class Reader:
             sp = tag.species
         if sp is None:
             sp = species_by_name("proton")
-            rep.lossy("SPECIES_ASSUMED", "no species_ref in the Beamline and no reference tag; proton assumed",
+            rep.lossy("SPECIES_ASSUMED", "no species_ref on the Beamline, its leading Marker or a reference "
+                                  "tag; proton assumed",
                       element=None, kind=None)
         f = tag.rf_frequency_Hz if tag is not None else None
         if kinetic_opt is not None:
@@ -436,7 +470,8 @@ class Reader:
             rep.equivalent("REFERENCE_FROM_TAG", "reference energy taken from the '# lattix: reference' tag",
                            element=None, kind=None)
             return ReferenceParticle(species=sp, kinetic_energy_eV=tag.kinetic_energy_eV, rf_frequency_Hz=f)
-        rep.lossy("ENERGY_ASSUMED", "no pc_ref/E_ref in the Beamline; 1 GeV kinetic assumed "
+        rep.lossy("ENERGY_ASSUMED", "no pc_ref/E_ref on the Beamline or its leading Marker; "
+                  "1 GeV kinetic assumed "
                   "(normalized strengths are meaningless without it)", element=None, kind=None)
         return ReferenceParticle(species=sp, kinetic_energy_eV=1e9, rf_frequency_Hz=f)
 

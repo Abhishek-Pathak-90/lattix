@@ -104,6 +104,45 @@ def test_reference_from_pc_ref_p_over_q_ref_and_tag(tmp_path):
     assert "REFERENCE_FROM_TAG" in rep.codes()
 
 
+_MARKER_DECK = ('using Beamlines\n@elements begin\n'
+                '  lat_begin = Marker(species_ref = Species("#1H-"), E_ref = 941391806.25)\n'
+                '  q1 = Quadrupole(L = 0.3, Kn1 = -2.0)\nend\n'
+                'lattice = Beamline([lat_begin, q1])\n')
+
+
+def test_reference_carried_on_a_leading_marker(tmp_path):
+    """The other carrier Beamlines.jl allows: a leading ``Marker`` holding the reference, which is the
+    form HELIX's SciBmad examples and Bmad's own converter emit.  Without it the deck reads as the
+    assumed proton at 1 GeV and every normalised strength is denormalised at the wrong rigidity."""
+    lat, rep = _read_text(tmp_path, _MARKER_DECK)
+    assert lat.reference.species.name == "h-"
+    assert lat.reference.kinetic_energy_eV == pytest.approx(941391806.25 - lat.reference.species.mass_eV,
+                                                            rel=1e-12)
+    assert "SPECIES_ASSUMED" not in rep.codes() and "ENERGY_ASSUMED" not in rep.codes()
+    # a negative Kn1 on a negative charge is a positive gradient: the signed rigidity did the work
+    assert lat.elements["q1"].multipole.Bn[1] == pytest.approx(2.0 * abs(lat.reference.brho_signed), rel=1e-12)
+
+
+def test_read_options_win_over_the_marker_field_by_field(tmp_path):
+    """``species=``/``kinetic_energy_eV=`` override the carrier one field at a time: what the caller
+    did not give still comes from the marker."""
+    lat, _ = _read_text(tmp_path, _MARKER_DECK, name="sp.jl", species="proton")
+    assert lat.reference.species.name == "proton"                       # option
+    assert lat.reference.kinetic_energy_eV == pytest.approx(941391806.25 - species("proton").mass_eV,
+                                                            rel=1e-12)  # marker
+    lat, _ = _read_text(tmp_path, _MARKER_DECK, name="ke.jl", kinetic_energy_eV=5e6)
+    assert lat.reference.species.name == "h-"                           # marker
+    assert lat.reference.kinetic_energy_eV == pytest.approx(5e6)        # option
+
+
+def test_beamline_keywords_win_over_the_marker(tmp_path):
+    lat, _ = _read_text(tmp_path, _MARKER_DECK.replace("Beamline([lat_begin, q1])",
+                                                       'Beamline([lat_begin, q1]; E_ref = 1738272000.0,'
+                                                       ' species_ref = Species("proton"))'))
+    assert lat.reference.species.name == "proton"
+    assert lat.reference.kinetic_energy_eV == pytest.approx(799999911.84, rel=1e-12)
+
+
 def test_bend_field_and_fringe_from_the_file(tmp_path):
     lat, rep = _read_text(tmp_path, """
 @elements begin
