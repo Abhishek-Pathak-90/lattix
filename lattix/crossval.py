@@ -785,12 +785,15 @@ def engine_verdict(pc, ea: str, eb: str, lat: Lattice, tier: str, codes: dict[st
         blocks -= {"path", "R56"}
         caveat("HELIX bend map has no path-length row (R51/R52) and no dispersive R56 (known HELIX limit): "
                "path/R56 not compared; ", append=True)
-        if any(e.kind == "Bend" and e.bend.angle < 0 for e in lat.elements.values()) and tier != "lossy":
-            # measured 2026-09-04 (docs/oracles.md): HELIX's BEND body evaluates the sector map at the
-            # signed angle with rho > 0, so a negative-angle bend gets R12 < 0 and R21 > 0 (TraceWin
-            # itself gives the positive-bend block with R16/R26 flipped) — report only for such decks
+        fixed = any(bool((r.meta or {}).get("dipole_negative_bend_fixed")) for r in (ra, rb)
+                    if getattr(r, "engine", None) == "helix")
+        if any(e.kind == "Bend" and e.bend.angle < 0 for e in lat.elements.values()) and tier != "lossy" \
+                and not fixed:
+            # measured 2026-09-04 (docs/oracles.md): HELIX's BEND body evaluated the sector map at the signed
+            # angle with rho > 0 (R12 < 0, R21 > 0 on a negative bend). Fixed in HELIX d3f281a (2026-09-06):
+            # psb.seq then agrees on T4x4/disp to 2.3e-13 — the oracle reports whether its tree has the fix
             tier = "lossy"
-            caveat("HELIX negative-angle bend body (known HELIX limit, report only); ")
+            caveat("HELIX negative-angle bend body (HELIX before d3f281a, report only); ")
     if "impactt" in (ea, eb):
         # MEASURED (docs/oracles.md, Phase 5.5): IMPACT-T's dipole (getfldt_Dipole) bends the whole
         # bunch by the reference angle — no pole-face focusing, R21 = R26 = 0 — so bend decks are report

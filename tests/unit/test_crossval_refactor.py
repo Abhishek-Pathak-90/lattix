@@ -111,6 +111,23 @@ class _FakeLte(_Fake):
     name = "fake_lte"
 
 
+def test_engine_verdict_helix_negative_bends_follow_the_tree_version():
+    """The report-only rule for HELIX on negative-angle bends is tied to the HELIX tree: an oracle result whose
+    ``meta`` says the dipole fix (HELIX d3f281a) is present keeps the deck's tier; the path/R56 exclusion stays."""
+    lat, _ = read(DATA / "lattix" / "rect_bends.madx", "madx", frequency_Hz=352.21e6)
+    assert any(e.kind == "Bend" and e.bend.angle < 0 for e in lat.elements.values())
+    d = drift_common(1.0, 2.1e6, MP)
+    ra, rb = _res("madx", ["d"], [1.0], [d]), _res("helix", ["d"], [1.0], [d])
+    old = engine_verdict(compare_pair(ra, rb), "madx", "helix", lat, "exact", {}, ra, rb)
+    assert old.tier == "lossy" and "before d3f281a" in old.note
+    rb.meta["dipole_negative_bend_fixed"] = True
+    new = engine_verdict(compare_pair(ra, rb), "madx", "helix", lat, "exact", {}, ra, rb)
+    assert new.ok and new.tier == "exact" and "d3f281a" not in new.note
+    assert new.blocks_used == set(BLOCKS) - {"path", "R56"} and "path/R56 not compared" in new.note
+    rb.meta["dipole_negative_bend_fixed"] = False                     # an older tree keeps the report-only rule
+    assert engine_verdict(compare_pair(ra, rb), "madx", "helix", lat, "exact", {}, ra, rb).tier == "lossy"
+
+
 def test_engine_check_uses_the_verdict(tmp_path, monkeypatch):
     register(_Fake)
     register(_FakeLte)

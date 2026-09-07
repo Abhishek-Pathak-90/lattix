@@ -209,6 +209,22 @@ def test_roundtrip_public_deck(deck, sp, ke):
     assert 0 < len(res["report"].entries) <= res["n"] + 1
 
 
+def test_oracle_routes_madx_decks_through_lattix(tmp_path):
+    """HELIX's own MAD-X parser does not follow ``call, file=`` (a wrapper deck came back as one element,
+    2026-09-06): the oracle reads MAD-X/MAD8/Elegant decks with lattix and hands HELIX a TraceWin file; the
+    result records the route and whether the tree carries the negative-bend dipole fix."""
+    from lattix.oracles.base import BeamSpec
+    from lattix.oracles.helix import HelixOracle
+
+    r = HelixOracle().run(DATA.parent / "xtrack" / "psb.seq", fmt="madx", beam=BeamSpec("proton", 160e6),
+                          workdir=tmp_path)
+    assert len(r.names) > 400 and float(r.s_out[-1]) == pytest.approx(157.08, abs=1e-3)
+    assert r.meta["route"].startswith("lattix madx reader") and (tmp_path / "psb.helix.dat").exists()
+    assert r.meta["helix_commit"] and r.meta["dipole_negative_bend_fixed"] in (True, False, None)
+    r2 = HelixOracle().run(DATA / "bend_line.dat", fmt="tracewin", beam=BeamSpec("h-", 2.1e6), workdir=tmp_path)
+    assert r2.meta["route"] == "HELIX tracewin parser" and r2.meta["helix_commit"] == r.meta["helix_commit"]
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize("deck,sp,ke", PIPII_CASES, ids=["mebt", "mebt+hwr"])
 def test_roundtrip_pipii_deck(deck, sp, ke):

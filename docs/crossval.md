@@ -99,11 +99,15 @@ DTL from `T4x4 = 11` to `3.5e-10` against xtrack; the xtrack oracle measured map
 wrong particle; FLAME maps came back in millimetres; ImpactX re-read a split thick cavity as a
 thin one; a reference change vanished through MAD-X/MAD8.  The battery itself learned to carry a
 derived deck's own tier, to ignore provenance in the JSON fixed point, and to treat HELIX pairs on
-negative-angle bends as report-only (HELIX's bend body has the wrong sign there; TraceWin itself
-does not).  What remains is documented engine behaviour: fringe-integral bends between MAD-X and
-Bmad, HELIX's bend path-length row and negative-bend body, MAD-X `twiss` at large δ, IMPACT-Z's
-short-cavity focusing versus the thin-gap formula; ion species cannot yet be handed to the
-engines.
+negative-angle bends as report-only while HELIX's bend body had the wrong sign there (fixed in
+HELIX d3f281a on 2026-09-06; the oracle reports whether its tree carries the fix, and the transverse
+block and the dispersion are held to the deck's tier again — `psb.seq` 2.3e-13 / 1.7e-13, at the
+equivalent tolerance its fringe-integral bends set).  What
+remains is documented engine behaviour: fringe-integral bends between MAD-X and Bmad, HELIX's
+dipole without a path-length row (R51/R52) or momentum compaction in R56 (its manual,
+`03_elements/04_dipole.md`: the longitudinal block is a drift's — 5.0e2 / 1.1e3 on `psb.seq`, never
+compared), MAD-X `twiss` at large δ, IMPACT-Z's short-cavity focusing versus the thin-gap formula;
+ion species cannot yet be handed to the engines.
 
 Third round (2026-09-06, the PIP-II BTL and two lattix bend decks — `docs/oracles.md` "Bend faces"):
 the battery now carries rectangular, negative-angle and vertical bends; IMPACT-Z and PyORBIT were right

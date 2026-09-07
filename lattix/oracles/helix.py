@@ -15,7 +15,9 @@ machine clock, ΔW MeV); ``rf_frequency_Hz`` carries the clock per element so
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -52,6 +54,30 @@ def _import_helix() -> Path:
     return root
 
 
+_DIPOLE_FIX_COMMIT = "d3f281a"      # HELIX: |theta| and |rho| in the dipole body, sign(theta) on the dispersion column
+_version_cache: dict[str, dict] = {}
+
+
+def _helix_version(root: Path) -> dict:
+    """The HELIX tree's commit and whether it carries the negative-bend dipole fix (None when unknown)."""
+    key = str(root)
+    if key in _version_cache:
+        return _version_cache[key]
+    info: dict = {"commit": None, "dipole_negative_bend_fixed": None}
+    try:
+        head = subprocess.run(["git", "-C", key, "rev-parse", "--short", "HEAD"], capture_output=True, text=True,
+                              timeout=10)
+        if head.returncode == 0:
+            info["commit"] = head.stdout.strip()
+            anc = subprocess.run(["git", "-C", key, "merge-base", "--is-ancestor", _DIPOLE_FIX_COMMIT, "HEAD"],
+                                 capture_output=True, text=True, timeout=10)
+            info["dipole_negative_bend_fixed"] = {0: True, 1: False}.get(anc.returncode)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    _version_cache[key] = info
+    return info
+
+
 @register
 class HelixOracle:
     name = "helix"
@@ -68,6 +94,7 @@ class HelixOracle:
     def run(self, deck: Path, *, fmt: str | None = None, beam: BeamSpec | None = None,
             probe: Probe | None = None, workdir: Path | None = None) -> OracleResult:
         root = _import_helix()
+        version = _helix_version(Path(root))
         from linac_gen.core.particle import DEUTERON, H_MINUS, PROTON
         from linac_gen.core.reference import ReferenceParticle
         from linac_gen.elements.base import FieldMapElement, ThinKickElement
@@ -75,10 +102,10 @@ class HelixOracle:
 
         deck = Path(deck).resolve()
         fmt = fmt or guess_format(deck)
-        lat, meta = self._parse(deck, fmt, beam)
+        lat, meta, beam_hint, route = self._parse(deck, fmt, beam, workdir)
         warnings = list(meta.get("warnings", [])) if isinstance(meta, dict) else []
         if beam is None:
-            beam = self._beam_from_meta(meta) or BeamSpec()
+            beam = beam_hint or self._beam_from_meta(meta) or BeamSpec()
         species = {"proton": PROTON, "h-": H_MINUS, "deuteron": DEUTERON}.get(beam.species.lower())
         if species is None:
             raise ValueError(f"HELIX has no species {beam.species!r} (proton, h-, deuteron)")
@@ -123,35 +150,48 @@ class HelixOracle:
             ref_kinetic_eV_in=np.array(w_in), ref_kinetic_eV_out=np.array(w_out),
             mass_eV=float(species.mass) * 1e6, charge=int(species.charge),
             rf_frequency_Hz=np.array(f_in), warnings=warnings,
-            meta={"root": str(root), "format": fmt, "n_elements": len(lat.elements),
+            meta={"root": str(root), "format": fmt, "n_elements": len(lat.elements), "route": route,
+                  "helix_commit": version.get("commit"),
+                  "dipole_negative_bend_fixed": version.get("dipole_negative_bend_fixed"),
                   "probe": "not implemented in Phase 0"},
         )
 
     # ------------------------------------------------------------------
     @staticmethod
-    def _parse(deck: Path, fmt: str, beam: BeamSpec | None):
-        if fmt == "madx":
-            from linac_gen.io.madx_parser import parse_madx
+    def _parse(deck: Path, fmt: str, beam: BeamSpec | None, workdir: Path | None = None):
+        """HELIX's own parser for a TraceWin deck; any other format goes through lattix's reader and its
+        TraceWin writer first — HELIX's MAD-X parser does not follow ``call, file=`` (a wrapper deck comes
+        back as one element, measured 2026-09-06), and the ``.dat`` route is the one the battery validates."""
+        from linac_gen.io.tracewin_parser import parse_tracewin
 
-            lat, meta = parse_madx(str(deck))[:2]
-        elif fmt == "mad8":
-            from linac_gen.io.mad8_parser import parse_mad8
+        if fmt in ("madx", "mad8", "elegant"):
+            import inspect
 
-            lat, meta = parse_mad8(str(deck))[:2]
-        elif fmt == "elegant":
-            from linac_gen.io.elegant_parser import parse_elegant
+            from lattix.formats import read, write
+            from lattix.formats.base import FORMATS
 
-            kw = {}
+            opts = {}
             if beam is not None:
-                kw = {"species": beam.species.upper() if beam.species.lower() == "h-" else beam.species,
-                      "w_kin": beam.kinetic_energy_eV * 1e-6,
-                      "frequency": (beam.frequency_Hz or _DEFAULT_FREQ_MHZ * 1e6) / 1e6}
-            lat, meta = parse_elegant(str(deck), **kw)[:2]
-        else:
-            from linac_gen.io.tracewin_parser import parse_tracewin
-
-            lat, meta = parse_tracewin(str(deck))
-        return lat, meta
+                try:
+                    params = inspect.signature(FORMATS[fmt].reader().read).parameters
+                except (TypeError, ValueError, KeyError):
+                    params = {}
+                for key, val in (("species", beam.species), ("kinetic_energy_eV", beam.kinetic_energy_eV),
+                                 ("frequency_Hz", beam.frequency_Hz)):
+                    if key in params and val is not None:
+                        opts[key] = val
+            lat_ir, _rep = read(deck, fmt, **opts)
+            out_dir = Path(workdir) if workdir is not None else Path(tempfile.mkdtemp(prefix="lattix-helix-"))
+            out_dir.mkdir(parents=True, exist_ok=True)
+            dat = out_dir / f"{deck.stem}.helix.dat"
+            write(lat_ir, dat, "tracewin")
+            ref = lat_ir.reference
+            hint = BeamSpec(species=ref.species.name, kinetic_energy_eV=ref.kinetic_energy_eV,
+                            frequency_Hz=ref.rf_frequency_Hz)
+            lat, meta = parse_tracewin(str(dat))
+            return lat, meta, hint, f"lattix {fmt} reader → TraceWin writer → HELIX ({dat.name})"
+        lat, meta = parse_tracewin(str(deck))
+        return lat, meta, None, "HELIX tracewin parser"
 
     @staticmethod
     def _beam_from_meta(meta) -> BeamSpec | None:
