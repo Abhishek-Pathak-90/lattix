@@ -56,10 +56,14 @@ limit of the formats themselves rather than of the translator.
 
 | group | formats |
 |---|---|
-| linac | TraceWin, DYNAC, IMPACT-Z, IMPACT-T, ImpactX, FLAME, OPAL-T |
-| ring and general | MAD-X, MAD8, Elegant, Bmad, PALS, MAD-NG |
-| modern stack | Xtrack, SciBmad, Cheetah, PyORBIT3, Ocelot, Synergia, lattix JSON |
+| linac heritage | TraceWin, DYNAC, IMPACT-Z, IMPACT-T, FLAME, OPAL-T |
+| ring heritage and general | MAD-X, MAD8, Elegant, Bmad, PALS, MAD-NG |
+| recent codes | ImpactX, Xtrack, SciBmad, Cheetah, PyORBIT3, Ocelot, Synergia, lattix JSON |
 | through Bmad's converters | SAD, Astra, GPT, CSRtrack, Merlin++, SLICKTRACK, SXF, Accelerator Toolkit |
+
+The groups are a reading aid, not a statement of what each code can simulate. Several of these codes
+serve linacs and rings alike. ImpactX, for one, is used for the Fermilab Booster and for IOTA as well as
+for linacs, and it is also the engine that agrees most closely with MAD-X in the plot further down.
 
 The last group is worth understanding before you rely on it. lattix does not write those formats
 itself. It writes a Bmad deck and then calls the converters that ship with Bmad, so those eight need
