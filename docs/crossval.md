@@ -103,11 +103,11 @@ negative-angle bends as report-only while HELIX's bend body had the wrong sign t
 HELIX d3f281a on 2026-09-06; the oracle reports whether its tree carries the fix, and the transverse
 block and the dispersion are held to the deck's tier again — `psb.seq` 2.3e-13 / 1.7e-13, at the
 equivalent tolerance its fringe-integral bends set).  What
-remains is documented engine behaviour: fringe-integral bends between MAD-X and Bmad, HELIX's
-dipole without a path-length row (R51/R52) or momentum compaction in R56 (its manual,
-`03_elements/04_dipole.md`: the longitudinal block is a drift's — 5.0e2 / 1.1e3 on `psb.seq`, never
-compared), MAD-X `twiss` at large δ, IMPACT-Z's short-cavity focusing versus the thin-gap formula;
-ion species cannot yet be handed to the engines.
+remains is documented engine behaviour: fringe-integral bends between MAD-X and Bmad, a HELIX
+before f0c37e5 without a path-length row (R51/R52) or momentum compaction in R56 (5.0e2 / 1.1e3 on
+`psb.seq`; the oracle reports `dipole_path_row` and those blocks are compared only on a tree that has
+them, 1.9e-16 on `fodo.madx` since 2026-09-08), MAD-X `twiss` at large δ, IMPACT-Z's short-cavity
+focusing versus the thin-gap formula; ion species cannot yet be handed to the engines.
 
 Third round (2026-09-06, the PIP-II BTL and two lattix bend decks — `docs/oracles.md` "Bend faces"):
 the battery now carries rectangular, negative-angle and vertical bends; IMPACT-Z and PyORBIT were right

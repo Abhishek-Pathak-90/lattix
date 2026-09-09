@@ -57,6 +57,7 @@ def _import_helix() -> Path:
 
 
 _DIPOLE_FIX_COMMIT = "d3f281a"      # HELIX: |theta| and |rho| in the dipole body, sign(theta) on the dispersion column
+_DIPOLE_PATH_COMMIT = "f0c37e5"     # HELIX: dipole path-length row and momentum compaction (R51, R52, R56)
 _version_cache: dict[str, dict] = {}
 
 
@@ -65,7 +66,7 @@ def _helix_version(root: Path) -> dict:
     key = str(root)
     if key in _version_cache:
         return _version_cache[key]
-    info: dict = {"commit": None, "dipole_negative_bend_fixed": None}
+    info: dict = {"commit": None, "dipole_negative_bend_fixed": None, "dipole_path_row": None}
     try:
         head = subprocess.run(["git", "-C", key, "rev-parse", "--short", "HEAD"], capture_output=True, text=True,
                               timeout=10)
@@ -74,6 +75,9 @@ def _helix_version(root: Path) -> dict:
             anc = subprocess.run(["git", "-C", key, "merge-base", "--is-ancestor", _DIPOLE_FIX_COMMIT, "HEAD"],
                                  capture_output=True, text=True, timeout=10)
             info["dipole_negative_bend_fixed"] = {0: True, 1: False}.get(anc.returncode)
+            anc = subprocess.run(["git", "-C", key, "merge-base", "--is-ancestor", _DIPOLE_PATH_COMMIT, "HEAD"],
+                                 capture_output=True, text=True, timeout=10)
+            info["dipole_path_row"] = {0: True, 1: False}.get(anc.returncode)
     except (OSError, subprocess.SubprocessError):
         pass
     _version_cache[key] = info
@@ -155,6 +159,7 @@ class HelixOracle:
             meta={"root": str(root), "format": fmt, "n_elements": len(lat.elements), "route": route,
                   "helix_commit": version.get("commit"),
                   "dipole_negative_bend_fixed": version.get("dipole_negative_bend_fixed"),
+                  "dipole_path_row": version.get("dipole_path_row"),
                   "probe": "not implemented in Phase 0"},
         )
 

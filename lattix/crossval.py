@@ -24,9 +24,9 @@ The battery is a library (:func:`run_matrix`), a CLI (``lattix crossval``) and a
 from __future__ import annotations
 
 import inspect
-import os
 import json
 import math
+import os
 import time
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
@@ -778,7 +778,8 @@ def engine_verdict(pc, ea: str, eb: str, lat: Lattice, tier: str, codes: dict[st
         notes.append(text.strip("; ").strip())
 
     # which blocks the pair can be held to (measured engine limits, docs/oracles.md):
-    # * HELIX's bend map has no path-length coupling (R51/R52 = 0) and its own R56;
+    # * a HELIX before f0c37e5 (2026-09-08) has no path-length coupling (R51/R52 = 0) and a drift's R56 in its
+    #   bend map; the oracle reports whether its tree carries the row (`dipole_path_row`);
     # * the thin-cavity longitudinal row differs between constant-p0 and p0-following engines and
     #   Elegant's RFCA matrix (its ultra-relativistic phase slip), so with RF only the transverse
     #   block and the dispersion column are compared across such pairs
@@ -786,9 +787,11 @@ def engine_verdict(pc, ea: str, eb: str, lat: Lattice, tier: str, codes: dict[st
     has_bends = any(e.kind == "Bend" for e in lat.elements.values())
     has_rf = any(e.kind in ("RFCavity", "FieldMap", "NCells", "RFQCell") for e in lat.elements.values())
     if "helix" in (ea, eb) and has_bends:
-        blocks -= {"path", "R56"}
-        caveat("HELIX bend map has no path-length row (R51/R52) and no dispersive R56 (known HELIX limit): "
-               "path/R56 not compared; ", append=True)
+        helix_meta = [(r.meta or {}) for r in (ra, rb) if getattr(r, "engine", None) == "helix"]
+        if not any(bool(m.get("dipole_path_row")) for m in helix_meta):
+            blocks -= {"path", "R56"}
+            caveat("HELIX bend map has no path-length row (R51/R52) and no dispersive R56 (HELIX before f0c37e5): "
+                   "path/R56 not compared; ", append=True)
         fixed = any(bool((r.meta or {}).get("dipole_negative_bend_fixed")) for r in (ra, rb)
                     if getattr(r, "engine", None) == "helix")
         if any(e.kind == "Bend" and e.bend.angle < 0 for e in lat.elements.values()) and tier != "lossy" \

@@ -108,8 +108,8 @@ Being clear about this is more useful than a longer feature list.
 
 - **IMPACT-T bends are reported, not asserted.** Its dipole turns the whole bunch by the reference
   angle with no pole-face focusing, so bend lines are compared and shown, never held to a tolerance.
-- **HELIX dipoles have no path-length row.** The transverse block and the dispersion are compared;
-  the longitudinal row is not, because that code does not model it.
+- **GPT decks cannot carry bends.** GPT is reached through Bmad's converter, which does not translate
+  bends; every bend in such a deck is marked as a converter loss in the ledger rather than dropped quietly.
 - **Codes that hold one reference momentum cannot follow strong acceleration.** MAD-X, Xtrack and
   SciBmad are not run on a line where the beam gains more than a factor of two, rather than reporting
   a comparison nobody should trust.
