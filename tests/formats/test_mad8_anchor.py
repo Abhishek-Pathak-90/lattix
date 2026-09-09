@@ -157,11 +157,13 @@ def test_per_element_agreement(decks):
             worst["quad_gradient_rel"] = max(worst["quad_gradient_rel"], abs(x[2] - y[2]) / scale)
         elif x[0] == "B":
             worst["bend_angle"] = max(worst["bend_angle"], abs(x[2] - y[2]))
-            # MEASURED 2026-09-03: the two negative-angle vertical bends read with opposite pole-face
-            # signs from the two formats.  The bend-face work of 2026-09-04 to 2026-09-06 (758a8bb,
-            # 86b06ca) settled the negative-bend convention against the engines, MAD-X's identity
-            # (angle<0, e1, e2) = (angle>0, tilt pi, -e1, -e2), after which both readers agree and no
-            # sign flip is expected.  Any element listed here is a regression in one of the readers.
+            # MEASURED 2026-09-03: the PIP-II TraceWin export then wrote the EDGE angle of its two
+            # negative-angle vertical bends with the wrong sign (β = e instead of β = sign(θ)·e), so
+            # they read with opposite pole-face signs from the two formats.  The export was
+            # regenerated on 2026-09-06 with the sign corrected (the deck's own date; the readers'
+            # fold, e = sign(θ)·β, is unchanged since 2026-09-03), and both readers have agreed
+            # since.  Any element listed here is a regression in a reader or a re-exported deck
+            # carrying the old error.
             d1, d2 = abs(x[3] - y[3]), abs(x[4] - y[4])
             if abs(x[3] + y[3]) < d1 and abs(x[4] + y[4]) < d2 and abs(x[3]) > 1e-12:
                 edge_sign_flips.append(x[6])
