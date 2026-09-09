@@ -24,6 +24,7 @@ The battery is a library (:func:`run_matrix`), a CLI (``lattix crossval``) and a
 from __future__ import annotations
 
 import inspect
+import os
 import json
 import math
 import time
@@ -42,7 +43,10 @@ from lattix.ir.walk import energy_gain_eV, propagate
 # ---------------------------------------------------------------------------
 # public decks
 
-PUBLIC = Path(__file__).resolve().parents[1] / "tests" / "data" / "public"
+#: the public sample decks: the repository's tests/data/public when running from a checkout, or
+#: LATTIX_PUBLIC_DECKS when the package is installed from a wheel (which ships no test data)
+PUBLIC = Path(os.environ.get("LATTIX_PUBLIC_DECKS")
+              or Path(__file__).resolve().parents[1] / "tests" / "data" / "public").expanduser()
 
 #: (relative path, format, read options) — every public deck the battery can start from
 DECKS: list[tuple[str, str, dict]] = [

@@ -170,6 +170,10 @@ def cmd_crossval(a) -> int:
 
     fmts = a.formats.split(",") if a.formats else None
     decks = [d for d in crossval.DECKS if not a.decks or any(x in d[0] for x in a.decks.split(","))]
+    if not crossval.PUBLIC.is_dir() or not any((crossval.PUBLIC / d[0]).is_file() for d in decks):
+        print(f"no public sample decks under {crossval.PUBLIC}: run from a checkout of the repository, or set "
+              "LATTIX_PUBLIC_DECKS to its tests/data/public directory", file=sys.stderr)
+        return 2
     results = crossval.run_matrix(decks, fmts, workdir=Path(a.workdir or tempfile.mkdtemp(prefix="lattix_crossval_")),
                                   engines=a.engines, only_src=a.src, only_dst=a.dst, derived=a.derived)
     print(crossval.to_markdown(results))
