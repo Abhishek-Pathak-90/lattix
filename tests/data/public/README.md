@@ -3,7 +3,7 @@
 Every file below was copied verbatim from a public upstream whose license permits
 redistribution (checked in the clone before copying; the license text is in
 `LICENSES/<source>.txt`).  Upstream clones live in
-`/Users/abhishekpathak/Desktop/Projects/particle_tracking_codes/`; the commit column is
+`~/Desktop/Projects/particle_tracking_codes/`; the commit column is
 `git rev-parse HEAD` of that clone at vendoring time (2026-09-03).  The **Format** column
 is what `lattix.corpus.sniff_format` must return for the file
 (`tests/corpus/test_public_samples.py` enforces it).  Total size is kept under 5 MB.
@@ -100,7 +100,7 @@ written for the cross-format battery (BSD-3, `LICENSES/lattix.txt`).
 
 ## HELIX
 
-- Upstream: HELIX_v3 snapshot at `/Users/abhishekpathak/Desktop/Projects/HELIX_unzipped/HELIX_v3`
+- Upstream: HELIX_v3 snapshot at `~/Desktop/Projects/HELIX_unzipped/HELIX_v3`
 - Commit: `71ac6be19e195741c6ff71afcad20a9b24a1c9f9`
 - License: HELIX examples, (c) Abhishek Pathak, redistributed with permission of the author (`LICENSES/HELIX.txt`)
 

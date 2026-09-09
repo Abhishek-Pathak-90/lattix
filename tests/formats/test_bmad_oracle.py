@@ -31,14 +31,14 @@ from lattix.ir.walk import propagate
 from lattix.oracles import BeamSpec, get_oracle
 from lattix.oracles.basis import rescale_to_constant_p0
 from lattix.oracles.compare import compare_pair
-from lattix.testing import needs
+from lattix.testing import conda_env_bin, needs
 from tests.formats.test_bmad_writer import linac_lattice
 
 pytestmark = pytest.mark.oracle_bmad
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "public" / "helix"
 #: Bmad's own MAD-X/MAD-8/Elegant converter, shipped in the ``bmad`` conda env.
-BMAD_TO_MAD = Path("/Users/abhishekpathak/anaconda3/envs/bmad/bin/bmad_to_mad_sad_elegant")
+BMAD_TO_MAD = conda_env_bin("bmad", 'bmad_to_mad_sad_elegant')
 
 
 # ---------------------------------------------------------------- gate A2

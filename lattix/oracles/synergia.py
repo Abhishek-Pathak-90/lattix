@@ -20,7 +20,6 @@ import numpy as np
 from lattix.oracles.base import Basis, BeamSpec, OracleResult, Probe, register
 
 _WORKER = Path(__file__).with_name("synergia_worker.py")
-_LOCAL_ROOT = Path("/Users/abhishekpathak/Desktop/Projects/particle_tracking_codes/tier3_peers/synergia2")
 
 
 def _pixi_python(root: Path) -> tuple[str | None, dict[str, str]]:
@@ -61,10 +60,11 @@ class SynergiaOracle:
         if explicit:
             cands.append((explicit, {}))
         cands.append((sys.executable, {}))
-        root = Path(os.environ.get("LATTIX_SYNERGIA_ROOT", str(_LOCAL_ROOT)))
-        py, env = _pixi_python(root)
-        if py:
-            cands.append((py, env))
+        root = os.environ.get("LATTIX_SYNERGIA_ROOT")          # a clone built with pixi
+        if root:
+            py, env = _pixi_python(Path(root).expanduser())
+            if py:
+                cands.append((py, env))
         for py, env in cands:
             try:
                 proc = subprocess.run([py, "-P", "-c", "import synergia, sys; print(sys.executable)"],

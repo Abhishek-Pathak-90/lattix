@@ -27,8 +27,9 @@ from lattix.ir.fieldmap import (
     clear_cache,
     read_component,
 )
+from lattix.testing import helix_path
 
-FIELDS = Path("/Users/abhishekpathak/Desktop/Projects/HELIX_unzipped/HELIX_v3/Fields")
+FIELDS = helix_path('Fields')
 
 
 # ---------------------------------------------------------------- fixtures

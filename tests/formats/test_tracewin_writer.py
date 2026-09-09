@@ -551,6 +551,8 @@ def _helix():
         from lattix.oracles.helix import _import_helix
 
         root = _import_helix()
+        import linac_gen.io.tracewin_parser  # noqa: F401  (HELIX's own writer needs scipy: skip, not error)
+        import linac_gen.io.tracewin_writer  # noqa: F401
     except Exception as exc:  # noqa: BLE001
         pytest.skip(f"HELIX not importable: {exc}")
     deck = root / "examples" / "pipii" / "mebt" / "mebt.dat"
@@ -601,6 +603,7 @@ def _canon(lines: list[str], *, helix: bool) -> list[str]:
     return out
 
 
+@pytest.mark.oracle_helix
 def test_byte_compare_with_helix_writer_on_mebt(tmp_path):
     root, deck = _helix()
     from linac_gen.io.tracewin_parser import parse_tracewin

@@ -12,9 +12,10 @@ from lattix.crossval import compare_profiles, neutral_set, profile
 from lattix.formats.base import guess_format
 from lattix.ir.elements import Drift
 from lattix.ir.lattice import Lattice
+from lattix.testing import codes_path
 from tests.formats.test_ocelot_writer import all_kinds_lattice, ref_at
 
-SYNERGIA_CLONE = Path("/Users/abhishekpathak/Desktop/Projects/particle_tracking_codes/tier3_peers/synergia2")
+SYNERGIA_CLONE = codes_path('tier3_peers', 'synergia2')
 BOOSTER_JSON = SYNERGIA_CLONE / "examples" / "normal_form" / "booster_init_lattice.json"
 
 

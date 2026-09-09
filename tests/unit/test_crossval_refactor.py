@@ -126,6 +126,9 @@ def test_engine_verdict_helix_negative_bends_follow_the_tree_version():
     assert new.blocks_used == set(BLOCKS) - {"path", "R56"} and "path/R56 not compared" in new.note
     rb.meta["dipole_negative_bend_fixed"] = False                     # an older tree keeps the report-only rule
     assert engine_verdict(compare_pair(ra, rb), "madx", "helix", lat, "exact", {}, ra, rb).tier == "lossy"
+    rb.meta.update(dipole_negative_bend_fixed=True, dipole_path_row=True)   # HELIX >= f0c37e5: every block
+    v = engine_verdict(compare_pair(ra, rb), "madx", "helix", lat, "exact", {}, ra, rb)
+    assert v.blocks_used == set(BLOCKS) and "path/R56 not compared" not in v.note
 
 
 def test_engine_check_uses_the_verdict(tmp_path, monkeypatch):

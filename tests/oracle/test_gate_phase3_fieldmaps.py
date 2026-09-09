@@ -21,9 +21,9 @@ import pytest
 
 from lattix.oracles import BeamSpec, get_oracle
 from lattix.oracles.compare import compare_pair
-from lattix.testing import corpus_dir
+from lattix.testing import corpus_dir, helix_path
 
-HELIX_EXAMPLES = Path("/Users/abhishekpathak/Desktop/Projects/HELIX_unzipped/HELIX_v3/examples")
+HELIX_EXAMPLES = helix_path('examples')
 FIELDS = HELIX_EXAMPLES.parent / "Fields"
 BEAM = BeamSpec("h-", 2.1e6, 162.5e6)
 READ_OPTIONS = {"species": "h-", "kinetic_energy_eV": 2.1e6, "frequency_Hz": 162.5e6}

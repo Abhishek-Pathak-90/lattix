@@ -11,9 +11,10 @@ from lattix.corpus import sniff_text
 from lattix.crossval import compare_profiles, neutral_set, profile
 from lattix.formats.base import guess_format
 from lattix.ir.lattice import Lattice
+from lattix.testing import codes_path
 from tests.formats.test_ocelot_writer import all_kinds_lattice
 
-DYNAC_CLONE = Path("/Users/abhishekpathak/Desktop/Projects/particle_tracking_codes/tier3_peers/dynac")
+DYNAC_CLONE = codes_path('tier3_peers', 'dynac')
 SNS_DECK = DYNAC_CLONE / "datafiles" / "sns" / "mebt_dtl1.in"
 
 

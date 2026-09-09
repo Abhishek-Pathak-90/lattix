@@ -29,8 +29,6 @@ from lattix.oracles.base import Basis, BeamSpec, OracleResult, Probe, register
 _AMU_EV = 931.49410242e6
 #: probe offsets: x [cm], x′ [rad], y [cm], y′ [rad], φ [rad], W [MeV]
 PROBE_AMP = (0.01, 1e-3, 0.01, 1e-3, 0.01, 1e-3)
-_LOCAL_BUILD = Path("/Users/abhishekpathak/Desktop/Projects/particle_tracking_codes/tier3_peers/dynac"
-                    "/build/source/dynac")
 #: cards that only define, print or plot the beam: dropped from the probe deck
 _DROP = frozenset({"GEBEAM", "INPUT", "RDBEAM", "ETAC", "EMITGR", "ENVEL", "PROFGR", "ACCEPT", "T3D", "WRBEAM",
                    "EMIT", "EMITL", "EMIPRT", "ZONES", "DCBEAM", "REFCOG",
@@ -55,8 +53,6 @@ class DynacOracle:
         which = shutil.which("dynac")
         if which:
             return Path(which)
-        if _LOCAL_BUILD.exists():
-            return _LOCAL_BUILD
         raise RuntimeError("no dynac binary: set LATTIX_DYNAC_EXE or put dynac on the PATH (build the clone with "
                            "cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 and gfortran)")
 

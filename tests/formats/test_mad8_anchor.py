@@ -39,14 +39,14 @@ import pytest
 from lattix.formats.mad8 import Reader as Mad8Reader
 from lattix.formats.mad8.reader import _significant_cards
 from lattix.formats.tracewin import Reader as TraceWinReader
-from lattix.testing import corpus_dir
+from lattix.testing import corpus_dir, helix_path
 
 pytestmark = [pytest.mark.corpus, pytest.mark.oracle_helix]
 
 #: ids in ``$LATTIX_CORPUS_DIR/manifest.yaml``; the fallbacks are this machine's paths.
 MAD8_ID = "helix-pipii-root/btl2025v0703.lat"
 TRACEWIN_ID = "helix-examples/examples/pipii/btl/btl_2025v0703.dat"
-_HELIX = "/Users/abhishekpathak/Desktop/Projects/HELIX_unzipped/HELIX_v3"
+_HELIX = str(helix_path())
 FALLBACK = {MAD8_ID: f"{_HELIX}/BTL2025v0703.lat",
             TRACEWIN_ID: f"{_HELIX}/examples/pipii/btl/btl_2025v0703.dat"}
 

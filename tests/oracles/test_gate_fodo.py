@@ -11,9 +11,10 @@ import pytest
 
 from lattix.oracles import BeamSpec, get_oracle
 from lattix.oracles.compare import compare_pair
+from lattix.testing import helix_path
 
 FODO_MADX = Path(__file__).parents[1] / "data" / "public" / "helix" / "fodo.madx"
-_HELIX_FODO = Path("/Users/abhishekpathak/Desktop/Projects/HELIX_unzipped/HELIX_v3/examples/madx/fodo.madx")
+_HELIX_FODO = helix_path('examples', 'madx', 'fodo.madx')
 BEAM = BeamSpec("proton", 800e6, 352.21e6)
 
 
@@ -41,5 +42,8 @@ def test_madx_vs_helix_transverse_and_dispersion(tmp_path):
     assert pc.blocks["T4x4"] < 1e-6
     assert pc.blocks["disp"] < 1e-7
     assert pc.blocks["E_row"] == 0.0 and pc.blocks["z_col"] == 0.0
-    # known HELIX gap: dipole path-length terms (R51, R52) and dispersive R56
-    assert pc.blocks["path"] > 0.1, "HELIX now models bend path length — update docs/oracles.md"
+    # the dipole's longitudinal row: absent before HELIX f0c37e5, present after; the oracle says which
+    if b.meta.get("dipole_path_row"):
+        assert pc.blocks["path"] < 1e-9 and pc.blocks["R56"] < 1e-9
+    else:
+        assert pc.blocks["path"] > 0.1, "HELIX models bend path length but the oracle did not report it"

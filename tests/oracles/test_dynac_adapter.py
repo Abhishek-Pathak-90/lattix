@@ -19,10 +19,11 @@ from lattix.ir.reference import ReferenceParticle, species
 from lattix.oracles import get_oracle
 from lattix.oracles.compare import compare_pair
 from lattix.oracles.fingerprint import FREQ_HZ, KE_EV, V_VOLT, write_decks
+from lattix.testing import codes_path
 
 pytestmark = pytest.mark.oracle_dynac
 DATA = Path(__file__).resolve().parents[1] / "data" / "public"
-DYNAC_CLONE = Path("/Users/abhishekpathak/Desktop/Projects/particle_tracking_codes/tier3_peers/dynac")
+DYNAC_CLONE = codes_path('tier3_peers', 'dynac')
 TW2DYN = DYNAC_CLONE / "build" / "converters" / "tw2dyn"
 SNS_DECK = DYNAC_CLONE / "datafiles" / "sns" / "mebt_dtl1.in"
 PRECISION = 5e-5                      # WRBEAM dumps carry 6 significant digits: ~1e-5 per fitted map

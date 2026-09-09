@@ -16,10 +16,11 @@ from lattix.oracles import get_oracle
 from lattix.oracles.base import BeamSpec
 from lattix.oracles.compare import compare_pair
 from lattix.oracles.fingerprint import FREQ_HZ, KE_EV, V_VOLT, write_decks
+from lattix.testing import codes_path
 
 pytestmark = pytest.mark.oracle_ocelot
 DATA = Path(__file__).resolve().parents[1] / "data" / "public"
-OCELOT_CLONE = Path("/Users/abhishekpathak/Desktop/Projects/particle_tracking_codes/tier2_modern/ocelot")
+OCELOT_CLONE = codes_path('tier2_modern', 'ocelot')
 XFEL_LTE = OCELOT_CLONE / "unit_tests/adaptors_test/elegant_lattice/ref_results/XFEL_elegant_TD1_S2E.lte"
 
 

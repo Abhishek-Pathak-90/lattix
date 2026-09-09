@@ -35,12 +35,12 @@ from lattix.ir import (
     species,
 )
 from lattix.ir.walk import propagate
-from lattix.testing import needs
+from lattix.testing import helix_path, needs
 
 pytestmark = [pytest.mark.oracle_helix, needs("helix")]
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "public" / "helix"
-HELIX_EXAMPLES = Path("/Users/abhishekpathak/Desktop/Projects/HELIX_unzipped/HELIX_v3/examples/pipii")
+HELIX_EXAMPLES = helix_path('examples', 'pipii')
 
 MATRIX_TOL = 1e-10
 LENGTH_TOL = 1e-9        # mm

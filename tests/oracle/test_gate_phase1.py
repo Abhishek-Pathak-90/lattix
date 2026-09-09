@@ -13,10 +13,10 @@ import pytest
 
 from lattix.oracles import BeamSpec, get_oracle
 from lattix.oracles.compare import compare_pair
-from lattix.testing import corpus_dir
+from lattix.testing import corpus_dir, helix_path
 
 PUBLIC = Path(__file__).parents[1] / "data" / "public"
-HELIX_EXAMPLES = Path("/Users/abhishekpathak/Desktop/Projects/HELIX_unzipped/HELIX_v3/examples")
+HELIX_EXAMPLES = helix_path('examples')
 
 
 def _formats_ready(*names: str) -> None:

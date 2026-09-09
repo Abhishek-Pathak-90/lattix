@@ -21,11 +21,11 @@ from lattix.ir.fieldmap import (
 )
 from lattix.ir.reference import ReferenceParticle, species
 from lattix.ir.walk import propagate
-from lattix.testing import needs
+from lattix.testing import helix_path, needs
 from tests.formats.test_fieldmap_data import write_1d
 
-HELIX_EXAMPLES = Path("/Users/abhishekpathak/Desktop/Projects/HELIX_unzipped/HELIX_v3/examples")
-FIELDS = Path("/Users/abhishekpathak/Desktop/Projects/HELIX_unzipped/HELIX_v3/Fields")
+HELIX_EXAMPLES = helix_path('examples')
+FIELDS = helix_path('Fields')
 
 
 def ref_at(ke_eV: float, freq_Hz: float | None = None, sp: str = "proton") -> ReferenceParticle:

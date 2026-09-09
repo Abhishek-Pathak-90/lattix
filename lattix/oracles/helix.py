@@ -32,20 +32,22 @@ from lattix.oracles.base import (
     register,
 )
 
-_DEFAULT_ROOT = Path("/Users/abhishekpathak/Desktop/Projects/HELIX_unzipped/HELIX_v3")
 _DEFAULT_FREQ_MHZ = 352.21   # tracewin_parser._DEFAULT_FREQ_MHZ
 
 
 def helix_root() -> Path | None:
+    """The HELIX checkout named by ``HELIX_ROOT``, or None when it is unset or holds no ``linac_gen``."""
     v = os.environ.get("HELIX_ROOT")
-    p = Path(v).expanduser() if v else _DEFAULT_ROOT
+    if not v:
+        return None
+    p = Path(v).expanduser()
     return p if (p / "linac_gen").is_dir() else None
 
 
 def _import_helix() -> Path:
     root = helix_root()
     if root is None:
-        raise ModuleNotFoundError("HELIX_ROOT is not set and the default checkout is absent")
+        raise ModuleNotFoundError("HELIX_ROOT is not set, or names no checkout containing linac_gen")
     for p in (str(root), str(root / "gui")):
         if p not in sys.path:
             sys.path.insert(0, p)

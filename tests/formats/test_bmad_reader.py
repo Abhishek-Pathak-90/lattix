@@ -38,10 +38,10 @@ from lattix.ir.elements import (
     Taylor,
 )
 from lattix.ir.walk import propagate
+from lattix.testing import codes_path
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "public" / "helix"
-BMAD_CLONE = Path("/Users/abhishekpathak/Desktop/Projects/particle_tracking_codes/"
-                  "tier3_peers/bmad-ecosystem")
+BMAD_CLONE = codes_path('tier3_peers', 'bmad-ecosystem')
 FOREIGN = BMAD_CLONE / "regression_tests" / "write_foreign_test" / "write_foreign_test.bmad"
 
 HEADER = """

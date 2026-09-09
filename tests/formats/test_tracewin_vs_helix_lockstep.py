@@ -9,12 +9,12 @@ from pathlib import Path
 import pytest
 
 from lattix.ir import Bend, Kicker, Quadrupole, RFCavity, Solenoid, propagate
-from lattix.testing import needs
+from lattix.testing import helix_path, needs
 
 pytestmark = [pytest.mark.oracle_helix, needs("helix")]
 
 PUBLIC = Path(__file__).parents[1] / "data" / "public" / "helix"
-HELIX_EXAMPLES = Path("/Users/abhishekpathak/Desktop/Projects/HELIX_unzipped/HELIX_v3/examples")
+HELIX_EXAMPLES = helix_path('examples')
 DECKS = [PUBLIC / n for n in ("fodo_cell.dat", "bend_line.dat", "dtl_section.dat", "solenoid_channel.dat",
                               "mebt_line.dat")] + \
         [HELIX_EXAMPLES / "pipii" / "mebt" / "mebt.dat", HELIX_EXAMPLES / "pipii" / "mebt+hwr" / "mebt+hwr.dat"]

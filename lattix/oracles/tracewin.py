@@ -30,14 +30,16 @@ import numpy as np
 
 from lattix.oracles.base import Basis, BeamSpec, OracleResult, Probe, register
 
-_DEFAULT_EXE = Path("/Users/abhishekpathak/Desktop/Projects/TraceWin/TraceWin.app/Contents/MacOS/TraceWin")
 _PROJECT_INI = Path(__file__).with_name("data") / "tracewin_project.ini"
 _ELE_RE = re.compile(r"^\s*ELE#\s*(\d+)\s*:\s*([-+0-9.eE]+)\s*m")
 
 
 def tracewin_exe() -> Path | None:
+    """The TraceWin binary named by ``TRACEWIN_EXE``, or None when it is unset or not executable."""
     v = os.environ.get("TRACEWIN_EXE")
-    p = Path(v).expanduser() if v else _DEFAULT_EXE
+    if not v:
+        return None
+    p = Path(v).expanduser()
     return p if p.is_file() and os.access(p, os.X_OK) else None
 
 
@@ -85,7 +87,7 @@ class TracewinOracle:
     def available(self) -> tuple[bool, str]:
         exe = tracewin_exe()
         if exe is None:
-            return False, "TRACEWIN_EXE not set and default TraceWin.app absent"
+            return False, "TRACEWIN_EXE is not set, or is not an executable file"
         if not _PROJECT_INI.is_file():
             return False, f"bundled project file missing: {_PROJECT_INI}"
         return True, f"{exe} (licence permitting; trial builds stop at 20 elements)"

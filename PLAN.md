@@ -196,7 +196,7 @@ conda env create -f environment-ci.yml && conda activate lattix     # cpymad xtr
 python -c "from cpymad.madx import Madx; print(Madx(stdout=False).version)"      # MAD-X 5.09.03 ✔
 elegant -h | head -1; sddsquery -h | head -1; python -c "import impactx, flame, pysdds, pals"
 conda run -n bmad python -c "import pytao; print(pytao.__version__)"              # 1.2.4 ✔
-export TRACEWIN_EXE="/Users/abhishekpathak/Desktop/Projects/TraceWin/TraceWin.app/Contents/MacOS/TraceWin"
+export TRACEWIN_EXE="~/Desktop/Projects/TraceWin/TraceWin.app/Contents/MacOS/TraceWin"
 export LATTIX_CORPUS_DIR=~/lattix_corpus && python -m lattix.corpus build-manifest
 pytest tests/oracles -m "not oracle_tracewin"                                     # basis fingerprints per engine
 "$TRACEWIN_EXE" project.ini hide dat_file=fodo_cell.dat path_cal=/tmp/tw energy1=2.1 current1=0 nbr_part1=1000   # confirm batch mode + Transfer_matrix1.dat

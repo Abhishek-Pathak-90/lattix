@@ -11,11 +11,12 @@ from lattix.formats.scibmad import Reader
 from lattix.formats.scibmad.reader import parse_kwargs, parse_map_function, parse_value, split_top_level
 from lattix.ir.elements import Taylor
 from lattix.ir.reference import ReferenceParticle, species
+from lattix.testing import codes_path
 from tests.formats.test_impactx_writer import all_kinds_lattice
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "public"
-BMAD_REFERENCE = Path("/Users/abhishekpathak/Desktop/Projects/particle_tracking_codes/tier3_peers/bmad-ecosystem/"
-                      "regression_tests/write_foreign_test/scibmad.correct")
+BMAD_REFERENCE = codes_path("tier3_peers", "bmad-ecosystem", "regression_tests", "write_foreign_test",
+                            "scibmad.correct")
 
 
 # ------------------------------------------------------------------ tokenizer

@@ -16,6 +16,7 @@ from lattix.oracles import get_oracle
 from lattix.oracles.base import BeamSpec
 from lattix.oracles.compare import compare_pair
 from lattix.oracles.fingerprint import FREQ_HZ, KE_EV, write_decks
+from lattix.testing import helix_path
 
 pytestmark = pytest.mark.oracle_lightwin
 DATA = Path(__file__).resolve().parents[1] / "data" / "public"
@@ -146,7 +147,7 @@ def test_battery_falls_back_to_lightwin_without_helix(lightwin, monkeypatch):
     assert crossval._pick_engine("madx") == "madx"
 
 
-HELIX_EXAMPLES = Path("/Users/abhishekpathak/Desktop/Projects/HELIX_unzipped/HELIX_v3/examples")
+HELIX_EXAMPLES = helix_path('examples')
 
 
 @pytest.mark.oracle_helix
