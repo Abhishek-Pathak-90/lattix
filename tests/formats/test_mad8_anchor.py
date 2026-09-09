@@ -157,10 +157,11 @@ def test_per_element_agreement(decks):
             worst["quad_gradient_rel"] = max(worst["quad_gradient_rel"], abs(x[2] - y[2]) / scale)
         elif x[0] == "B":
             worst["bend_angle"] = max(worst["bend_angle"], abs(x[2] - y[2]))
-            # MEASURED (TraceWin + HELIX + MAD-X, 2026-09-03): a TraceWin EDGE angle carries the
-            # sign of the bend angle (β = sign(θ)·e).  The PIP-II export writes β = e for its two
-            # negative-angle vertical bends, i.e. the wrong edge focusing in TraceWin itself; the
-            # lattix reader recovers e = sign(θ)·β, so those two differ from MAD8 by exactly 2e.
+            # MEASURED 2026-09-03: the two negative-angle vertical bends read with opposite pole-face
+            # signs from the two formats.  The bend-face work of 2026-09-04 to 2026-09-06 (758a8bb,
+            # 86b06ca) settled the negative-bend convention against the engines, MAD-X's identity
+            # (angle<0, e1, e2) = (angle>0, tilt pi, -e1, -e2), after which both readers agree and no
+            # sign flip is expected.  Any element listed here is a regression in one of the readers.
             d1, d2 = abs(x[3] - y[3]), abs(x[4] - y[4])
             if abs(x[3] + y[3]) < d1 and abs(x[4] + y[4]) < d2 and abs(x[3]) > 1e-12:
                 edge_sign_flips.append(x[6])
@@ -184,8 +185,8 @@ def test_per_element_agreement(decks):
     assert worst["bend_tilt_abs"] < TOL_ANGLE_RAD
     # the export script's known vertical mirror, and nothing else
     assert sorted(tilt_sign_flips) == ["BVDD", "BVDU", "ORB1", "ORB2"]
-    # the export's wrong edge sign on the negative-angle vertical bends, and nothing else
-    assert sorted(edge_sign_flips) == ["BVDD", "ORB1"]
+    # the readers agree on every pole face, the two negative vertical bends included (see above)
+    assert edge_sign_flips == []
     assert len(tilt_sign_flips) == EXPECTED_TILT_SIGN_FLIPS
 
 
