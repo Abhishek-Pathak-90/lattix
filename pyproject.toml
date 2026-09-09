@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lattix"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Translate accelerator lattice files between codes with a fidelity report and engine-backed validation."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -51,6 +51,9 @@ lattix = "lattix.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["lattix*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "lattix._version.__version__"}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -80,11 +80,23 @@ def test_format_pages_only_cite_real_fidelity_codes():
 
 
 def test_version_is_consistent():
+    """One version, spelled canonically, in the package, the citation file and the changelog.
+
+    pyproject.toml reads it from lattix/_version.py (dynamic), so it is not compared here; the
+    release workflow checks the built distribution against the tag instead.  The changelog section
+    is the base version, so a release candidate and its release share one entry."""
+    from packaging.version import Version
+
     import lattix
 
-    project = tomllib.loads(_read(ROOT / "pyproject.toml"))["project"]["version"]
+    v = lattix.__version__
     cff = re.search(r"^version:\s*(\S+)", _read(ROOT / "CITATION.cff"), re.M).group(1)
-    assert project == lattix.__version__ == cff
+    assert v == cff
+    assert str(Version(v)) == v, f"{v!r} is not canonical PEP 440"
+    assert "dynamic" in tomllib.loads(_read(ROOT / "pyproject.toml"))["project"]
+    base = Version(v).base_version
+    assert re.search(rf"^## \[{re.escape(base)}\]", _read(ROOT / "CHANGELOG.md"), re.M), \
+        f"CHANGELOG.md has no section for {base}"
 
 
 @pytest.mark.parametrize("doc", ["README.md", "docs/index.md", "docs/tutorial.md", "docs/fidelity.md",
