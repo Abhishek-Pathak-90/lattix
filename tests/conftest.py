@@ -12,6 +12,22 @@ ROOT = Path(__file__).resolve().parents[1]
 os.environ.setdefault("XSUITE_ALLOW_KERNEL_COMPILATION", "1")  # xtrack >= 0.112 JIT kernels
 
 
+def pytest_sessionstart(session):
+    """With LATTIX_EXPECT_INSTALLED set, the suite must exercise an installed wheel, not this checkout.
+
+    The release workflow installs the built wheel and runs these tests from the checkout with
+    ``--import-mode=append`` (the checkout goes to the end of sys.path, so ``tests.*`` imports work
+    while ``lattix`` resolves to site-packages) and ``PYTHONSAFEPATH=1``.  If ``lattix`` still came
+    from the checkout, every result would be about the wrong code, so that is an error, not a skip."""
+    if os.environ.get("LATTIX_EXPECT_INSTALLED"):
+        import lattix
+
+        where = Path(lattix.__file__).resolve()
+        if ROOT in where.parents:
+            raise pytest.UsageError(f"lattix was imported from the checkout ({where}), not from the installed "
+                                    "wheel; run with --import-mode=append and PYTHONSAFEPATH=1")
+
+
 @pytest.fixture(scope="session")
 def data_public():
     from pathlib import Path

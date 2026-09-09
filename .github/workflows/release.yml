@@ -1,0 +1,188 @@
+name: release
+# A tag `vX.Y.Z` builds the sdist and the wheel, proves the wheel on six interpreters, then publishes
+# through PyPI trusted publishing (no stored token). A pre-release tag such as `v0.2.0rc1` goes to
+# TestPyPI; a final tag goes to PyPI, after a review of the `pypi` environment, and gets a GitHub
+# Release carrying the same files. The environment names and this file's name are part of the
+# trusted-publisher binding on both indexes: treat them as API.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  ENGINE_FREE: >-
+    not corpus and not slow and not crossval and not oracle_madx and not oracle_xtrack and not oracle_bmad
+    and not oracle_elegant and not oracle_impactx and not oracle_impactz and not oracle_flame
+    and not oracle_scibmad and not oracle_lightwin and not oracle_cheetah and not oracle_pyorbit
+    and not oracle_impactt and not oracle_ocelot and not oracle_dynac and not oracle_synergia
+    and not oracle_helix and not oracle_tracewin
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: python -m pip install -U pip build "twine>=6.1" packaging
+      - name: the tag is a canonical, non-dev, non-local version
+        id: meta
+        env: { TAG: "${{ github.ref_name }}" }
+        run: |
+          python - "$TAG" >> "$GITHUB_OUTPUT" <<'PY'
+          import sys
+          from packaging.version import Version
+          tag = sys.argv[1]
+          assert tag.startswith("v"), f"tag {tag!r} must start with v"
+          v = Version(tag[1:])
+          assert str(v) == tag[1:], f"tag {tag!r} is not canonical PEP 440 ({v})"
+          assert not v.is_devrelease and not v.local, f"{tag!r} is a dev or local version"
+          print(f"version={v}")
+          print(f"prerelease={str(v.is_prerelease).lower()}")
+          PY
+      - name: build
+        run: |
+          rm -rf build dist *.egg-info
+          python -m build
+          python -m twine check --strict dist/*
+      - name: the artifacts are the two expected files, and they carry what the package needs
+        env: { V: "${{ steps.meta.outputs.version }}" }
+        run: |
+          set -eu
+          ls -l dist
+          test "$(ls dist | wc -l)" -eq 2
+          test -f "dist/lattix-$V-py3-none-any.whl"
+          test -f "dist/lattix-$V.tar.gz"
+          python - "$V" <<'PY'
+          import sys, zipfile
+          v = sys.argv[1]
+          names = zipfile.ZipFile(f"dist/lattix-{v}-py3-none-any.whl").namelist()
+          for needed in ("lattix/oracles/scibmad_worker.jl", "lattix/ui/static/index.html", "lattix/py.typed"):
+              assert needed in names, f"{needed} missing from the wheel"
+          print("wheel carries the worker, the page and the typing marker")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
+
+  verify:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+        python: ["3.11", "3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python }}" }
+      - uses: actions/download-artifact@v4
+        with: { name: dist, path: dist }
+      - name: install the wheel, never the checkout
+        run: |
+          python -m pip install -U pip
+          python -m pip install dist/*.whl
+          python -m pip install pytest "hypothesis>=6" pysdds "pals-schema>=0.3" packaging
+      - if: runner.os == 'Linux'
+        run: python -m pip install cpymad
+      - name: the installed package is the tagged version
+        env: { V: "${{ needs.build.outputs.version }}" }
+        run: |
+          set -eu
+          test "$(lattix --version)" = "lattix $V"
+          python -c "import importlib.metadata as m, sys; assert m.version('lattix') == sys.argv[1]" "$V"
+      - name: a real conversion from the installed package
+        run: |
+          set -eu
+          lattix convert tests/data/public/helix/bend_line.dat /tmp/bend_line.lte \
+            --read-option species=h- --read-option kinetic_energy_eV=2.1e6 2>&1 | tee /tmp/convert.log
+          grep -q "fidelity tracewin→elegant: EXACT=41" /tmp/convert.log
+          test -s /tmp/bend_line.lte
+      - name: the engine-free suite, run against the installed wheel
+        env:
+          PYTHONSAFEPATH: "1"
+          LATTIX_EXPECT_INSTALLED: "1"
+          LATTIX_PUBLIC_DECKS: ${{ github.workspace }}/tests/data/public
+        run: pytest --import-mode=append -p no:cacheprovider -m "$ENGINE_FREE" -q tests
+
+  publish-testpypi:
+    if: needs.build.outputs.prerelease == 'true'
+    needs: [build, verify]
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/lattix
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: dist, path: dist }
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+          verbose: true
+          print-hash: true
+
+  publish-pypi:
+    if: needs.build.outputs.prerelease == 'false'
+    needs: [build, verify]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/lattix
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: dist, path: dist }
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
+          print-hash: true
+
+  github-release:
+    if: needs.build.outputs.prerelease == 'false'
+    needs: [build, publish-pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/download-artifact@v4
+        with: { name: dist, path: dist }
+      - name: the release body is this version's changelog section
+        env: { V: "${{ needs.build.outputs.version }}" }
+        run: |
+          python - "$V" > /tmp/notes.md <<'PY'
+          import re, sys
+          from packaging.version import Version
+          base = Version(sys.argv[1]).base_version
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          m = re.search(rf"^## \[{re.escape(base)}\][^\n]*\n(.*?)(?=^## \[|\Z)", text, re.M | re.S)
+          assert m, f"CHANGELOG.md has no section for {base}"
+          print(m.group(1).strip())
+          PY
+          test -s /tmp/notes.md
+      - name: create the release with the same files PyPI received
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          V: ${{ needs.build.outputs.version }}
+        run: gh release create "$TAG" dist/* --verify-tag --title "lattix $V" --notes-file /tmp/notes.md
