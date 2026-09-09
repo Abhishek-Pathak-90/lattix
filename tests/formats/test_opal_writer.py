@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -53,13 +54,20 @@ def _deck(lat: Lattice, tmp_path: Path, **opts):
     return defs(out.read_text()), rep, out
 
 
+_VERSION_RE = re.compile(r"\blattix \d[\w.+!-]*")      # the writer's banner: "lattix 0.2.0", "lattix 0.2.0rc1"
+
+
+def _norm(text: str) -> str:
+    return _VERSION_RE.sub("lattix <version>", text)
+
+
 def _golden(name: str, path: Path) -> None:
     golden = GOLDEN / name
     text = path.read_text()
     if os.environ.get("LATTIX_UPDATE_GOLDEN") or not golden.exists():
         golden.parent.mkdir(parents=True, exist_ok=True)
-        golden.write_text(text)
-    assert text == golden.read_text(), f"golden {name} differs (LATTIX_UPDATE_GOLDEN=1 to regenerate)"
+        golden.write_text(_norm(text))
+    assert _norm(text) == _norm(golden.read_text()), f"golden {name} differs (LATTIX_UPDATE_GOLDEN=1 to regenerate)"
 
 
 def f(v) -> float:
