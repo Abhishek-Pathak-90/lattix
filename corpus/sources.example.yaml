@@ -1,0 +1,40 @@
+# Pointer file for a PRIVATE lattix corpus: copy to corpus/sources.yaml (which is gitignored)
+# and point each `root` at decks on your machine.  Nothing listed here enters the repository:
+# `python -m lattix.corpus build-manifest --sources corpus/sources.yaml` walks these paths and
+# writes $LATTIX_CORPUS_DIR/manifest.yaml (sha256, size, sniffed format, provenance) outside the
+# repo.  Patterns are relative to each source's `root`; `{a,b}` brace expansion and `**` globs
+# are allowed; a directory means "every file below it".  `formats:` keeps only files that sniff
+# as one of the listed formats; `format:` overrides the sniff.
+#
+# Redistributable public samples live in tests/data/public/ instead (see its README).
+version: 1
+sources:
+  - name: my-linac-tracewin
+    root: ~/path/to/design-decks
+    paths:
+      - "**/*.dat"
+    formats: [tracewin]
+    origin: "where these decks come from"
+    license: private
+    redistributable: false
+    notes: TraceWin decks of a machine under design.
+
+  - name: my-anchors
+    root: ~/path/to/design-decks
+    paths:
+      - "lattices/*.lat"
+      - "lattices/*.lte"
+    origin: "where these decks come from"
+    license: private
+    redistributable: false
+    notes: The same line in more than one format, for lockstep comparisons.
+
+  - name: fieldmaps
+    root: ~/path/to/field-maps
+    paths:
+      - "*"
+    format: fieldmap
+    origin: "who made the maps"
+    license: private
+    redistributable: false
+    notes: TraceWin ASCII field maps the decks refer to.

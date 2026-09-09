@@ -1,6 +1,7 @@
 # Corpus notes (Phase 0)
 
-`corpus/sources.yaml` points at the private decks on this Mac; `python -m lattix.corpus
+`corpus/sources.yaml` points at the private decks on one machine and is not tracked; copy
+`corpus/sources.example.yaml` and edit its roots. `python -m lattix.corpus
 build-manifest --sources corpus/sources.yaml` writes `$LATTIX_CORPUS_DIR/manifest.yaml`
 (955 entries on 2026-09-03: 816 TraceWin decks, 56 field maps, 38 TFS, 29 TraceWin
 outputs, 9 MAD-X, 4 MAD8, 3 Elegant; 89 redistributable).  `tests/data/public/` holds the

@@ -23,3 +23,6 @@ runs/
 # engine scratch written to the cwd by an oracle run
 checkpoint_restart.dat
 *.o
+
+# the machine-local pointer file to a private corpus (see corpus/sources.example.yaml)
+corpus/sources.yaml
