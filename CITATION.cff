@@ -5,7 +5,7 @@ title: "lattix: accelerator lattice translator with engine-backed validation"
 version: 0.1.0
 date-released: 2026-09-03
 license: BSD-3-Clause
-repository-code: "https://github.com/Abhishek-Pathak-90/lattix"
+repository-code: "https://github.com/Accel-Toolkit/lattix"
 authors:
   - family-names: Pathak
     given-names: Abhishek

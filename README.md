@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="docs/assets/readme-hero.png" alt="lattix: twenty-eight accelerator lattice formats connected through one intermediate representation" width="880">
+  <img src="https://raw.githubusercontent.com/Accel-Toolkit/lattix/main/docs/assets/readme-hero.png" alt="lattix: twenty-eight accelerator lattice formats connected through one intermediate representation" width="880">
 </p>
 
 <p align="center">
-  <img src="docs/assets/readme-badges.png" alt="BSD 3-Clause, Python 3.11 and above, 28 formats, 17 engines, 588 ledger codes, version 0.1.0" width="760">
+  <img src="https://raw.githubusercontent.com/Accel-Toolkit/lattix/main/docs/assets/readme-badges.png" alt="BSD 3-Clause, Python 3.11 and above, 28 formats, 17 engines, 589 ledger codes" width="760">
 </p>
 
 # lattix
@@ -48,7 +48,7 @@ you want in a script. Add `--report out.json` and the whole ledger lands in a fi
 ## Twenty-eight formats
 
 <p align="center">
-  <img src="docs/assets/readme-formats.png" alt="The formats grouped into linac codes, ring codes, the modern Python stack, and the eight reached through Bmad's converters" width="900">
+  <img src="https://raw.githubusercontent.com/Accel-Toolkit/lattix/main/docs/assets/readme-formats.png" alt="The formats grouped into linac codes, ring codes, the modern Python stack, and the eight reached through Bmad's converters" width="900">
 </p>
 
 Twenty of them work in both directions. Six can only be written and two can only be read, which is a
@@ -72,11 +72,11 @@ a Bmad installation present. The other twenty need nothing beyond lattix.
 ## The ledger
 
 <p align="center">
-  <img src="docs/assets/readme-ledger.png" alt="A fidelity ledger: each element marked exact, equivalent, lossy or dropped, with a named code" width="900">
+  <img src="https://raw.githubusercontent.com/Accel-Toolkit/lattix/main/docs/assets/readme-ledger.png" alt="A fidelity ledger: each element marked exact, equivalent, lossy or dropped, with a named code" width="900">
 </p>
 
 Every element in every conversion is marked exact, equivalent, lossy or dropped, and each mark carries a
-named code saying precisely what happened. There are 588 of them, all catalogued in
+named code saying precisely what happened. There are 589 of them, all catalogued in
 [docs/fidelity.md](docs/fidelity.md) with the source line that raises each one.
 
 The distinction matters in practice. `RBEN_CHORD_TO_ARC` is equivalent, meaning the optics survive and
@@ -87,7 +87,7 @@ you got before you run anything.
 ## Checked against the real codes
 
 <p align="center">
-  <img src="docs/assets/readme-validation.png" alt="Thirteen engines compared against MAD-X on one bend line, agreement plotted on a logarithmic scale" width="900">
+  <img src="https://raw.githubusercontent.com/Accel-Toolkit/lattix/main/docs/assets/readme-validation.png" alt="Thirteen engines compared against MAD-X on one bend line, agreement plotted on a logarithmic scale" width="900">
 </p>
 
 lattix does not take its own word for it. The same lattice is written out for as many of the
@@ -120,13 +120,16 @@ Full detail, with the measurement behind each one, is in [docs/oracles.md](docs/
 ## Install
 
 ```bash
-pip install -e .                 # numpy, pydantic, lark and pyyaml, nothing else
-pip install -e ".[oracles]"      # adds cpymad, xtrack and friends for validation
+pip install lattix                 # numpy, pydantic, lark and pyyaml, nothing else
+pip install "lattix[oracles]"      # adds cpymad, xtrack and friends for validation
 ```
 
-Requires Python 3.11 or newer. The optional engine extras stay optional on purpose: several
-simulation codes are GPL, and lattix keeps them at arm's length by running them as separate
-processes, which is what lets the translator itself stay BSD licensed.
+Requires Python 3.11 or newer. Two things the base install does not do, on purpose. Reading a
+MAD-X deck runs MAD-X itself to evaluate it, which is what makes that reader exact, so it needs
+`cpymad` from the `oracles` extra. And the eight formats reached through Bmad's converters need a
+Bmad installation. The optional engine extras stay optional because several simulation codes are
+GPL, and lattix keeps them at arm's length by running them as separate processes, which is what
+lets the translator itself stay BSD licensed.
 
 Two conda environments cover the engines that are not pip installable. `environment-ci.yml` builds
 the env used by continuous integration, with Elegant, ImpactX, IMPACT-Z and cpymad.

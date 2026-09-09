@@ -6,13 +6,15 @@ public sample decks in `tests/data/public/helix/` and the output is shown as pri
 ## 1. Install
 
 ```
-$ pip install lattix-0.1.0-py3-none-any.whl        # or: pip install -e .  in a clone
+$ pip install lattix                 # or: pip install -e .  in a clone
+$ pip install "lattix[oracles]"      # adds cpymad, xtrack and friends
 $ lattix --version
 ```
 
-The package needs only numpy, scipy, pydantic, lark and pyyaml.  Readers that drive an
-engine need it installed: the MAD-X reader needs `cpymad`, the xtrack adapter needs
-`xtrack`, PALS validation uses `pals-schema`.  The oracle adapters find their engines on
+The package needs only numpy, pydantic, lark and pyyaml.  Readers that drive an engine need it
+installed: the MAD-X reader needs `cpymad` (the `oracles` extra provides it), the xtrack adapter
+needs `xtrack`, PALS validation uses `pals-schema`, and the eight formats reached through Bmad's
+converters need a Bmad installation.  The oracle adapters find their engines on
 `PATH` or through `TRACEWIN_EXE`, `ELEGANT_EXE`, `HELIX_ROOT`, `LATTIX_BMAD_ENV` and friends
 (see [oracles.md](oracles.md)).  `environment-ci.yml` builds a conda environment with
 every free engine.

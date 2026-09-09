@@ -73,6 +73,8 @@ _BUILTINS: dict[str, _Sig] = {
     "add": _Sig(cls_arg=0, code_arg=1, msg_arg=2),
     # the writers' capability tables: Rule(target, cls="EXACT", code="OK", message="")
     "Rule": _Sig(cls_arg=1, cls_default="EXACT", code_arg=2, code_default="OK", msg_arg=3),
+    # a ledger entry built directly, by keyword: FidelityEntry(element=…, kind=…, cls=…, code=…, message=…)
+    "FidelityEntry": _Sig(cls_arg=None, code_arg=None, msg_arg=None),
 }
 
 
