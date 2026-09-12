@@ -62,7 +62,17 @@ from lattix import __version__
 from lattix.fidelity import FidelityReport
 from lattix.formats.base import note_quad_higher_orders
 from lattix.formats.madx.naming import NameMap, is_valid, name_tag
-from lattix.ir.elements import ALL_KINDS, ApertureP, Directive, Drift, Element, FieldMap, Freq, Superposition
+from lattix.ir.elements import (
+    ALL_KINDS,
+    ApertureP,
+    Directive,
+    Drift,
+    Element,
+    FieldMap,
+    Freq,
+    Patch,
+    Superposition,
+)
 from lattix.ir.energy_mode import (
     check_mode,
     mode_ratio,
@@ -92,7 +102,7 @@ _FAMILY_TYPE = {"BPM": "monitor", "MONITOR": "monitor", "HMONITOR": "hmonitor",
 
 #: MAD-X base types that reject ``apertype``/``aperture`` ("illegal keyword: apertype");
 #: measured by scanning every base type's command parameters in MAD-X 5.09.03.
-_NO_APERTURE = frozenset({"drift", "matrix", "translation"})
+_NO_APERTURE = frozenset({"drift", "matrix", "translation", "yrotation", "xrotation", "srotation"})
 
 _ID = re.compile(r"[A-Za-z_][A-Za-z0-9_.]*")
 _EXPR_TOL = 1e-12
@@ -172,8 +182,7 @@ class Writer:
         "Foil": Rule("marker", "LOSSY", "FOIL_TO_MARKER",
                      "MAD-X has no stripping foil; written as a marker"),
         "Taylor": Rule("matrix"),
-        "Patch": Rule("marker", "LOSSY", "PATCH_DROPPED",
-                      "MAD-X has no patch element; written as a marker"),
+        "Patch": Rule("translation/yrotation/xrotation/srotation"),
         "ReferenceChange": Rule("marker", "EQUIVALENT", "REFCHANGE_AS_TAG",
                                 "MAD-X cannot change the reference energy: written as a marker whose "
                                 "lattix tag carries the jump (the reader restores it; downstream "
@@ -337,6 +346,17 @@ class Writer:
             if isinstance(el, FieldMap):
                 out.extend(self._fieldmap_items(el, p.s_in, ref, rep, probe))
                 continue
+            if isinstance(el, Patch):
+                parts = self._patch_parts(el)
+                if len(parts) > 1:
+                    rep.equivalent("PATCH_AS_CARDS",
+                                   f"MAD-X has no combined frame patch: written as {len(parts)} cards at the same "
+                                   "position (translation, then yrotation, xrotation, srotation), which compose "
+                                   "to the same frame change", element=el.name, kind="Patch",
+                                   cards=[part.name for part in parts])
+                    for part in parts:
+                        out.append(_Item(part, p.s_in, p.s_in, ref.brho_signed, 0.0, probe, ref))
+                    continue
             out.append(_Item(el, p.s_in, p.s_out, ref.brho_signed,
                              energy_gain_eV(el, ref), probe, ref))
         return self._resolve_overlaps(out, rep)
@@ -734,7 +754,36 @@ class Writer:
         return "matrix", attrs
 
     def _def_patch(self, el, brho, lat, ux, rep):
+        """One MAD-X card per component group; a combined patch was split by ``_items`` into
+        single-group parts, and a patch with nothing to do is a marker."""
+        if el.t_offset_s or el.e_tot_offset_eV:
+            rep.lossy("PATCH_ATTR_DROPPED",
+                      "MAD-X frame cards carry no time or energy offset",
+                      element=el.name, kind="Patch", t_offset_s=el.t_offset_s, e_tot_offset_eV=el.e_tot_offset_eV)
+        if el.x_offset or el.y_offset or el.z_offset:
+            return "translation", [f"{k}={_num(v)}" for k, v in (("dx", el.x_offset), ("dy", el.y_offset),
+                                                                    ("ds", el.z_offset)) if v]
+        if el.y_rot:
+            return "yrotation", [f"angle={_num(el.y_rot)}"]
+        if el.x_rot:
+            return "xrotation", [f"angle={_num(el.x_rot)}"]
+        if el.tilt:
+            return "srotation", [f"angle={_num(el.tilt)}"]
         return "marker", []
+
+    @staticmethod
+    def _patch_parts(el: Patch) -> list[Patch]:
+        """The single-card patches a combined patch composes to, in the IR's own order: the
+        offsets first (in the entrance frame), then yaw, pitch, roll."""
+        parts: list[Patch] = []
+        if el.x_offset or el.y_offset or el.z_offset:
+            parts.append(Patch(name=f"{el.name}_t", x_offset=el.x_offset, y_offset=el.y_offset, z_offset=el.z_offset))
+        for suffix, attr in (("y", "y_rot"), ("x", "x_rot"), ("s", "tilt")):
+            if getattr(el, attr):
+                parts.append(Patch(name=f"{el.name}_{suffix}", **{attr: getattr(el, attr)}))
+        if parts and (el.t_offset_s or el.e_tot_offset_eV):
+            parts[0] = parts[0].model_copy(update={"t_offset_s": el.t_offset_s, "e_tot_offset_eV": el.e_tot_offset_eV})
+        return parts
 
     def _def_referencechange(self, el, brho, lat, ux, rep):
         return "marker", []

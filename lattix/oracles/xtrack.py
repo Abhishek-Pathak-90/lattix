@@ -254,8 +254,10 @@ class XtrackOracle:
         # -- survey at exits ---------------------------------------------------
         sv = line.survey()
         rows = _exit_rows(sv, n_all, s_down, "survey")[keep]
-        survey = np.stack([np.asarray(sv[k], dtype=float)[rows] for k in ("X", "Y", "Z", "theta")],
-                          axis=1)
+        survey6 = np.stack([np.asarray(sv[k], dtype=float)[rows]
+                            for k in ("X", "Y", "Z", "theta", "phi", "psi")], axis=1)
+        survey = survey6[:, :4].copy()
+        meta["survey6"] = survey6.tolist()             # X, Y, Z, theta, phi, psi at every exit
 
         # -- probe -------------------------------------------------------------
         probe_out = None

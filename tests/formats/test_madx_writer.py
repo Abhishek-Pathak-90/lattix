@@ -454,7 +454,7 @@ _LOSSY_CASES = [
     ("NCELLS_TO_DRIFT", lambda: one_element(NCells(name="nc", length=0.4))),
     ("RFQ_TO_DRIFT", lambda: one_element(RFQCell(name="rq", length=0.4))),
     ("FOIL_TO_MARKER", lambda: one_element(Foil(name="fo"))),
-    ("PATCH_DROPPED", lambda: one_element(Patch(name="pa", x_offset=1e-3))),
+    ("PATCH_ATTR_DROPPED", lambda: one_element(Patch(name="pa", x_offset=1e-3, t_offset_s=1e-9))),
     ("FOREIGN_DIRECTIVE",
      lambda: one_element(Directive(name="dv", card="SET_ADV", args=["1"], role="matching"))),
     ("EKICK_AS_MAGNETIC",
@@ -627,3 +627,34 @@ def test_drift_body_shift_is_dropped_in_sequence_mode(tmp_path):
     assert "DRIFT_SHIFT_DROPPED" in rep.codes()
     with pytest.raises(TranslationError):
         Writer().write(lat, tmp_path / "ds2.madx", strict=True)
+
+
+def test_patch_round_trip_through_madx_frame_cards(tmp_path):
+    """A combined patch is written as one card per component (translation, yrotation, xrotation,
+    srotation at the same position) and reads back as four patches with the same exit frame; a
+    single-component patch is one card, exactly."""
+    import numpy as np
+
+    from lattix.ir import frame_survey
+
+    combined = Patch(name="pa", x_offset=1e-3, y_offset=-2e-3, z_offset=5e-4, x_rot=0.01, y_rot=-0.02, tilt=0.3)
+    lat = Lattice.from_sequence("s", [Drift(name="d1", length=1.0), combined, Drift(name="d2", length=1.0)],
+                                proton_ref())
+    out = tmp_path / "patch.madx"
+    rep = Writer().write(lat, out)
+    assert "PATCH_AS_CARDS" in rep.codes() and "PATCH_DROPPED" not in rep.codes(), rep.summary()
+    text = out.read_text()
+    for card in ("pa_t: translation, dx=", "pa_y: yrotation, angle=", "pa_x: xrotation, angle=",
+                 "pa_s: srotation, angle="):
+        assert card in text, text
+    back, _ = Reader().read(out)
+    assert [p.element.kind for p in back.flatten()].count("Patch") == 4
+    want, got = frame_survey(lat.flatten())[-1].exit, frame_survey(back.flatten())[-1].exit
+    np.testing.assert_allclose(got.V, want.V, atol=1e-12)
+    np.testing.assert_allclose(got.W, want.W, atol=1e-12)
+    single = Lattice.from_sequence("s", [Drift(name="d1", length=1.0), Patch(name="yaw", y_rot=0.02),
+                                         Drift(name="d2", length=1.0)], proton_ref())
+    rep1 = Writer().write(single, tmp_path / "one.madx")
+    assert rep1.ok and "yaw: yrotation, angle=0.02;" in (tmp_path / "one.madx").read_text()
+    back1, _ = Reader().read(tmp_path / "one.madx")
+    assert back1.elements["yaw"].y_rot == 0.02

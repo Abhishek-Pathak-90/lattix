@@ -62,6 +62,7 @@ from lattix.ir.elements import (
     Marker,
     Multipole,
     Octupole,
+    Patch,
     Provenance,
     Quadrupole,
     RFCavity,
@@ -621,6 +622,33 @@ class Reader:
         el.matrix = [[row.get(f"rm{i}{j}", 1.0 if i == j else 0.0) for j in range(1, 7)]
                      for i in range(1, 7)]
         el.offset = [row.get(f"kick{i}") for i in range(1, 7)]
+        return el
+
+    # reference-frame patches ---------------------------------------------
+    # MAD-X's own survey (5.09.03, measured 2026-09-11): yrotation adds its angle to theta,
+    # xrotation subtracts its angle from phi, srotation adds its angle to psi, and a translation
+    # moves by (dx, dy, ds) in the local frame — the IR Patch conventions one for one
+    # (docs/conventions.md §11).  changeref is ignored by that survey (PTC honours it), so it
+    # stays an unsupported type rather than a guessed one.
+    def _conv_yrotation(self, row, brho, rep, keep):
+        el = Patch(name=row.name, y_rot=row.get("angle"))
+        self._expr(el, row, "angle", "y_rot", keep)
+        return el
+
+    def _conv_xrotation(self, row, brho, rep, keep):
+        el = Patch(name=row.name, x_rot=row.get("angle"))
+        self._expr(el, row, "angle", "x_rot", keep)
+        return el
+
+    def _conv_srotation(self, row, brho, rep, keep):
+        el = Patch(name=row.name, tilt=row.get("angle"))
+        self._expr(el, row, "angle", "tilt", keep)
+        return el
+
+    def _conv_translation(self, row, brho, rep, keep):
+        el = Patch(name=row.name, x_offset=row.get("dx"), y_offset=row.get("dy"), z_offset=row.get("ds"))
+        for attr, path in (("dx", "x_offset"), ("dy", "y_offset"), ("ds", "z_offset")):
+            self._expr(el, row, attr, path, keep)
         return el
 
     # -- aperture, errors ----------------------------------------------------

@@ -13,8 +13,12 @@ macros, `if`, variables and `:=` behave exactly as MAD-X defines them, and build
 element boundaries are MAD-X's.  `beam` gives the `ReferenceParticle`; `dipedge` elements
 adjacent to a bend are folded into `e1`/`e2`/`fint`/`hgap` (EQUIVALENT `DIPEDGE_FOLDED`, with a
 curvature tolerance of 1e-4; orphans are LOSSY `DIPEDGE_ORPHAN`); `ealign` misalignments become
-`BodyShiftP`; `efcomp` field errors are LOSSY `EFCOMP_DROPPED`; unknown types are DROPPED
-`UNSUPPORTED_MADX_TYPE`.  Without cpymad the reader raises `MissingDependencyError`.
+`BodyShiftP`; `yrotation`, `xrotation`, `srotation` and `translation` become `Patch` elements with
+the conventions MAD-X's own `survey` uses (measured with cpymad 5.09.03, [conventions §11](../conventions.md));
+`changeref` is ignored by that survey and stays DROPPED; `efcomp` field errors are LOSSY
+`EFCOMP_DROPPED`; unknown types are DROPPED `UNSUPPORTED_MADX_TYPE`.  Without cpymad the reader
+raises `MissingDependencyError`.  The writer emits a `Patch` as the matching card, or as several
+cards at one position when it combines offsets and rotations (EQUIVALENT `PATCH_AS_CARDS`).
 
 ## Writing
 

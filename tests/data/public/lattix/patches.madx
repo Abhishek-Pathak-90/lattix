@@ -1,0 +1,38 @@
+! lattix survey deck: reference-frame patches — a yaw (yrotation), a pitch (xrotation), a roll
+! (srotation) and a translation between quadrupoles and bends, with an EALIGN misalignment on one
+! quadrupole.  MAD-X's own survey pins the frame conventions (docs/conventions.md §11).  Proton 800 MeV.
+beam, particle=proton, energy=1.738272088;
+d1: drift, l=0.5;
+d2: drift, l=1.0;
+qf: quadrupole, l=0.3, k1=0.8;
+qd: quadrupole, l=0.3, k1=-0.8;
+bh: sbend, l=1.2, angle=0.08;
+bv: sbend, l=1.05, angle=0.0416, tilt=pi/2;
+yaw: yrotation, angle=0.02;
+pitch: xrotation, angle=-0.015;
+roll: srotation, angle=0.3;
+jump: translation, dx=0.004, dy=-0.002, ds=0.01;
+mend: marker;
+patches: sequence, l=9.35, refer=entry;
+d1, at=0.0;
+qf, at=0.5;
+yaw, at=0.8;
+d2, at=0.8;
+bh, at=1.8;
+pitch, at=3.0;
+d1, at=3.0;
+qd, at=3.5;
+roll, at=3.8;
+d2, at=3.8;
+bv, at=4.8;
+jump, at=5.85;
+d1, at=5.85;
+qf, at=6.35;
+d2, at=6.65;
+bh, at=7.65;
+d1, at=8.85;
+mend, at=9.35;
+endsequence;
+use, sequence=patches;
+select, flag=error, pattern="qd";
+ealign, dx=1e-3, dy=-2e-3, ds=5e-4, dphi=1e-3, dtheta=2e-3, dpsi=3e-3;

@@ -289,6 +289,11 @@ body frame after its misalignment.  `survey()` is the `(X, Y, Z, theta)` view of
   never moves because of a shift; only the body frame does.
 * **Superposition children** (`expand_children=True`) are placed along the container's straight
   axis at `s_in + z_offset` and carry the container's index.
+* **MAD-X cards** (measured with cpymad 5.09.03 on 2026-09-11, `tests/oracles/test_frame_survey.py`):
+  `yrotation, angle=a` adds `a` to theta (`Patch.y_rot = a`), `xrotation, angle=a` subtracts `a`
+  from phi (`Patch.x_rot = a`), `srotation, angle=a` adds `a` to psi (`Patch.tilt = a`), and
+  `translation, dx, dy, ds` moves in the local frame (`Patch` offsets).  MAD-X's own `survey`
+  ignores `changeref`, so lattix keeps it unsupported rather than guessing its order of operations.
 
 `survey_table` and `survey_csv` flatten the frames into rows (`X, Y, Z, theta, phi, psi` per
 frame, metres and radians, 12 significant digits).

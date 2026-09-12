@@ -549,3 +549,26 @@ use, sequence=s;
     assert lat.reference.rf_frequency_Hz is None
     lat, _ = Reader().read(p, frequency_Hz=352.21e6)
     assert lat.reference.rf_frequency_Hz == 352.21e6 and lat.reference.kinetic_energy_eV == pytest.approx(8e8, rel=1e-6)
+
+
+def test_frame_cards_become_patches_and_changeref_stays_unsupported(tmp_path):
+    from lattix.ir.elements import Patch
+
+    p = _deck(tmp_path, """
+beam, particle=proton, energy=1.738272;
+yaw: yrotation, angle=0.02;
+pitch: xrotation, angle=-0.015;
+roll: srotation, angle=0.3;
+jump: translation, dx=0.004, dy=-0.002, ds=0.01;
+cr: changeref, patch_ang={0.05,0.06,0.07}, patch_trans={0.001,0.002,0.003};
+s: sequence, l=1.0; yaw, at=0.2; pitch, at=0.4; roll, at=0.6; jump, at=0.8; cr, at=0.9; endsequence;
+use, sequence=s;
+""")
+    lat, rep = Reader().read(p)
+    yaw, pitch, roll, jump = (lat.elements[n] for n in ("yaw", "pitch", "roll", "jump"))
+    assert isinstance(yaw, Patch) and yaw.y_rot == 0.02 and yaw.length == 0.0
+    assert isinstance(pitch, Patch) and pitch.x_rot == -0.015
+    assert isinstance(roll, Patch) and roll.tilt == 0.3
+    assert isinstance(jump, Patch) and (jump.x_offset, jump.y_offset, jump.z_offset) == (0.004, -0.002, 0.01)
+    assert isinstance(lat.elements["cr"], Marker)      # MAD-X's own survey ignores changeref: not guessed
+    assert [e.details["madx_type"] for e in rep.entries if e.code == "UNSUPPORTED_MADX_TYPE"] == ["changeref"]

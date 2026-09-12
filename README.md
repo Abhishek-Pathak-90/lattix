@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Accel-Toolkit/lattix/main/docs/assets/readme-badges.png" alt="BSD 3-Clause, Python 3.11 and above, 28 formats, 17 engines, 589 ledger codes" width="760">
+  <img src="https://raw.githubusercontent.com/Accel-Toolkit/lattix/main/docs/assets/readme-badges.png" alt="BSD 3-Clause, Python 3.11 and above, 28 formats, 17 engines, 590 ledger codes" width="760">
 </p>
 
 # lattix
@@ -76,7 +76,7 @@ a Bmad installation present. The other twenty need nothing beyond lattix.
 </p>
 
 Every element in every conversion is marked exact, equivalent, lossy or dropped, and each mark carries a
-named code saying precisely what happened. There are 589 of them, all catalogued in
+named code saying precisely what happened. There are 590 of them, all catalogued in
 [docs/fidelity.md](docs/fidelity.md) with the source line that raises each one.
 
 The distinction matters in practice. `RBEN_CHORD_TO_ARC` is equivalent, meaning the optics survive and

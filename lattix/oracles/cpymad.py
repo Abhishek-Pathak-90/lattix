@@ -27,16 +27,25 @@ def _strip_occurrence(name: str) -> str:
     return n.rsplit(":", 1)[0] if ":" in n and n.rsplit(":", 1)[1].isdigit() else n
 
 
-def _align(s_ref: np.ndarray, s_tbl: np.ndarray, tol: float = 1e-9) -> list[int]:
-    """Index into a MAD-X table (twiss/survey) whose rows are at positions
-    ``s_tbl`` for each requested exit position in ``s_ref`` (last match wins,
-    so zero-length elements sharing an s pick the downstream row)."""
+def _align(s_ref: np.ndarray, s_tbl: np.ndarray, tol: float = 1e-9, *,
+           names_ref: list[str] | None = None, names_tbl: list[str] | None = None) -> list[int]:
+    """Index into a MAD-X table (twiss/survey) whose rows are at positions ``s_tbl`` for each
+    requested exit position in ``s_ref``.  With names, the row of the same element at that
+    position wins (a thick element and a zero-length frame card ending at one s have different
+    survey rows); otherwise the last match, so zero-length elements sharing an s pick the
+    downstream row."""
+    tbl = [_strip_occurrence(n) for n in names_tbl] if names_tbl is not None else None
     out = []
-    for s in s_ref:
+    for k, s in enumerate(s_ref):
         hits = np.nonzero(np.abs(s_tbl - s) <= tol)[0]
         if len(hits) == 0:
             raise ValueError(f"no MAD-X table row at s={s!r}")
-        out.append(int(hits[-1]))
+        pick = int(hits[-1])
+        if tbl is not None and names_ref is not None:
+            same = [int(h) for h in hits if tbl[h] == names_ref[k]]
+            if same:
+                pick = same[-1]
+        out.append(pick)
     return out
 
 
@@ -115,14 +124,16 @@ class MadxOracle:
         lengths = np.diff(np.concatenate([[0.0], s_out]))
 
         twiss = {}
-        tw_idx = _align(s_out, np.asarray(tw.s, dtype=float))
+        tw_idx = _align(s_out, np.asarray(tw.s, dtype=float), names_ref=names, names_tbl=list(tw.name))
         for key in ("betx", "alfx", "bety", "alfy", "dx", "dpx", "dy", "dpy"):
             twiss[key] = np.asarray(tw[key], dtype=float)[tw_idx]
         disp = {k: twiss.pop(k) for k in ("dx", "dpx", "dy", "dpy")}
 
         sv = m.survey(sequence=seq)
-        sv_idx = _align(s_out, np.asarray(sv.s, dtype=float))
-        survey = np.stack([np.asarray(sv[k], dtype=float)[sv_idx] for k in ("x", "y", "z", "theta")], axis=1)
+        sv_idx = _align(s_out, np.asarray(sv.s, dtype=float), names_ref=names, names_tbl=list(sv.name))
+        survey6 = np.stack([np.asarray(sv[k], dtype=float)[sv_idx]
+                            for k in ("x", "y", "z", "theta", "phi", "psi")], axis=1)
+        survey = survey6[:, :4].copy()
 
         probe_out = None
         if probe is not None:
@@ -133,7 +144,9 @@ class MadxOracle:
             engine=self.name, basis=Basis.MADX, names=names, length=lengths, s_out=s_out,
             R_elem=R, ref_kinetic_eV_in=np.full(n, ke), ref_kinetic_eV_out=np.full(n, ke),
             mass_eV=mass_eV, charge=charge, twiss=twiss, disp=disp, survey=survey,
-            probe_out=probe_out, meta={"sequence": seq, "workdir": str(wd)},
+            probe_out=probe_out,
+            meta={"sequence": seq, "workdir": str(wd),
+                  "survey6": survey6.tolist()},        # x, y, z, theta, phi, psi at every exit
         )
 
     # ------------------------------------------------------------------
