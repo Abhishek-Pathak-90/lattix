@@ -34,8 +34,28 @@ and are listed under the version they rehearse.
   gains more than a factor of two, and the verdict says so.
 - Packaging for PyPI: the Julia worker ships in the wheel, the metadata carries classifiers,
   keywords and project URLs, and the licence is declared as a PEP 639 expression.
+- Floor frames (`lattix.ir.frames`): the position and full orientation of every element at its
+  entrance, centre and exit, the misaligned body frame (offsets and pitches about the centre, a
+  skew magnet rolled by its own tilt), MAD-X survey angles kept continuous along the line, a start
+  pose as MAD-X `SURVEY` takes it, and Superposition children in place. Pinned against MAD-X's
+  survey, xtrack's and Bmad's floor positions (`Reference` and `Actual`) to 1e-9 m and 1e-10 rad.
+- `lattix survey`: the floor coordinates and survey angles of every element as a table, CSV or
+  JSON; the workbench serves the same at `GET /api/session/<sid>/survey`.
+- MAD-X `yrotation`, `xrotation`, `srotation` and `translation` read as `Patch` elements and a
+  `Patch` writes back as those cards (several at one position for a combined patch,
+  EQUIVALENT `PATCH_AS_CARDS`), with cpymad's survey as the arbiter of the signs; `changeref`
+  stays unsupported because MAD-X's own survey ignores it.
+- Workbench plugins: an installed package adds tabs to `lattix ui` through the
+  `lattix.ui.plugins` entry-point group, served under `/plugins/<name>/` behind the same token and
+  kept in step with the page over `postMessage`; `lattix ui --no-plugins` turns them off.
+- Two public decks for the survey oracles: `lattix/patches.madx` and `lattix/misaligned.bmad`.
 
 ### Changed
+- `survey()` keeps its shape and its numbers on every public deck, but its `theta` is now the
+  azimuth of the exit direction rather than the sum of bend angles, which only agreed while the
+  bend plane was horizontal.
+- The MAD-X oracle aligns table rows by element name, so a thick element followed by a
+  zero-length frame card no longer reports the card's survey row as its own.
 - Bmad pitch planes: `x_pitch` is a rotation about y (the IR `y_rot`) and `y_pitch` is `-x_rot`,
   matching Elegant, PALS and MAD8. A Bmad round trip hid the earlier plane swap.
 - The SciBmad reader honours a reference carried on a leading `Marker`, the form HELIX's examples
