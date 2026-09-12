@@ -42,6 +42,7 @@ from lattix.ui.model import (
     ledger_view,
     sample_decks,
 )
+from lattix.ui.plugins import LoadedPlugin, load_plugins, plugins_view
 
 _LOCAL_ONLY = frozenset({"tracewin", "dynac", "synergia", "helix"})
 _DECK_NAMES = {"impactz": "ImpactZ.in", "impactt": "ImpactT.in"}
@@ -111,6 +112,8 @@ class Settings:
     job_timeout_s: float = 1800.0
     token: str = field(default_factory=lambda: secrets.token_urlsafe(24))
     quiet: bool = True
+    plugins: bool = True            # load the installed workbench plugins (lattix.ui.plugins entry points)
+    open_path: str = "/"            # the page the browser is opened on (a plugin may run standalone)
 
 
 @dataclass
@@ -154,6 +157,7 @@ class Session:
     source: Loaded | None = None
     translations: dict[str, Translation] = field(default_factory=dict)
     n_translations: int = 0
+    plugin_state: dict = field(default_factory=dict)      # per-plugin scratch, keyed by the plugin name
 
 
 class SessionStore:
@@ -202,8 +206,14 @@ class App:
     """Everything the handler needs: settings, sessions, jobs, the cached catalogues, the engine probe."""
 
     def __init__(self, settings: Settings, *, oracle_probe: Callable[[], dict] | None = None,
-                 validation_runner: Callable[[Job, dict], dict] | None = None) -> None:
+                 validation_runner: Callable[[Job, dict], dict] | None = None,
+                 plugins: list[LoadedPlugin] | None = None) -> None:
         self.settings = settings
+        self.plugin_errors: list[str] = []
+        if plugins is None:
+            plugins = load_plugins(errors=self.plugin_errors) if settings.plugins else []
+        self.plugins = plugins
+        self.plugin_routes = [r for p in plugins for r in p.routes]
         self.tmp_root = Path(tempfile.mkdtemp(prefix="lattix_ui_"))
         self.sessions = SessionStore(self.tmp_root, settings.session_limit)
         self.jobs = JobManager(max_workers=1, default_timeout_s=settings.job_timeout_s)
@@ -506,7 +516,8 @@ def start_validation(app: App, session: Session, body: dict) -> Job:
 # ------------------------------------------------------------------------------------------------ HTTP
 _HOSTS = ("127.0.0.1", "localhost", "[::1]")
 _CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; "
-        "connect-src 'self'; font-src 'self' data:")
+        "connect-src 'self'; font-src 'self' data:; frame-src 'self'")     # frame-src: plugin tabs, same origin only
+_PLUGIN_PAGE = re.compile(r"/plugins/[a-z][a-z0-9_]*/?(index\.html)?")
 
 
 def _page() -> bytes:
@@ -527,11 +538,11 @@ class Handler(BaseHTTPRequestHandler):
 
     # -- helpers
     def _send(self, status: int, body: bytes, ctype: str = "application/json; charset=utf-8",
-              extra: dict | None = None) -> None:
+              extra: dict | None = None, *, cache: str = "no-store") -> None:
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", cache)
         self.send_header("X-Content-Type-Options", "nosniff")
         for k, v in (extra or {}).items():
             self.send_header(k, v)
@@ -583,7 +594,7 @@ class Handler(BaseHTTPRequestHandler):
             return False
         token = self.headers.get("X-Lattix-Token") or (query.get("token") or [None])[0]
         if not token or not secrets.compare_digest(token, self.app.settings.token):
-            if self.command == "GET" and path in ("/", "/index.html"):
+            if self.command == "GET" and (path in ("/", "/index.html") or _PLUGIN_PAGE.fullmatch(path)):
                 # a person typed the bare address or kept an old link: say so in words, not JSON
                 page = _NEED_LINK_HTML.replace("PORT", str(port))
                 self._send(403, page.encode("utf-8"), "text/html; charset=utf-8")
@@ -610,7 +621,7 @@ class Handler(BaseHTTPRequestHandler):
             # the body is consumed here, once, whether or not the route wants it: on a keep-alive connection
             # an unread body would be parsed as the start of the browser's next request
             self._raw = self._read_body()
-            for method, pattern, fn in ROUTES:
+            for method, pattern, fn in (*ROUTES, *self.app.plugin_routes):
                 if method != self.command:
                     continue
                 m = pattern.fullmatch(path)
@@ -643,7 +654,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def r_ping(self, query) -> None:
         self._json(200, {"ok": True, "version": __version__, "root": str(self.app.settings.root),
-                         "any_path": self.app.settings.any_path, "uptime_s": time.time() - self.app.started})
+                         "any_path": self.app.settings.any_path, "uptime_s": time.time() - self.app.started,
+                         "plugins": [p.plugin.name for p in self.app.plugins]})
+
+    def r_plugins(self, query) -> None:
+        self._json(200, plugins_view(self.app.plugins, self.app.plugin_errors))
 
     def r_formats(self, query) -> None:
         self._json(200, format_catalog())
@@ -856,6 +871,7 @@ ROUTES: list[tuple[str, re.Pattern, Callable]] = [
     ("GET", re.compile(r"/|/index\.html"), Handler.r_page),
     ("HEAD", re.compile(r"/|/index\.html"), Handler.r_page),
     ("GET", re.compile(r"/api/ping"), Handler.r_ping),
+    ("GET", re.compile(r"/api/plugins"), Handler.r_plugins),
     ("GET", re.compile(r"/api/formats"), Handler.r_formats),
     ("GET", re.compile(r"/api/samples"), Handler.r_samples),
     ("GET", re.compile(r"/api/catalog"), Handler.r_catalog),
@@ -903,19 +919,24 @@ def _is_loopback(host: str) -> bool:
         return False
 
 
-def serve(settings: Settings, *, check: bool = False, deck: str | None = None) -> int:
+def serve(settings: Settings, *, check: bool = False, deck: str | None = None,
+          deck_options: dict | None = None) -> int:
     if not _is_loopback(settings.host):
         print(f"lattix ui: refusing to bind {settings.host!r}: the UI serves the local browser only "
               "(127.0.0.1 or localhost)", file=sys.stderr)
         return 2
     app = App(settings)
+    names = [f"{p.plugin.name} {p.plugin.version}".strip() for p in app.plugins]
+    print(f"lattix ui: plugins: {', '.join(names) if names else '(none)'}", flush=True)
+    for err in app.plugin_errors:
+        print(f"lattix ui: plugin error: {err}", file=sys.stderr, flush=True)
     srv, thread, port = start_in_thread(app, settings.host, settings.port)
-    url = f"http://{settings.host}:{port}/?token={settings.token}"
+    url = f"http://{settings.host}:{port}{settings.open_path}?token={settings.token}"
     try:
         sid = None
         if deck:
             s = app.sessions.create()
-            s.source = load_source(app, s, {"source": {"path": deck}})
+            s.source = load_source(app, s, {"source": {"path": deck}, **(deck_options or {})})
             sid = s.id
             url += f"&session={sid}"
         if check:

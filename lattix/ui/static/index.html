@@ -199,6 +199,7 @@ svg.chart .grid line { stroke: var(--line); }
 svg.chart polyline { fill: none; stroke-width: 1.5px; }
 @media (max-width: 1100px) { #app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto; } #panel, #inspector { border: none; border-bottom: 1px solid var(--line); max-height: 40vh; } }
 @media (prefers-reduced-motion: reduce) { #busy.on { animation: none; } }
+iframe.plugin { display: block; width: 100%; height: 100%; border: 0; background: var(--bg-0); }
 </style>
 </head>
 <body>
@@ -1778,8 +1779,7 @@ const validation = {
 };
 // ------------------------------------------------------------------------------------------ keys, resize, init
 const keys = {
-  bind() {
-    document.addEventListener("keydown", ev => {
+  handle(ev) {                        // also fed by plugin tabs (postMessage "plugin:key") with an event-like object
       const tag = (ev.target.tagName || "").toLowerCase();
       if (tag === "input" || tag === "select" || tag === "textarea") { if (ev.key === "Escape") ev.target.blur(); return; }
       const sel = store.selection;
@@ -1790,7 +1790,7 @@ const keys = {
       if (ev.key === "-") { setView(zoomAt(store.view, syn.src.W, syn.src.W / 2, 1 / 1.5, store.limits)); return; }
       if (ev.key === "0") { if (store.source) setView(fitView(store.source.header.total_length, store.limits)); return; }
       if (ev.key === "i") { $("#inspector").classList.toggle("hidden"); return; }
-      if (/^[1-5]$/.test(ev.key)) { ui.tab(["synoptic", "floor", "deck", "fidelity", "validation"][+ev.key - 1]); return; }
+      if (/^[1-9]$/.test(ev.key)) { const tabs = $$("#tabs [role=tab]").map(b => b.dataset.tab); if (tabs[+ev.key - 1]) ui.tab(tabs[+ev.key - 1]); return; }
       if (ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "Home" || ev.key === "End") {
         if (!store.source) return;
         const side = sel ? sel.side : "src"; const vm = side === "src" ? store.source : store.target; if (!vm) return;
@@ -1805,7 +1805,9 @@ const keys = {
         const other = sel.side === "src" ? "dst" : "src"; const linked = linkedIndices(sel, other);
         if (linked.length) { ev.preventDefault(); select({ side: other, index: linked[0] }); }
       }
-    });
+  },
+  bind() {
+    document.addEventListener("keydown", ev => keys.handle(ev));
     $("#search").addEventListener("keydown", ev => {
       if (ev.key !== "Enter") return;
       const q = ev.target.value.trim().toLowerCase(); if (!q || !store.source) return;
@@ -1825,6 +1827,65 @@ const keys = {
     store.on("cursorpin", () => { for (const s of [syn.src, syn.dst]) s.drawCursor(); floor.drawSelection(); });
   },
 };
+// ------------------------------------------------------------------------------------------ plugins
+// Installed plugins (GET /api/plugins) add tabs: each is a same-origin iframe served by this server
+// with the same token and session, kept in step with this page through postMessage — the session,
+// the selection, the hover, the pinned cursor and the palette go down, the plugin's selection,
+// hover and keys come back (docs/ui.md "Plugins").
+const pluginTabs = {
+  frames: new Map(),
+  mount() {
+    const tabs = (store.plugins || []).flatMap(p => p.tabs || []).sort((a, b) => a.order - b.order);
+    for (const t of tabs) {
+      if (!/^[a-z][a-z0-9_]*$/.test(t.id) || this.frames.has(t.id) || $(`#tab-${t.id}`)) continue;
+      const btn = h("button", { role: "tab", "data-tab": t.id, "aria-selected": "false", text: t.label });
+      btn.addEventListener("click", () => ui.tab(t.id));
+      $("#tabs").appendChild(btn);
+      const frame = h("iframe", { class: "plugin", title: t.label });
+      $("#main").appendChild(h("section", { class: "tabpanel hidden", id: "tab-" + t.id, role: "tabpanel" }, frame));
+      this.frames.set(t.id, { iframe: frame, page: t.page, ready: false });
+    }
+    if (!this.frames.size) return;
+    store.on("tab", id => {
+      const p = this.frames.get(id);
+      if (p && !p.iframe.src) p.iframe.src = api.url(p.page) + "&embedded=1" + (store.session ? "&session=" + encodeURIComponent(store.session) : "");
+    });
+    store.on("source", () => this.broadcast({ type: "lattix:source", session: store.session }));
+    store.on("target", () => this.broadcast({ type: "lattix:target", session: store.session, translation: store.translation ? store.translation.translation : null }));
+    store.on("selection", sel => this.broadcast({ type: "lattix:selection", selection: sel }));
+    store.on("hover", hv => this.broadcast({ type: "lattix:hover", hover: hv }));
+    store.on("cursorpin", () => this.broadcast({ type: "lattix:cursor", s: store.cursorS }));
+    store.on("theme", () => this.broadcast(this.palette()));
+    window.addEventListener("message", ev => {
+      if (ev.origin !== location.origin || !ev.data || typeof ev.data.type !== "string") return;
+      const entry = [...this.frames.values()].find(p => p.iframe.contentWindow === ev.source);
+      if (!entry) return;
+      const m = ev.data;
+      if (m.type === "plugin:ready") {
+        entry.ready = true;
+        this.send(entry, { type: "lattix:source", session: store.session });
+        this.send(entry, this.palette());
+        if (store.selection) this.send(entry, { type: "lattix:selection", selection: store.selection });
+      } else if (m.type === "plugin:selection") {
+        const s = m.selection && Number.isInteger(m.selection.index) ? { side: m.selection.side === "dst" ? "dst" : "src", index: m.selection.index } : null;
+        select(s); if (s) ensureVisible(s);
+      } else if (m.type === "plugin:hover") {
+        store.hover = m.hover || null; store.emit("hover", store.hover, null);
+      } else if (m.type === "plugin:tab") {
+        if (typeof m.tab === "string" && $$("#tabs [role=tab]").some(b => b.dataset.tab === m.tab)) ui.tab(m.tab);
+      } else if (m.type === "plugin:key") {
+        keys.handle({ key: String(m.key || ""), shiftKey: !!m.shiftKey, ctrlKey: !!m.ctrlKey, metaKey: !!m.metaKey, target: document.body, preventDefault() { /* nothing to cancel */ } });
+      }
+    });
+  },
+  palette() {
+    const colors = {};
+    for (const k of (store.formats && store.formats.kinds) || []) colors[k] = ui.cssVar("--k-" + k);
+    return { type: "lattix:palette", theme: store.theme, colors, accent: ui.cssVar("--accent"), bg: ui.cssVar("--bg-0"), text: ui.cssVar("--text-0") };
+  },
+  send(p, msg) { if (p.iframe.contentWindow) p.iframe.contentWindow.postMessage(msg, location.origin); },
+  broadcast(msg) { for (const p of this.frames.values()) if (p.ready) this.send(p, msg); },
+};
 let floor = null;
 async function main() {
   try { const t = localStorage.getItem("lattix.theme"); if (t) { $("#theme").value = t; ui.theme(t); } const w = localStorage.getItem("lattix.insp"); if (w) document.documentElement.style.setProperty("--insp-w", w); } catch (e) { /* ignore */ }
@@ -1832,10 +1893,11 @@ async function main() {
   floor = new FloorPlan($("#floor"));
   minimap.bind(); deckText.bind(); keys.bind(); validation.init();
   try {
-    const [formats, catalog, samples] = await Promise.all([api.get("/api/formats"), api.get("/api/catalog"), api.get("/api/samples")]);
-    store.formats = formats; store.catalog = catalog; store.samples = samples.decks || [];
+    const [formats, catalog, samples, plugins] = await Promise.all([api.get("/api/formats"), api.get("/api/catalog"), api.get("/api/samples"), api.get("/api/plugins")]);
+    store.formats = formats; store.catalog = catalog; store.samples = samples.decks || []; store.plugins = plugins.plugins || [];
+    for (const err of plugins.errors || []) ui.toast("warn", "a workbench plugin failed to load", err);
   } catch (e) { ui.toast("err", "cannot reach the lattix server", e.message + "\nopen the URL that `lattix ui` printed (it carries the access token)"); return; }
-  topbar.init(); translatePanel.init(); inspector.render();
+  topbar.init(); translatePanel.init(); inspector.render(); pluginTabs.mount();
   const sid = new URLSearchParams(location.search).get("session");
   if (sid) { try { const s = await api.get(`/api/session/${sid}`); store.session = sid; if (s.source) loadSource(s.source); for (const tr of Object.values(s.translations || {})) loadTranslation(tr); } catch (e) { ui.toast("warn", "session not found", e.message); } }
   const m = location.hash.match(/sel=(src|dst):(\d+)/); if (m && store.source) select({ side: m[1], index: +m[2] });

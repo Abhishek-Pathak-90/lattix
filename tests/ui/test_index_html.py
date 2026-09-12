@@ -25,6 +25,12 @@ def test_page_is_self_contained_and_small():
     assert "<title>lattix</title>" in text and 'type="module"' in text
     assert "/* PURE-BEGIN */" in text and "/* PURE-END */" in text
     assert text.count("--k-Quadrupole:") >= 3 and "prefers-color-scheme: dark" in text
+    # the plugin bridge: tabs from /api/plugins, iframes, and the postMessage protocol both ways
+    assert "/api/plugins" in text and "iframe.plugin" in text
+    for msg in ("lattix:source", "lattix:selection", "lattix:hover", "lattix:cursor", "lattix:palette",
+                "plugin:ready", "plugin:selection", "plugin:hover", "plugin:tab", "plugin:key"):
+        assert f'"{msg}"' in text, msg
+    assert "ev.origin !== location.origin" in text
 
 
 def _pure_block() -> str:

@@ -131,11 +131,34 @@ check refuse other pages and DNS-rebinding; file access is confined to `--root` 
 request bodies are limited to 64 MiB; sessions live in a temporary directory removed on exit (16 kept);
 one engine job runs at a time with a 30 min limit.
 
+## Plugins
+
+An installed package can add tabs to the workbench.  It registers an entry point in the group
+`lattix.ui.plugins` whose callable returns a `lattix.ui.plugins.UiPlugin`: a name (the URL segment
+`/plugins/<name>/`, the import package name by convention), routes given as `(method, regex, fn)`
+relative to that prefix, and `UiTab`s naming the page one of those routes serves.  Routes are
+dispatched after the core ones, behind the same token, `Host` and `Origin` checks, and their
+handlers are written exactly like the core routes (`fn(handler, query, *groups)` with
+`handler._session`, `_json`, `_send`, `_json_body`, `handler.app.resolve_path`); a `Session`
+carries a `plugin_state` dict for them.  A plugin page sends its own `Content-Security-Policy`.
+
+The page mounts each tab as a same-origin iframe, loaded on first use with the token and the
+session id (`?token=…&embedded=1&session=…`), and keeps it in step by `postMessage` (origin-checked
+both ways): down go `lattix:source`, `lattix:target`, `lattix:selection`, `lattix:hover`,
+`lattix:cursor` and `lattix:palette` (the theme and the per-kind colours); up come `plugin:ready`,
+`plugin:selection`, `plugin:hover`, `plugin:tab` and `plugin:key` (a key the plugin does not
+handle itself, given to the workbench's shortcuts).  Number keys switch to plugin tabs as well.
+
+`lattix ui` prints the plugins it loaded (`lattix ui: plugins: …`, also under `--check`) and any
+load error; a broken plugin is skipped, never fatal.  `lattix ui --no-plugins` starts without them.
+`GET /api/plugins` lists them for the page.
+
 ## API
 
 | route | purpose |
 |---|---|
 | `GET /api/ping`, `/api/formats`, `/api/samples`, `/api/catalog`, `/api/oracles`, `/api/browse?path=` | catalogues and the file picker |
+| `GET /api/plugins`, `/plugins/<name>/…` | the installed plugins with their tabs, and their own routes |
 | `POST /api/session`, `PUT /api/session/{sid}/upload?path=` | an empty session and raw-body uploads (folders keep their paths) |
 | `POST /api/read` | `{source: {sample}|{path}|{content, filename}, format?, options}` → the source view model |
 | `POST /api/translate` | `{session, format, options, strict, reread}` → deck text, side files, ledger, the target view model, the comparison |

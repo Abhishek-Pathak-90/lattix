@@ -124,7 +124,7 @@ def cmd_ui(a) -> int:
 
     root = Path(a.root).expanduser().resolve() if a.root else Path.cwd()
     return serve(Settings(host=a.host, port=a.port, root=root, any_path=a.any_path, open_browser=not a.no_browser,
-                          token=stable_token(rotate=a.new_token)),
+                          token=stable_token(rotate=a.new_token), plugins=not a.no_plugins),
                  check=a.check, deck=a.deck)
 
 
@@ -295,6 +295,7 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--check", action="store_true", help="start, self-test the API and exit")
     s.add_argument("--new-token", action="store_true",
                    help="issue a new access token (the link changes; the old one is kept in ~/.config/lattix/ui-token)")
+    s.add_argument("--no-plugins", action="store_true", help="start without the installed workbench plugins")
     s.set_defaults(func=cmd_ui)
     s = sub.add_parser("convert", help="translate a deck between formats")
     s.add_argument("src")
