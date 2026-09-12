@@ -36,6 +36,7 @@ from lattix.ir.elements import (
     Taylor,
 )
 from lattix.ir.expr import Expression, ExpressionError, LazyResolver, evaluate, evaluate_rpn
+from lattix.ir.frames import Frame, PlacedFrames, frame_survey, site_frame, survey_csv, survey_table
 from lattix.ir.lattice import Lattice, Line, LineItem, Placed, Variable, survey
 from lattix.ir.reference import SPECIES, ReferenceParticle, Species, species
 from lattix.ir.walk import propagate

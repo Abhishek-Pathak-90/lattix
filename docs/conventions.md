@@ -264,6 +264,35 @@ position, shortens the preceding drift and keeps every element where the source 
 genuine thick-element collisions are shifted and recorded (`LOSSY OVERLAP_SHIFTED`).
 Zero-length sequences fall back to line mode (`ZERO_LENGTH_LINE_MODE`).
 
+## 11. Survey frames
+
+`lattix.ir.frames.frame_survey` walks the expanded line with a full frame — a position `V` and
+a 3×3 orientation `W` whose columns are the local x, y and s axes in global coordinates — and
+returns, for every placed element, the frame at its entrance, its centre and its exit, and the
+body frame after its misalignment.  `survey()` is the `(X, Y, Z, theta)` view of the exit frames.
+
+* **Global frame.**  The line starts at the origin with the beam along +Z, X horizontal and Y up
+  (right-handed).  A positive horizontal bend turns the beam toward −X and its azimuth `theta`
+  decreases: MAD-X `survey`'s frame.  The angles are MAD-X's, `W = Θ(theta)·Φ(phi)·Ψ(psi)` with
+  `theta = atan2(W₀₂, W₂₂)`, `phi = asin(W₁₂)`, `psi = atan2(W₁₀, W₁₁)`, and `theta` is kept
+  continuous along the line (MAD-X `proxim`: a ring ends at −2π).  `site_frame(x0, y0, z0,
+  theta0, phi0, psi0)` is the start pose of MAD-X `SURVEY`.
+* **Bend.**  The frame moves along the arc in the bend's plane, `T(tilt_ref)` conjugating the
+  rotation, so a `tilt_ref = +π/2` bend with a positive angle bends toward −Y (`phi = −angle`);
+  the centre frame is the arc midpoint with the tangent turned by half the angle.  A reversed
+  placement negates the angle.
+* **Patch.**  The frame jumps by the offsets in the local frame, then rotates by
+  `Ry(y_rot)·Rx(x_rot)·Rs(tilt)` — yaw, pitch, roll in that order; a positive `x_rot` tips the
+  beam toward −Y.  The centre of a patch is its entrance.
+* **Body shift** (`Element.shift`).  Applied about the element centre, in the centre frame:
+  translate by the offsets, then rotate by `Ry(y_rot)·Rx(x_rot)·Rs(tilt)`.  The reference orbit
+  never moves because of a shift; only the body frame does.
+* **Superposition children** (`expand_children=True`) are placed along the container's straight
+  axis at `s_in + z_offset` and carry the container's index.
+
+`survey_table` and `survey_csv` flatten the frames into rows (`X, Y, Z, theta, phi, psi` per
+frame, metres and radians, 12 significant digits).
+
 ### Field-map phases (TraceWin `FIELD_MAP`, measured 2026-09-05)
 
 | Card | Meaning in the IR | Integration |

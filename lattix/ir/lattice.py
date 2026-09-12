@@ -1,13 +1,12 @@
 """Lattice container: element definitions, nested lines, flatten() and survey()."""
 from __future__ import annotations
 
-import math
 from collections.abc import Iterable
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
-from lattix.ir.elements import Bend, Element, Patch, element_from_dict, element_to_dict
+from lattix.ir.elements import Element, element_from_dict, element_to_dict
 from lattix.ir.expr import Expression
 from lattix.ir.reference import ReferenceParticle
 
@@ -158,40 +157,12 @@ def survey(placed: list[Placed]) -> np.ndarray:
     (X, Y, Z, theta).  The reference orbit starts at the origin pointing along +Z;
     a positive horizontal bend angle rotates the direction toward −X (theta decreases),
     a vertical bend (tilt_ref = ±π/2) toward ±Y.  Straight elements advance along the
-    local s axis; patches apply their offsets in the local frame."""
-    V = np.zeros(3)
-    W = np.eye(3)            # columns: local x, y, s axes in the global frame
+    local s axis; patches apply their offsets in the local frame.  theta is the MAD-X
+    azimuth of the exit frame, kept continuous along the line; the full frames come from
+    :func:`lattix.ir.frames.frame_survey`."""
+    from lattix.ir.frames import frame_survey  # frames builds on Placed: imported lazily
+
     out = np.empty((len(placed), 4))
-    theta = 0.0
-    for i, p in enumerate(placed):
-        e = p.element
-        L = e.length
-        if isinstance(e, Bend) and e.bend.angle != 0.0:
-            a = -e.bend.angle if p.reversed else e.bend.angle
-            rho = L / a
-            psi = e.bend.tilt_ref
-            ct, st = math.cos(psi), math.sin(psi)
-            T = np.array([[ct, -st, 0.0], [st, ct, 0.0], [0.0, 0.0, 1.0]])        # tilt about s
-            # local displacement and rotation for a horizontal bend of angle a
-            R_local = np.array([rho * (math.cos(a) - 1.0), 0.0, rho * math.sin(a)])
-            ca, sa = math.cos(a), math.sin(a)
-            S = np.array([[ca, 0.0, -sa], [0.0, 1.0, 0.0], [sa, 0.0, ca]])       # rotation about y by -a
-            V = V + W @ (T @ R_local)
-            W = W @ T @ S @ T.T
-            if psi == 0.0:
-                theta -= a
-        elif isinstance(e, Patch):
-            V = V + W @ np.array([e.x_offset, e.y_offset, e.z_offset])
-            # rotations: yaw (y_rot) about local y, pitch (x_rot) about local x, tilt about s
-            cy, sy = math.cos(e.y_rot), math.sin(e.y_rot)
-            cx, sx = math.cos(e.x_rot), math.sin(e.x_rot)
-            ct, st = math.cos(e.tilt), math.sin(e.tilt)
-            Ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
-            Rx = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
-            Rs = np.array([[ct, -st, 0], [st, ct, 0], [0, 0, 1]])
-            W = W @ Ry @ Rx @ Rs
-            theta += e.y_rot
-        else:
-            V = V + W[:, 2] * L
-        out[i] = (V[0], V[1], V[2], theta)
+    for f in frame_survey(placed, apply_shift=False):
+        out[f.index] = (f.exit.V[0], f.exit.V[1], f.exit.V[2], f.theta_out)
     return out
