@@ -920,12 +920,15 @@ def _is_loopback(host: str) -> bool:
 
 
 def serve(settings: Settings, *, check: bool = False, deck: str | None = None,
-          deck_options: dict | None = None) -> int:
+          deck_options: dict | None = None, plugins: list[LoadedPlugin] | None = None) -> int:
+    """Run the workbench until Ctrl-C (or once, with ``check``).  ``deck`` is read into a session the
+    opened link resumes (``deck_options``: ``format`` and reader ``options``); ``plugins`` replaces
+    entry-point discovery (a plugin's own command passes itself)."""
     if not _is_loopback(settings.host):
         print(f"lattix ui: refusing to bind {settings.host!r}: the UI serves the local browser only "
               "(127.0.0.1 or localhost)", file=sys.stderr)
         return 2
-    app = App(settings)
+    app = App(settings, plugins=plugins)
     names = [f"{p.plugin.name} {p.plugin.version}".strip() for p in app.plugins]
     print(f"lattix ui: plugins: {', '.join(names) if names else '(none)'}", flush=True)
     for err in app.plugin_errors:
