@@ -8,6 +8,9 @@ and are listed under the version they rehearse.
 ## [Unreleased]
 
 ### Added
+- TraceWin: a trailing comment on an element card travels with the element and is written back;
+  a comment that names the card (`; 4.898 HKV MONITOR`, `; D1`) names an unlabelled element and
+  keeps its type words as tags, and a zero-length `DRIFT` so named is read as a `Marker`.
 - SciBmad (Beamlines.jl) as a format and an engine, with a pure Python reader for the Julia
   lattice subset and a writer whose conventions were measured against BeamTracking.
 - The xsuite completion: every xtrack element class, knobs and environments, and a MAD-NG writer.

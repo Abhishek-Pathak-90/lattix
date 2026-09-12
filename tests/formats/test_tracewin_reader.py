@@ -666,3 +666,36 @@ def test_assumed_beam_is_flagged(tmp_path):
     assert lat.warnings and "2.1 MeV" in lat.warnings[0] and "proton" in lat.warnings[0]
     lat, rep = _read(tmp_path, "DRIFT 100 30\nEND\n", kinetic_energy_eV=800e6, species="h-")
     assert "BEAM_ASSUMED" not in rep.codes() and not lat.warnings
+
+
+def test_trailing_comments_name_cards_and_make_markers(tmp_path):
+    """A ``; s NAME TYPE`` comment (decks converted from MAD flat files) or a bare ``; NAME`` names the
+    card; a zero-length drift so named is a survey marker; the comment travels in ``meta`` and its type
+    words in ``meta["tags"]``; prose comments are kept but name nothing."""
+    lat, rep = _read(tmp_path,
+                     "DRIFT 300 25.4\n"
+                     "DRIFT 0.000 25.400 ; 4.898 HKV MONITOR\n"
+                     "DRIFT 0.000 25.400 ; 4.998 HKV MONITOR\n"
+                     "DRIFT 200 25.4 ; drift to the buncher\n"
+                     "DRIFT 0 25.4\n"
+                     "QF1:QUAD 200 5.0 25.4 ; 10.295 QF1 QUADRUPOLE K1=0.5\n"
+                     "BEND 10 2000 0 25.4 0 ; 2.450 BA1011 RBEND\n"
+                     "MARKER ; 12.5 DCH01 HKICKER\n"
+                     "DRIFT 0.000 25.400 ; BLM3\n"
+                     "DRIFT 0.000 25.400 0 0 1.0 0 ; 13.0 SHIFTED MONITOR\n")
+    els = [lat.elements[it.ref] for it in lat.lines["main"].items] if "main" in lat.lines else \
+          [lat.elements[it.ref] for it in next(iter(lat.lines.values())).items]
+    names = [e.name for e in els]
+    kinds = [e.kind for e in els]
+    assert names == ["DRIFT_0001", "HKV", "HKV_2", "DRIFT_0002", "DRIFT_0003", "QF1", "BA1011", "DCH01", "BLM3",
+                     "SHIFTED"]
+    assert kinds == ["Drift", "Marker", "Marker", "Drift", "Drift", "Quadrupole", "Bend", "Marker", "Marker", "Drift"]
+    hkv = els[1]
+    assert hkv.meta["comment"] == "4.898 HKV MONITOR" and hkv.meta["tags"] == ["MONITOR"]
+    assert hkv.aperture is not None and hkv.native["tracewin"] == {"card": "DRIFT", "args": ["0.000", "25.400"]}
+    assert hkv.provenance.original_name is None and hkv.provenance.original_type == "DRIFT"
+    assert els[3].meta["comment"] == "drift to the buncher" and "tags" not in els[3].meta
+    assert els[5].provenance.original_name == "QF1" and els[5].meta["tags"] == ["QUADRUPOLE", "K1=0.5"]
+    assert els[6].meta["tags"] == ["RBEND"] and els[7].meta["tags"] == ["HKICKER"]
+    assert "comment" not in els[0].meta and "comment" not in els[4].meta
+    assert els[9].kind == "Drift" and els[9].shift is not None            # a shifted zero-length drift is not a marker

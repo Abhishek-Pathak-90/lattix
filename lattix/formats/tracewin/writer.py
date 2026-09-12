@@ -44,6 +44,8 @@ from lattix.ir.walk import propagate
 
 _RF_LIKE = frozenset({"RFCavity", "FieldMap", "NCells", "RFQCell", "Superposition"})
 _LABEL_OK = re.compile(r"^[A-Za-z][^\s:;]*$")
+#: cards emitted around an element's own card, never the one a comment belongs to
+_AUXILIARY_CARDS = frozenset({"EDGE", "FREQ", "FIELD_MAP_PATH", "SET_SYNC_PHASE"})
 _AUTO_NAME = re.compile(r"^[A-Z][A-Z0-9_]*_\d{4}(?:_\d+)?$")
 _UG_PER_CM2 = 1e-5
 _K1_DEFAULT = 0.45
@@ -144,7 +146,19 @@ class _Emitter:
         for p in self.placed:
             if self.pending_sync_line and p.element.kind not in _RF_LIKE:
                 self.flush_sync()  # keeps the deck order for non-RF cards
+            before = len(self.lines)
             RULES[p.element.kind](self, p)
+            comment = (p.element.meta or {}).get("comment")
+            if comment and len(self.lines) > before:
+                # the deck's own annotation goes back on the element's card (TraceWin ignores it; the reader
+                # names cards by it): the first line that is neither a comment nor a state or edge card
+                for k in range(before, len(self.lines)):
+                    line = self.lines[k]
+                    head = line.split(":", 1)[-1].split(None, 1)[0].upper() if line.strip() else ""
+                    if line.lstrip().startswith(";") or head in _AUXILIARY_CARDS:
+                        continue
+                    self.lines[k] = f"{line} ; {comment}"
+                    break
         if self.pending_sync_line:
             self.flush_sync()
         self.lines.append("END")

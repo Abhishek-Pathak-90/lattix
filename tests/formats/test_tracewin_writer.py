@@ -632,3 +632,32 @@ def test_byte_compare_with_helix_writer_on_mebt(tmp_path):
     assert set(classes) <= set(_DIFF_CLASSES)
     assert _canon(a, helix=True) == _canon(b, helix=False)
     assert len(a) == len(b) - sum(1 for ln in b if ln.startswith("FIELD_MAP_PATH"))
+
+
+def test_trailing_comments_survive_the_round_trip(tmp_path):
+    """The writer puts a card's comment back on its line, so a deck that names its markers by comments
+    reads, writes and re-reads to the same names and kinds, and the second write equals the first."""
+    src = tmp_path / "named.dat"
+    src.write_text("DRIFT 300 25.4\n"
+                   "DRIFT 0.000 25.400 ; 4.898 HKV MONITOR\n"
+                   "QF1:QUAD 200 5.0 25.4 ; 10.295 QF1 QUADRUPOLE K1=0.5\n"
+                   "DRIFT 200 25.4 ; drift to the buncher\n"
+                   "MARKER ; 12.5 DCH01 HKICKER\n"
+                   "END\n")
+    lat, _ = read(src, kinetic_energy_eV=2.1e6)
+    text = render(lat)
+    text = text[0] if isinstance(text, tuple) else text
+    lines = [ln for ln in text.splitlines() if ln and not ln.startswith(";")]
+    assert "DRIFT 0.000 25.400 ; 4.898 HKV MONITOR" in lines
+    assert any(ln.startswith("QF1: QUAD") and ln.endswith("; 10.295 QF1 QUADRUPOLE K1=0.5") for ln in lines), lines
+    assert any(ln.startswith("DRIFT") and ln.endswith("; drift to the buncher") for ln in lines)
+    assert "MARKER ; 12.5 DCH01 HKICKER" in lines
+    out = tmp_path / "again.dat"
+    out.write_text(text)
+    lat2, _ = read(out, kinetic_energy_eV=2.1e6)
+    line1 = next(iter(lat.lines.values())).items
+    line2 = next(iter(lat2.lines.values())).items
+    assert [(lat.elements[i.ref].name, lat.elements[i.ref].kind) for i in line1] == \
+           [(lat2.elements[i.ref].name, lat2.elements[i.ref].kind) for i in line2]
+    again = render(lat2)
+    assert (again[0] if isinstance(again, tuple) else again) == text

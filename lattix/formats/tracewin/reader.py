@@ -131,6 +131,38 @@ _CLUSTER_TRANSPARENT = frozenset(
 _CLUSTER_TRANSPARENT_ROLES = frozenset({"matching", "sync_phase", "title", "tracking"})
 
 
+# A trailing comment that names the card: ``; 4.898 HKV MONITOR`` (a position, a name, type words: the
+# convention of decks converted from MAD-X/MAD8 flat files) or a bare ``; QF1``.  Prose is left alone.
+_NAMED_COMMENT = re.compile(
+    r"^\s*(?:(?P<s>[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s+)?(?P<name>[A-Za-z_][\w.:\-]*)\s*(?P<rest>.*)$"
+)
+
+
+def parse_named_comment(comment: str) -> tuple[str | None, list[str]]:
+    """``(name, tags)`` from a trailing comment, or ``(None, [])`` when it does not name the card.
+
+    A comment names the card when it is a bare token (``QF1``) or a position followed by a token and
+    optional type words (``4.898 HKV MONITOR``, ``2.450 BA1011 RBEND``).  Words in parentheses after
+    the type (``(kicker body, zero kick)``) are a note, not tags.  A token that is a plain word of prose
+    followed by more prose (``drift to the buncher``) is not a name.
+    """
+    text = comment.strip()
+    if not text:
+        return None, []
+    m = _NAMED_COMMENT.match(text)
+    if not m:
+        return None, []
+    name, rest = m.group("name"), m.group("rest").strip()
+    note_at = rest.find("(")
+    tags_text = rest if note_at < 0 else rest[:note_at]
+    tags = tags_text.split()
+    if m.group("s") is None and (tags or not name):
+        return None, []                       # prose, or a multi-word comment without a position
+    if tags and any(not re.fullmatch(r"[A-Za-z_][\w.:\-=]*", t) for t in tags):
+        return None, []                       # type words are identifiers, not sentences
+    return name, tags
+
+
 def _split_tokens(code: str) -> list[str]:
     """Tokenise one card; quoted tokens (paths with spaces) stay whole, quotes are stripped."""
     try:
@@ -299,6 +331,7 @@ class _Parser:
         self.postpass: list[tuple[str, Element, dict]] = []  # (what, element, data)
         self.variables: dict[str, float] = {}  # ``VARIABLE name value`` definitions (lower-case keys)
         self.expr_pending: dict[str, Expression] = {}  # operand expressions of the card being built
+        self.comment = ""                              # the trailing ``;`` comment of the card being read
 
     # -- bookkeeping ----------------------------------------------------------------------
     def _auto_name(self, card: str) -> str:
@@ -312,6 +345,10 @@ class _Parser:
         if element and self.pending_name:
             nm, self.pending_name = self.pending_name, None
             return nm
+        if element:
+            named, _ = parse_named_comment(self.comment)
+            if named:
+                return named
         return self._auto_name(card)
 
     def _prov(self, keyword: str, label: str | None) -> Provenance:
@@ -328,6 +365,11 @@ class _Parser:
         if self.expr_pending:
             e.expressions = dict(self.expr_pending)
             self.expr_pending = {}
+        if self.comment and "comment" not in e.meta:
+            e.meta["comment"] = self.comment
+            _, tags = parse_named_comment(self.comment)
+            if tags:
+                e.meta["tags"] = tags
         nm = self.lat.add_element(e)
         self.line.items.append(LineItem(ref=nm))
         self.report.exact(nm, e.kind)
@@ -479,7 +521,8 @@ class _Parser:
         for self.line_no, raw in enumerate(text.splitlines(), 1):
             if raw.lstrip().startswith(";") and self._comment_card(raw):
                 continue
-            code = raw.split(";", 1)[0].strip()
+            code, _, comment = raw.partition(";")
+            code = code.strip()
             if not code:
                 continue
             tokens = _split_tokens(code)
@@ -490,7 +533,9 @@ class _Parser:
                 continue
             if keyword == "END":
                 break
+            self.comment = comment.strip()
             self._dispatch(keyword, raw_card, params, label, label_only)
+            self.comment = ""
         self._finish()
         return self.lat, self.report
 
@@ -748,6 +793,17 @@ class _Parser:
         shift = None
         if kw["x_shift"] or kw["y_shift"]:
             shift = BodyShiftP(x_offset=kw["x_shift"] * MM, y_offset=kw["y_shift"] * MM)
+        if kw["length"] == 0 and not shift and (label or parse_named_comment(self.comment)[0]):
+            # a zero-length drift that the deck names is a survey marker (a device the deck only points at)
+            self._add(
+                Marker(
+                    name=self._name("DRIFT", label),
+                    aperture=ap,
+                    provenance=self._prov("DRIFT", label),
+                    native={"tracewin": {"card": "DRIFT", "args": list(params)}},
+                )
+            )
+            return
         self._add(
             Drift(
                 name=self._name("DRIFT", label),

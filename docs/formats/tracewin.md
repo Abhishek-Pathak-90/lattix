@@ -12,7 +12,14 @@ and then pinned against the TraceWin binary.
 `lattix/formats/tracewin/reader.py` keeps the HELIX label grammar (`NAME : CARD`, `NAME:CARD`,
 standalone `NAME :`), latin-1 decoding, `;` comments including the `;@LG`, `; HELIX_FOIL` and
 `; HELIX_SC_GRID` comment cards, and the `FREQ` / `FIELD_MAP_PATH` / `SET_SYNC_PHASE` state
-machine.  Every card becomes an IR element in deck order:
+machine.  A trailing `;` comment on an element card travels with the element (`meta["comment"]`)
+and the writer puts it back on the card.  A comment that names the card, either a bare token
+(`DRIFT 100 25.4 ; D1`) or a position followed by a name and type words as decks converted from MAD
+flat files carry them (`; 4.898 HKV MONITOR`, `; 2.450 BA1011 RBEND`), names an unlabelled element
+(duplicates get `_2`, `_3` …; an explicit `NAME:` label always wins) and stores the type words in
+`meta["tags"]`; prose comments name nothing.  A zero-length `DRIFT` so named is read as a `Marker`,
+the survey marker of a device the deck only points at, and is written back as the same `DRIFT`
+card.  Every card becomes an IR element in deck order:
 
 * `DRIFT`, `QUAD` (with `G3..G6`), `SOLENOID`, `THIN_STEERING`, `APERTURE`, `MARKER`,
   `GAP`, `FIELD_MAP`, `NCELLS`, `RFQ_CELL`, `DTL_CEL` and the diagnostic family map to
