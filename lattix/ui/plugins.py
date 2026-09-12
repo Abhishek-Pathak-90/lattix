@@ -32,9 +32,13 @@ class UiTab:
 
 @dataclass(frozen=True)
 class UiPlugin:
+    """``routes`` are ``(method, regex under the prefix, fn)`` tuples; a fourth item ``True`` marks a
+    GET route as public — served without the token, for the plugin's own script and style files,
+    which a browser requests without headers (the Host check still applies, and nothing a public
+    route serves may depend on a session)."""
     name: str                           # the URL segment /plugins/<name>/ — use the import package name
     version: str = ""
-    routes: list[tuple[str, str, Callable]] = field(default_factory=list)   # (method, regex under the prefix, fn)
+    routes: list[tuple] = field(default_factory=list)
     tabs: list[UiTab] = field(default_factory=list)
 
     @property
@@ -46,6 +50,7 @@ class UiPlugin:
 class LoadedPlugin:
     plugin: UiPlugin
     routes: list[tuple[str, re.Pattern, Callable]]      # compiled with the prefix, method upper-cased
+    public: list[re.Pattern] = field(default_factory=list)   # GET paths served without the token
 
 
 def compile_plugin(plugin: UiPlugin) -> LoadedPlugin:
@@ -59,12 +64,20 @@ def compile_plugin(plugin: UiPlugin) -> LoadedPlugin:
             raise ValueError(f"tab id {t.id!r} of plugin {plugin.name!r} must match [a-z][a-z0-9_]*")
         if not t.page.startswith("/"):
             raise ValueError(f"tab page {t.page!r} of plugin {plugin.name!r} must start with /")
-    routes = []
-    for method, pattern, fn in plugin.routes:
+    routes, public = [], []
+    for route in plugin.routes:
+        if len(route) not in (3, 4):
+            raise TypeError(f"route {route!r} of plugin {plugin.name!r} must be (method, pattern, fn[, public])")
+        method, pattern, fn = route[:3]
         if not callable(fn):
             raise TypeError(f"route {method} {pattern!r} of plugin {plugin.name!r} has no callable")
-        routes.append((str(method).upper(), re.compile(re.escape(plugin.prefix) + pattern), fn))
-    return LoadedPlugin(plugin, routes)
+        compiled = re.compile(re.escape(plugin.prefix) + pattern)
+        routes.append((str(method).upper(), compiled, fn))
+        if len(route) == 4 and route[3]:
+            if str(method).upper() != "GET":
+                raise ValueError(f"only a GET route can be public: {method} {pattern!r} of plugin {plugin.name!r}")
+            public.append(compiled)
+    return LoadedPlugin(plugin, routes, public)
 
 
 def load_plugins(*, group: str = ENTRY_POINT_GROUP, errors: list[str] | None = None) -> list[LoadedPlugin]:

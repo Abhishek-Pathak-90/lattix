@@ -141,6 +141,9 @@ dispatched after the core ones, behind the same token, `Host` and `Origin` check
 handlers are written exactly like the core routes (`fn(handler, query, *groups)` with
 `handler._session`, `_json`, `_send`, `_json_body`, `handler.app.resolve_path`); a `Session`
 carries a `plugin_state` dict for them.  A plugin page sends its own `Content-Security-Policy`.
+A route tuple's fourth item, `True`, marks a GET route as public: served without the token, for
+the plugin's own script and style files, which a browser requests without headers (the `Host`
+check still applies; nothing public may depend on a session).
 
 The page mounts each tab as a same-origin iframe, loaded on first use with the token and the
 session id (`?token=…&embedded=1&session=…`), and keeps it in step by `postMessage` (origin-checked

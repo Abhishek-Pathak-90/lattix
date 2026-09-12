@@ -62,6 +62,11 @@ def test_plugin_is_listed_and_its_routes_are_token_gated(server):
     assert status == 403 and b"needs its access link" in page
     status, css, resp = api(server, "GET", "/plugins/fake/static/app.css")
     assert status == 200 and css == b"body{}" and resp.getheader("Cache-Control") == "private, max-age=60"
+    # a public route: the browser fetches scripts without headers, so no token is needed there and only there
+    assert api(server, "GET", "/plugins/fake/static/app.css", token=None)[0] == 200
+    assert api(server, "GET", "/plugins/fake/static/app.css", token="wrong")[0] == 200
+    assert api(server, "GET", "/plugins/fake/api/hello", token=None)[0] == 403
+    assert api(server, "POST", "/plugins/fake/static/app.css", token=None)[0] == 403
     assert api(server, "GET", "/plugins/fake/nothing")[0] == 404
     assert api(server, "GET", "/plugins/other/api/hello")[0] == 404
     status, err, _ = api(server, "GET", "/plugins/fake/api/boom")
@@ -94,6 +99,12 @@ def test_compile_plugin_validates():
         compile_plugin(UiPlugin(name="ok", tabs=[UiTab("tab", "x", page="index.html")]))
     with pytest.raises(TypeError):
         compile_plugin(UiPlugin(name="ok", routes=[("GET", "/x", "not callable")]))
+    with pytest.raises(ValueError):
+        compile_plugin(UiPlugin(name="ok", routes=[("POST", "/x", lambda h, q: None, True)]))
+    with pytest.raises(TypeError):
+        compile_plugin(UiPlugin(name="ok", routes=[("GET", "/x")]))
+    pub = compile_plugin(UiPlugin(name="ok", routes=[("GET", r"/s/(.+)", lambda h, q, r: None, True)]))
+    assert pub.public and pub.public[0].fullmatch("/plugins/ok/s/a.js")
     loaded = compile_plugin(UiPlugin(name="ok", routes=[("get", r"/x/(\d+)", lambda h, q, n: None)]))
     assert loaded.routes[0][0] == "GET" and loaded.routes[0][1].fullmatch("/plugins/ok/x/12")
     assert not loaded.routes[0][1].fullmatch("/plugins/okx/12") and loaded.plugin.prefix == "/plugins/ok"

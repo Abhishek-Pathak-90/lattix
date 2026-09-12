@@ -214,6 +214,7 @@ class App:
             plugins = load_plugins(errors=self.plugin_errors) if settings.plugins else []
         self.plugins = plugins
         self.plugin_routes = [r for p in plugins for r in p.routes]
+        self.public_routes = [pat for p in plugins for pat in p.public]     # GET paths served without the token
         self.tmp_root = Path(tempfile.mkdtemp(prefix="lattix_ui_"))
         self.sessions = SessionStore(self.tmp_root, settings.session_limit)
         self.jobs = JobManager(max_workers=1, default_timeout_s=settings.job_timeout_s)
@@ -592,6 +593,8 @@ class Handler(BaseHTTPRequestHandler):
         if host not in {f"{h}:{port}" for h in _HOSTS} | set(_HOSTS):
             self._error(403, "forbidden", "unexpected Host header")
             return False
+        if self.command == "GET" and any(p.fullmatch(path) for p in self.app.public_routes):
+            return True                   # a plugin's script or style file: no token, no session, no data
         token = self.headers.get("X-Lattix-Token") or (query.get("token") or [None])[0]
         if not token or not secrets.compare_digest(token, self.app.settings.token):
             if self.command == "GET" and (path in ("/", "/index.html") or _PLUGIN_PAGE.fullmatch(path)):

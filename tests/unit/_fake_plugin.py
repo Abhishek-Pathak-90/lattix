@@ -33,5 +33,5 @@ def r_boom(handler, query) -> None:
 def register() -> UiPlugin:
     return UiPlugin(name="fake", version="0.0.1",
                     routes=[("GET", r"/", r_page), ("get", r"/api/hello", r_hello),
-                            ("GET", r"/static/([\w.]+)", r_static), ("GET", r"/api/boom", r_boom)],
+                            ("GET", r"/static/([\w.]+)", r_static, True), ("GET", r"/api/boom", r_boom)],
                     tabs=[UiTab("fake", "Fake", "/", order=5)])
