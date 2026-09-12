@@ -1,0 +1,22 @@
+!+
+! lattix survey deck: misaligned elements and a patch.  A quadrupole with offsets, pitches and a
+! tilt, a bend with a roll, a rolled quadrupole and a combined patch, so Bmad's floor positions
+! (Tao ele_floor, Reference and Actual) pin the body frame convention of lattix.ir.frames
+! (docs/conventions.md §11).  Proton 800 MeV.
+!-
+
+parameter[particle] = proton
+parameter[E_tot] = 1.738272 * 1e9
+
+d1: drift, l = 0.5
+d2: drift, l = 1.0
+qshift: quadrupole, l = 0.3, k1 = 0.8, x_offset = 1e-3, y_offset = -2e-3, z_offset = 5e-4, x_pitch = 2e-3, y_pitch = -1e-3, tilt = 3e-3
+qroll: quadrupole, l = 0.3, k1 = -0.8, tilt = 0.02
+broll: sbend, l = 1.2, angle = 0.08, roll = 0.01
+bplain: sbend, l = 1.05, angle = 0.0416, ref_tilt = pi / 2
+jump: patch, x_offset = 0.004, y_offset = -0.002, z_offset = 0.01, x_pitch = 0.02, y_pitch = -0.015, tilt = 0.3
+mend: marker
+
+misaligned: line = (d1, qshift, d2, broll, d1, qroll, d2, bplain, jump, d1, mend)
+
+use, misaligned

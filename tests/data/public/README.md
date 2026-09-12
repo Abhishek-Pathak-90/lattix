@@ -177,3 +177,4 @@ written for the cross-format battery (BSD-3, `LICENSES/lattix.txt`).
 | `lattix/rect_bends.madx` | madx | `tests/data/public/lattix/rect_bends.madx` (rectangular bends with explicit faces, one negative-angle, one sector; PIP-II BTL geometry) |
 | `lattix/vertical_bends.madx` | madx | `tests/data/public/lattix/vertical_bends.madx` (vertical rectangular bends, one negative-angle; the BTL BVDD/ORB1 case) |
 | `lattix/patches.madx` | madx | `tests/data/public/lattix/patches.madx` (yaw, pitch, roll and translation cards with an EALIGN misalignment: the survey-frame oracle deck, not in the battery) |
+| `lattix/misaligned.bmad` | bmad | `tests/data/public/lattix/misaligned.bmad` (offset, pitched, tilted and rolled elements and a combined patch: the body-frame oracle deck for Bmad's floor positions, not in the battery) |

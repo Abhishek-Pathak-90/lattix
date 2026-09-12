@@ -169,6 +169,9 @@ class BmadOracle:
             "p0_model": "follows p0: lcavity changes the reference momentum; pz is relative "
                         "to the local p0",
             "p0c_in": data.get("p0c_in"), "p0c_out": data.get("p0c_out"), "workdir": str(wd),
+            # X, Y, Z, theta, phi, psi: the reference frame at every exit and centre, and the
+            # misaligned body's frame at the centre (Tao ele_floor Reference / Actual)
+            "survey6": data.get("floor6"), "centre6": data.get("centre6"), "body6": data.get("body6"),
         }
         return OracleResult(
             engine="bmad", basis=Basis.BMAD, names=names,

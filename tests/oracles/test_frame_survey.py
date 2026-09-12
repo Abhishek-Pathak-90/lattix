@@ -68,3 +68,48 @@ def test_frames_match_madx_survey(rel, beam, opts, tmp_path):
 @pytest.mark.parametrize("rel,beam,opts", DECKS, ids=[d[0] for d in DECKS])
 def test_frames_match_xtrack_survey(rel, beam, opts, tmp_path):
     _check("xtrack", rel, beam, opts, tmp_path)
+
+
+BMAD_DECKS = ["helix/fodo.bmad", "lattix/misaligned.bmad"]
+
+
+def _assert_frame(frame, angles, row, label) -> None:
+    np.testing.assert_allclose(frame.V, row[:3], atol=1e-9, err_msg=f"{label}: position")
+    theta, phi, psi = angles
+    assert _wrap(theta - row[3]) == pytest.approx(0.0, abs=1e-10), (label, "theta", theta, row[3])
+    assert phi == pytest.approx(row[4], abs=1e-10), (label, "phi", phi, row[4])
+    assert _wrap(psi - row[5]) == pytest.approx(0.0, abs=1e-10), (label, "psi", psi, row[5])
+
+
+@pytest.mark.oracle_bmad
+@pytest.mark.parametrize("rel", BMAD_DECKS)
+def test_frames_match_bmad_floor_positions(rel, tmp_path):
+    """Bmad's floor positions at every exit and centre, and the *Actual* position of a misaligned
+    body at its centre, against the exit, centre and body frames."""
+    ok, why = get_oracle("bmad").available()
+    if not ok:
+        pytest.skip(why)
+    lat, _ = read(PUBLIC / rel, "bmad")
+    frames = frame_survey(lat.flatten())
+    res = get_oracle("bmad").run(PUBLIC / rel, fmt="bmad", workdir=tmp_path)
+    exits = np.asarray(res.meta["survey6"], dtype=float)
+    centres = np.asarray(res.meta["centre6"], dtype=float)
+    bodies = np.asarray(res.meta["body6"], dtype=float)
+    by_key = {}
+    for f in frames:
+        by_key.setdefault((f.name.lower(), round(f.s_out, 9)), []).append(f)
+    checked = shifted = rolled = 0
+    for name, s, e_row, c_row, b_row in zip(res.names, res.s_out, exits, centres, bodies, strict=True):
+        cands = by_key.get((name.lower(), round(float(s), 9)))
+        if not cands:
+            continue                                   # Bmad's own markers (BEGINNING, END)
+        f = cands[-1]
+        _assert_frame(f.exit, f.angles("exit"), e_row, f"{rel} {name} exit")
+        _assert_frame(f.centre, f.angles("centre"), c_row, f"{rel} {name} centre")
+        _assert_frame(f.body, f.angles("body"), b_row, f"{rel} {name} body")
+        checked += 1
+        shifted += f.shifted
+        rolled += f.roll != 0.0
+    assert checked >= 5
+    if rel == "lattix/misaligned.bmad":
+        assert shifted >= 2 and rolled >= 2        # the offset quad and the rolled bend; the two skew quads

@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from lattix.ir.elements import Bend, Patch, Superposition
+from lattix.ir.elements import Bend, Element, Multipole, Octupole, Patch, Quadrupole, Sextupole, Superposition
 from lattix.ir.lattice import Lattice, Placed
 
 TWO_PI = 2.0 * math.pi
@@ -131,9 +131,10 @@ _PREFIX = {"entrance": "in_", "centre": "c_", "exit": "out_", "body": "body_"}
 
 @dataclass(frozen=True)
 class PlacedFrames:
-    """The frames of one placed element.  ``body`` is the centre frame after ``Element.shift``
-    (equal to ``centre`` when the element is not misaligned); the reference orbit itself never
-    moves because of a shift.  ``theta_*`` are the azimuths kept continuous along the line."""
+    """The frames of one placed element.  ``body`` is the centre frame rolled by the element's
+    own field roll (a skew quadrupole is a rolled quadrupole) and moved by ``Element.shift``;
+    it is ``centre`` itself when neither applies.  The reference orbit never moves because of a
+    shift.  ``theta_*`` are the azimuths kept continuous along the line."""
     index: int
     name: str
     kind: str
@@ -148,6 +149,7 @@ class PlacedFrames:
     theta_out: float
     angle: float = 0.0          # signed bend angle after reversal; 0 for anything but a bend
     tilt_ref: float = 0.0
+    roll: float = 0.0           # the field roll folded into the body frame [rad]
     shifted: bool = False
     reversed: bool = False
     parent: int | None = None   # a Superposition child carries its container's index here
@@ -181,9 +183,29 @@ def _arc(L: float, a: float) -> tuple[np.ndarray, np.ndarray]:
     return dV, R
 
 
-def _shifted(frame: Frame, shift) -> Frame:
-    return frame.moved((shift.x_offset, shift.y_offset, shift.z_offset),
-                       rot_y(shift.y_rot) @ rot_x(shift.x_rot) @ rot_s(shift.tilt))
+def field_roll(e: Element) -> float:
+    """The roll of an element's own field about s: a skew quadrupole is a rolled quadrupole, so
+    its body frame is rolled by ``multipole.tilt[1]`` (sextupole ``[2]``, octupole ``[3]``; a thin
+    multipole when all its orders share one tilt).  Bmad's ``tilt`` is exactly this, and its floor
+    positions include it (measured: ``tests/oracles/test_frame_survey.py``)."""
+    order = {Quadrupole: 1, Sextupole: 2, Octupole: 3}.get(type(e))
+    if order is not None:
+        return float(e.multipole.tilt.get(order, 0.0))
+    if isinstance(e, Multipole):
+        tilts = {t for n, t in e.multipole.tilt.items() if t}
+        return float(tilts.pop()) if len(tilts) == 1 else 0.0
+    return 0.0
+
+
+def _body(centre: Frame, e: Element, apply_shift: bool) -> tuple[Frame, float, bool]:
+    """The body frame: the centre rolled by the field roll, then moved by the shift (offsets in
+    the centre frame, then yaw, pitch, roll — Bmad's body coordinates, measured)."""
+    roll = field_roll(e)
+    sh = e.shift if apply_shift and e.shift is not None and not e.shift.is_zero() else None
+    if sh is None:
+        return (centre.moved((0.0, 0.0, 0.0), rot_s(roll)) if roll else centre), roll, False
+    return centre.moved((sh.x_offset, sh.y_offset, sh.z_offset),
+                        rot_y(sh.y_rot) @ rot_x(sh.x_rot) @ rot_s(sh.tilt + roll)), roll, True
 
 
 def frame_survey(placed: list[Placed], *, lat: Lattice | None = None, start: Frame | None = None,
@@ -222,11 +244,9 @@ def frame_survey(placed: list[Placed], *, lat: Lattice | None = None, start: Fra
             f = f_in.advanced(L)
         theta_c = unwrap(f_c.angles()[0], theta_in)
         theta_out = unwrap(f.angles()[0], theta_c)
-        body, shifted = f_c, False
-        if apply_shift and e.shift is not None and not e.shift.is_zero():
-            body, shifted = _shifted(f_c, e.shift), True
+        body, roll, shifted = _body(f_c, e, apply_shift)
         out.append(PlacedFrames(p.index, e.name, e.kind, p.s_in, p.s_out, f_in, f_c, f, body,
-                                theta_in, theta_c, theta_out, angle, tilt, shifted, p.reversed))
+                                theta_in, theta_c, theta_out, angle, tilt, roll, shifted, p.reversed))
         theta_prev = theta_out
         if expand_children and isinstance(e, Superposition) and lat is not None:
             for z0, name in e.children:
@@ -235,12 +255,10 @@ def frame_survey(placed: list[Placed], *, lat: Lattice | None = None, start: Fra
                     continue
                 c_in = f_in.advanced(z0)
                 c_c = c_in.advanced(c.length / 2.0)
-                c_body, c_shifted = c_c, False
-                if apply_shift and c.shift is not None and not c.shift.is_zero():
-                    c_body, c_shifted = _shifted(c_c, c.shift), True
+                c_body, c_roll, c_shifted = _body(c_c, c, apply_shift)
                 out.append(PlacedFrames(p.index, name, c.kind, p.s_in + z0, p.s_in + z0 + c.length,
                                         c_in, c_c, c_in.advanced(c.length), c_body,
-                                        theta_in, theta_in, theta_in, 0.0, 0.0, c_shifted, p.reversed,
+                                        theta_in, theta_in, theta_in, 0.0, 0.0, c_roll, c_shifted, p.reversed,
                                         parent=p.index, child=name))
     return out
 

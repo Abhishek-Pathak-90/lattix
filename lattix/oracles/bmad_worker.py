@@ -150,7 +150,7 @@ def _collect(tao, pytao, deck: str, wrapper: str, species: str | None, probe: st
     keys = [str(x) for x in tao.lat_list("*", "ele.key")]
 
     # matrices / floor / twiss BEFORE any particle_start change (see module doc)
-    mat6, floor = [], []
+    mat6, floor, floor6, centre6, body6 = [], [], [], [], []
     twiss: dict[str, list[float]] = {k: [] for k, _ in _TWISS_KEYS}
     n_unreadable = 0
     for i in range(1, n_all):
@@ -162,6 +162,12 @@ def _collect(tao, pytao, deck: str, wrapper: str, species: str | None, probe: st
                                "written for") from None
         ref = np.asarray(tao.ele_floor(i, where="end")["Reference"], dtype=float)
         floor.append([float(ref[0]), float(ref[1]), float(ref[2]), float(ref[3])])
+        floor6.append([float(v) for v in ref[:6]])
+        # the reference frame at the element centre, and the misaligned body's frame there
+        # (Bmad applies offsets and pitches about the centre): the survey-frame oracles
+        mid = tao.ele_floor(i, where="center")
+        centre6.append([float(v) for v in np.asarray(mid["Reference"], dtype=float)[:6]])
+        body6.append([float(v) for v in np.asarray(mid["Actual"], dtype=float)[:6]])
         try:
             tw = tao.ele_twiss(i)
         except Exception:  # noqa: BLE001 - Twiss beyond 1e100 (an unstable line): the maps still compare
@@ -205,7 +211,8 @@ def _collect(tao, pytao, deck: str, wrapper: str, species: str | None, probe: st
         "e_tot_in": e_tot[:-1].tolist(), "e_tot_out": e_tot[1:].tolist(),
         "p0c_in": p0c[:-1].tolist(), "p0c_out": p0c[1:].tolist(),
         "mass_ev": mass, "charge": charge,
-        "floor": floor, "twiss": twiss, "probe_out": probe_out,
+        "floor": floor, "floor6": floor6, "centre6": centre6, "body6": body6,
+        "twiss": twiss, "probe_out": probe_out,
         "warnings": warnings, "tao_version": version,
         "pytao_version": getattr(pytao, "__version__", None), "python": sys.executable,
         "numpy_version": np.__version__,

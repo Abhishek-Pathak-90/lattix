@@ -300,3 +300,25 @@ def test_survey_table_and_csv():
     assert float(parsed[1]["X"]) == pytest.approx(-1.0 / (math.pi / 2), rel=1e-11)
     assert parsed[1]["theta"] == f"{-math.pi / 2:.12g}" and parsed[0]["i"] == "0"
     assert survey_csv([]) == ""
+
+
+def test_a_skew_quadrupole_is_a_rolled_body():
+    from lattix.ir import MagneticMultipoleP
+    from lattix.ir.frames import field_roll
+
+    skew = Quadrupole(name="qs", length=0.4, multipole=MagneticMultipoleP(Bn={1: 2.0}, tilt={1: 0.02}))
+    fr = frame_survey(_line(Drift(name="d", length=1.0), skew).flatten())[1]
+    assert field_roll(skew) == 0.02 and fr.roll == 0.02 and not fr.shifted
+    assert fr.angles("body")[2] == pytest.approx(0.02) and fr.angles("centre")[2] == 0.0
+    np.testing.assert_allclose(fr.body.V, fr.centre.V)
+    # the roll is hardware, not a misalignment: it stays when shifts are ignored, and adds to a shift's own roll
+    assert frame_survey(_line(skew).flatten(), apply_shift=False)[0].angles("body")[2] == pytest.approx(0.02)
+    both = skew.model_copy(update={"shift": BodyShiftP(tilt=0.01)})
+    assert frame_survey(_line(both).flatten())[0].angles("body")[2] == pytest.approx(0.03)
+    # no field roll for a straight quad, a mixed-tilt thin multipole, or a bend (its tilt_ref is the frame)
+    assert field_roll(Quadrupole(name="q", length=0.4)) == 0.0
+    from lattix.ir import Multipole
+    mixed = Multipole(name="m", multipole=MagneticMultipoleP(BnL={1: 1.0, 2: 1.0}, tilt={1: 0.1, 2: 0.2}))
+    same = Multipole(name="m", multipole=MagneticMultipoleP(BnL={1: 1.0, 2: 1.0}, tilt={1: 0.1, 2: 0.1}))
+    assert field_roll(mixed) == 0.0 and field_roll(same) == 0.1
+    assert field_roll(_bend("b", 0.1, tilt_ref=0.3)) == 0.0

@@ -284,9 +284,15 @@ body frame after its misalignment.  `survey()` is the `(X, Y, Z, theta)` view of
 * **Patch.**  The frame jumps by the offsets in the local frame, then rotates by
   `Ry(y_rot)·Rx(x_rot)·Rs(tilt)` — yaw, pitch, roll in that order; a positive `x_rot` tips the
   beam toward −Y.  The centre of a patch is its entrance.
-* **Body shift** (`Element.shift`).  Applied about the element centre, in the centre frame:
-  translate by the offsets, then rotate by `Ry(y_rot)·Rx(x_rot)·Rs(tilt)`.  The reference orbit
-  never moves because of a shift; only the body frame does.
+* **Body frame.**  The centre frame rolled by the element's own field roll — a skew quadrupole
+  is a rolled quadrupole (`multipole.tilt[1]`; `[2]` and `[3]` for sextupoles and octupoles) —
+  then moved by `Element.shift` about the element centre, in the centre frame: translate by the
+  offsets, then rotate by `Ry(y_rot)·Rx(x_rot)·Rs(tilt)`.  *Measured* against Bmad's floor
+  positions (Tao `ele_floor`, `Reference` at the exit and the centre, `Actual` at the centre)
+  on `lattix/misaligned.bmad`: positions to 1e-9 m and all three angles to 1e-10 for an offset
+  and pitched quadrupole, a rolled bend, a skew quadrupole and a combined patch
+  (`tests/oracles/test_frame_survey.py`).  The reference orbit never moves because of a shift;
+  only the body frame does.
 * **Superposition children** (`expand_children=True`) are placed along the container's straight
   axis at `s_in + z_offset` and carry the container's index.
 * **MAD-X cards** (measured with cpymad 5.09.03 on 2026-09-11, `tests/oracles/test_frame_survey.py`):
