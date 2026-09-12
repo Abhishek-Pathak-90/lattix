@@ -156,6 +156,16 @@ handle itself, given to the workbench's shortcuts).  Number keys switch to plugi
 load error; a broken plugin is skipped, never fatal.  `lattix ui --no-plugins` starts without them.
 `GET /api/plugins` lists them for the page.
 
+### The 3D tab
+
+[lattix-view](https://github.com/Accel-Toolkit/lattix-view) (`pip install lattix-view`) is the
+first plugin: a `3D` tab that draws the deck of the session element by element on the frames of
+`lattix survey`, with a procedural model per element kind and instrument family (or a site's own
+glTF), hover labels, measurement tools that snap to the survey frames, and exports (the survey
+table through the route above, glTF and OBJ scenes, screenshots, video).  The tab follows the
+selection, hover and cursor of the 2D pages and reports its own back.  `lattix-view view deck.dat`
+starts this server with the 3D page first.
+
 ## API
 
 | route | purpose |
