@@ -165,6 +165,48 @@ def cmd_inspect(a) -> int:
     return 0
 
 
+def cmd_survey(a) -> int:
+    from lattix.formats import read
+    from lattix.ir.frames import frame_survey, site_frame, survey_csv, survey_table
+
+    lat, rep = read(a.src, a.from_fmt, **_kv(a.read_option))
+    pose = (a.x0, a.y0, a.z0, a.theta0, a.phi0, a.psi0)
+    frames = frame_survey(lat.flatten(), lat=lat, start=site_frame(*pose),
+                          apply_shift=not a.no_shift, expand_children=a.children)
+    rows = survey_table(frames, at=a.at)
+    fmt = rep.source_format or a.from_fmt or lat.meta.get("source_format") or "?"
+    comments = [f"lattix {__version__} survey of {a.src} ({fmt}): {len(rows)} rows",
+                f"frames: {a.at}; misalignments {'ignored' if a.no_shift else 'applied to the body frame'}; "
+                f"superposition children {'expanded' if a.children else 'not expanded'}",
+                "start pose (MAD-X SURVEY x0 y0 z0 theta0 phi0 psi0; m, rad): " + " ".join(f"{v:.12g}" for v in pose),
+                "units: m and rad; theta, phi, psi are MAD-X survey angles, theta continuous along the line"]
+    if a.csv:
+        Path(a.csv).write_text(survey_csv(rows, comments=comments), encoding="utf-8")
+        print(f"{len(rows)} rows -> {a.csv}")
+    elif a.json:
+        doc = {"deck": str(a.src), "format": fmt, "at": a.at, "shift": not a.no_shift, "children": a.children,
+               "start": dict(zip(("x0", "y0", "z0", "theta0", "phi0", "psi0"), pose, strict=True)),
+               "columns": list(rows[0]) if rows else [], "rows": rows}
+        Path(a.json).write_text(json.dumps(doc, indent=1), encoding="utf-8")
+        print(f"{len(rows)} rows -> {a.json}")
+    else:
+        for c in comments:
+            print(f"# {c}")
+        if rows:
+            cols = list(rows[0])
+            widths = [max(len(c), *(len(_cell(r[c])) for r in rows)) for c in cols]
+            print("  ".join(c.rjust(w) for c, w in zip(cols, widths, strict=True)))
+            for r in rows:
+                print("  ".join(_cell(r[c]).rjust(w) for c, w in zip(cols, widths, strict=True)))
+    if not rep.ok:
+        print(rep.summary(), file=sys.stderr)
+    return 0
+
+
+def _cell(v) -> str:
+    return f"{v:.9g}" if isinstance(v, float) else str(v)
+
+
 def cmd_crossval(a) -> int:
     from lattix import crossval
 
@@ -271,6 +313,22 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--elements", action="store_true")
     s.add_argument("--read-option", action="append")
     s.set_defaults(func=cmd_inspect)
+
+    s = sub.add_parser("survey", help="floor coordinates of every element (MAD-X survey frame): table, CSV or JSON")
+    s.add_argument("src")
+    s.add_argument("--from", dest="from_fmt", default=None)
+    s.add_argument("--read-option", action="append", help="KEY=VALUE for the reader (e.g. species=h-)")
+    s.add_argument("--at", default="exit", choices=["entrance", "centre", "exit", "body", "all"],
+                   help="which frame of each element to tabulate (body = centre after the misalignment); "
+                        "all gives every frame with the prefixes in_, c_, out_, body_")
+    s.add_argument("--no-shift", action="store_true", help="ignore misalignments (the body frame equals the centre)")
+    s.add_argument("--children", action="store_true", help="expand superposition clusters into their field maps")
+    for name, what in (("x0", "X [m]"), ("y0", "Y [m]"), ("z0", "Z [m]"), ("theta0", "azimuth [rad]"),
+                       ("phi0", "elevation [rad]"), ("psi0", "roll [rad]")):
+        s.add_argument(f"--{name}", type=float, default=0.0, help=f"start pose {what}, as MAD-X SURVEY")
+    s.add_argument("--csv", default=None, help="write the table as CSV here (12 significant digits)")
+    s.add_argument("--json", default=None, help="write the table as JSON here")
+    s.set_defaults(func=cmd_survey)
 
     s = sub.add_parser("crossval", help="cross-format battery: every format pair on every public deck")
     s.add_argument("--formats", default=None, help="comma list of formats (default: all)")

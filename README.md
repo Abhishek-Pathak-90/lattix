@@ -141,6 +141,7 @@ and by the eight bridged formats.
 ```bash
 lattix ui --root tests/data/public     # a browser workbench: translate, then compare the beam lines
 lattix inspect mebt.dat --elements     # what the reader made of a deck
+lattix survey ring.seq --at all --csv ring.csv   # floor coordinates and MAD-X survey angles of every element
 lattix oracles                         # which engines this machine can actually run
 lattix fingerprint                     # measure each engine's longitudinal conventions
 lattix validate --deck madx=fodo.madx --deck bmad=fodo.bmad --oracles madx,xtrack,bmad --ke 800e6

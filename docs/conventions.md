@@ -302,7 +302,8 @@ body frame after its misalignment.  `survey()` is the `(X, Y, Z, theta)` view of
   ignores `changeref`, so lattix keeps it unsupported rather than guessing its order of operations.
 
 `survey_table` and `survey_csv` flatten the frames into rows (`X, Y, Z, theta, phi, psi` per
-frame, metres and radians, 12 significant digits).
+frame, metres and radians, 12 significant digits); `lattix survey` prints or writes them for any
+deck, and the workbench serves them at `GET /api/session/<sid>/survey`.
 
 ### Field-map phases (TraceWin `FIELD_MAP`, measured 2026-09-05)
 

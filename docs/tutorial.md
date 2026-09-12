@@ -37,6 +37,27 @@ reference: proton 2.1 MeV -> 2.1 MeV; RF clock 352210000.0
 particle through it and prints the reader's ledger: here every card was read exactly.
 Add `--elements` for one line per placed element with its exit position.
 
+`survey` gives the floor coordinates: where every element sits in the global frame, with
+MAD-X's survey angles (the line starts at the origin along +Z, a positive horizontal bend turns
+toward −X).
+
+```
+$ lattix survey bend_line.dat
+# lattix 0.2.0 survey of bend_line.dat (tracewin): 21 rows
+# frames: exit; misalignments applied to the body frame; superposition children not expanded
+# start pose (MAD-X SURVEY x0 y0 z0 theta0 phi0 psi0; m, rad): 0 0 0 0 0 0
+# units: m and rad; theta, phi, psi are MAD-X survey angles, theta continuous along the line
+ i               name        kind  parent        s_in       s_out           L             X  Y           Z         theta  phi  psi        angle  tilt_ref
+ 3         DRIFT_0001       Drift                   0         0.1         0.1             0  0         0.1             0    0    0            0         0
+ 4          QUAD_0001  Quadrupole                 0.1        0.16        0.06             0  0        0.16             0    0    0            0         0
+…
+```
+
+`--at all` tabulates the entrance, centre, exit and misaligned-body frames side by side, `--csv`
+and `--json` write the table for survey and alignment work, and `--x0 … --psi0` set the start
+pose the way MAD-X `SURVEY` does.  Misaligned elements get a body frame that differs from the
+reference orbit's; `--no-shift` ignores the misalignments.
+
 ## 3. Convert
 
 ```

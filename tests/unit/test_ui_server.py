@@ -4,6 +4,7 @@ from __future__ import annotations
 import http.client
 import io
 import json
+import math
 import re
 import threading
 import time
@@ -262,3 +263,28 @@ def test_page_without_a_token_explains_in_html(server):
     conn.close()
     status, payload, _ = api(server, "GET", "/api/ping", token=False)
     assert status == 403 and payload["error"]["type"] == "forbidden"      # the API stays JSON
+
+
+def test_survey_route(server):
+    status, r, _ = api(server, "POST", "/api/read", body={"source": {"sample": "helix/bend_line.dat"}})
+    sid = r["session"]
+    status, sv, _ = api(server, "GET", f"/api/session/{sid}/survey?at=all")
+    assert status == 200 and sv["at"] == "all" and sv["deck"] == "bend_line.dat" and sv["format"] == "tracewin"
+    assert {"in_X", "c_theta", "out_psi", "body_Z", "angle"} <= set(sv["columns"])
+    assert len(sv["rows"]) == r["source"]["header"]["n_placed"]
+    bends = [row for row in sv["rows"] if row["kind"] == "Bend"]
+    assert bends and any(abs(row["out_theta"] - row["in_theta"]) > 1e-6 for row in bends)
+    status, moved, _ = api(server, "GET", f"/api/session/{sid}/survey?x0=1&z0=2&theta0=0.25&shift=0&children=0")
+    assert status == 200 and moved["start"]["theta0"] == 0.25 and moved["shift"] is False
+    assert moved["rows"][0]["X"] == pytest.approx(1.0 + moved["rows"][0]["L"] * math.sin(0.25))
+    status, text, resp = api(server, "GET", f"/api/session/{sid}/survey?format=csv")
+    assert status == 200 and resp.getheader("Content-Type").startswith("text/csv")
+    assert "attachment" in resp.getheader("Content-Disposition") and text.decode("utf-8").startswith("# lattix ")
+    assert api(server, "GET", f"/api/session/{sid}/survey?at=middle")[0] == 400
+    assert api(server, "GET", f"/api/session/{sid}/survey?format=xml")[0] == 400
+    assert api(server, "GET", f"/api/session/{sid}/survey?x0=abc")[0] == 400
+    assert api(server, "GET", f"/api/session/{sid}/survey?translation=t9")[0] == 404
+    status, t, _ = api(server, "POST", "/api/translate", body={"session": sid, "format": "elegant"})
+    status, tsv, _ = api(server, "GET", f"/api/session/{sid}/survey?translation={t['translation']}")
+    assert status == 200 and tsv["format"] == "elegant" and len(tsv["rows"]) >= len(bends)
+    assert api(server, "GET", "/api/session/nope/survey")[0] == 404

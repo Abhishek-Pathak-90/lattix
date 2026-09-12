@@ -140,6 +140,7 @@ one engine job runs at a time with a 30 min limit.
 | `POST /api/read` | `{source: {sample}|{path}|{content, filename}, format?, options}` → the source view model |
 | `POST /api/translate` | `{session, format, options, strict, reread}` → deck text, side files, ledger, the target view model, the comparison |
 | `GET /api/session/{sid}[/translation/{tid}]`, `…/download?what=source|deck|fidelity|zip|side&name=`, `…/source_text` | resume, files |
+| `GET /api/session/{sid}/survey?at=exit|entrance|centre|body|all&format=json|csv&shift=1&children=1&x0=…&psi0=…&translation=` | floor coordinates and MAD-X survey angles of every element, of the source or of a re-read target |
 | `POST /api/validate`, `GET /api/jobs/{jid}`, `POST /api/jobs/{jid}/cancel` | the engine job |
 
 The view model of a lattice (`lattix.ui.model.lattice_view`) is placed rows (`s`, energies, glyph hints,

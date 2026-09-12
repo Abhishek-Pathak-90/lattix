@@ -732,6 +732,58 @@ class Handler(BaseHTTPRequestHandler):
             raise ApiError(409, "conflict", "no source deck in this session")
         self._json(200, {"name": s.source.path.name, "text": s.source.text})
 
+    def r_survey(self, query, sid: str) -> None:
+        """The survey table of the session's source, or of a re-read translation's target with
+        ``?translation=``: ``format=csv`` as an attachment, otherwise JSON.  ``at`` picks the frame
+        (``entrance``, ``centre``, ``exit``, ``body`` or ``all``), ``shift=0`` ignores misalignments,
+        ``children=0`` keeps superposition clusters whole, and ``x0 … psi0`` set the start pose."""
+        from lattix.ir.frames import frame_survey, site_frame, survey_csv, survey_table
+
+        s = self._session(sid)
+        tid = (query.get("translation") or [None])[0]
+        if tid:
+            _, tr = self._translation(sid, tid)
+            loaded = tr.target
+            if loaded is None:
+                raise ApiError(409, "conflict", f"translation {tid!r} was not re-read; no target lattice to survey")
+        else:
+            loaded = s.source
+            if loaded is None:
+                raise ApiError(409, "conflict", "no source deck in this session")
+
+        def flag(name: str, default: str = "1") -> bool:
+            return (query.get(name) or [default])[0].lower() not in ("0", "false", "no")
+
+        names = ("x0", "y0", "z0", "theta0", "phi0", "psi0")
+        try:
+            pose = tuple(float((query.get(k) or ["0"])[0]) for k in names)
+        except ValueError as exc:
+            raise ApiError(400, "bad_request", f"start pose must be numbers: {exc}") from None
+        at = (query.get("at") or ["exit"])[0]
+        shift, children = flag("shift"), flag("children")
+        frames = frame_survey(loaded.placed, lat=loaded.lattice, start=site_frame(*pose),
+                              apply_shift=shift, expand_children=children)
+        try:
+            rows = survey_table(frames, at=at)
+        except ValueError as exc:
+            raise ApiError(400, "bad_request", str(exc)) from None
+        fmt = (query.get("format") or ["json"])[0]
+        if fmt == "csv":
+            comments = [f"lattix {__version__} survey of {loaded.path.name} ({loaded.fmt}): {len(rows)} rows",
+                        f"frames: {at}; misalignments {'applied to the body frame' if shift else 'ignored'}; "
+                        f"superposition children {'expanded' if children else 'not expanded'}",
+                        "start pose (MAD-X SURVEY x0 y0 z0 theta0 phi0 psi0; m, rad): "
+                        + " ".join(f"{v:.12g}" for v in pose),
+                        "units: m and rad; theta, phi, psi are MAD-X survey angles, theta continuous along the line"]
+            self._file(survey_csv(rows, comments=comments).encode("utf-8"),
+                       f"{loaded.path.stem}.survey.csv", "text/csv; charset=utf-8")
+        elif fmt == "json":
+            self._json(200, {"deck": loaded.path.name, "format": loaded.fmt, "at": at, "shift": shift,
+                             "children": children, "start": dict(zip(names, pose, strict=True)),
+                             "columns": list(rows[0]) if rows else [], "rows": rows})
+        else:
+            raise ApiError(400, "bad_request", f"unknown survey format {fmt!r}; use csv or json")
+
     def r_translate(self, query) -> None:
         body = self._json_body()
         s = self._session(str(body.get("session") or ""))
@@ -815,6 +867,7 @@ ROUTES: list[tuple[str, re.Pattern, Callable]] = [
     ("GET", re.compile(r"/api/session/([\w\-]+)"), Handler.r_session),
     ("DELETE", re.compile(r"/api/session/([\w\-]+)"), Handler.r_session_delete),
     ("GET", re.compile(r"/api/session/([\w\-]+)/source_text"), Handler.r_source_text),
+    ("GET", re.compile(r"/api/session/([\w\-]+)/survey"), Handler.r_survey),
     ("GET", re.compile(r"/api/session/([\w\-]+)/download"), Handler.r_download),
     ("POST", re.compile(r"/api/translate"), Handler.r_translate),
     ("GET", re.compile(r"/api/session/([\w\-]+)/translation/([\w\-]+)"), Handler.r_translation),
